@@ -37,9 +37,15 @@ public static class TestData
             MaxAliveEnemies = maxAlive,
             RestCountdownSeconds = 5,
             Debug = new DebugConfig { StartWave = startWave },
+            Xp = Xp(),
             ReloadsEnabled = reloadsEnabled,
             GlobalReloadTimeMultiplier = reloadMultiplier,
         };
+    }
+
+    public static XpConfig Xp(bool shared = true)
+    {
+        return new XpConfig { Base = 60, Exponent = 1.35f, SharedFullToAllPlayers = shared };
     }
 
     public static WavesConfig Waves()

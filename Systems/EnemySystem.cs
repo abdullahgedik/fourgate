@@ -24,6 +24,7 @@ public sealed class EnemySystem : IHittableSource
     private readonly Pool<Enemy> _enemies = new(InitialEnemies);
     private readonly SpatialHash<Enemy> _hash = new(CellSize);
     private readonly List<Enemy> _nearby = new();
+    private readonly List<EnemyDeath> _deaths = new();
     private int _nextId;
 
     public EnemySystem(IAudioManager audio)
@@ -36,6 +37,9 @@ public sealed class EnemySystem : IHittableSource
 
     /// <summary>Total enemies killed so far.</summary>
     public int KillCount { get; private set; }
+
+    /// <summary>Enemies removed by the latest <see cref="Update"/>, for rewards and drops.</summary>
+    public IReadOnlyList<EnemyDeath> Deaths => _deaths;
 
     public Enemy this[int index] => _enemies[index];
 
@@ -100,10 +104,13 @@ public sealed class EnemySystem : IHittableSource
 
     private void RemoveDead()
     {
+        _deaths.Clear();
         for (var i = _enemies.Count - 1; i >= 0; i--)
         {
-            if (!_enemies[i].IsAlive)
+            var enemy = _enemies[i];
+            if (!enemy.IsAlive)
             {
+                _deaths.Add(new EnemyDeath(enemy.Config, enemy.Position, enemy.LastHitBy));
                 KillCount++;
                 _audio.PlaySfx(SfxIds.EnemyDeath);
                 _enemies.ReturnAt(i);

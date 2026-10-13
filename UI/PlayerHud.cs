@@ -1,4 +1,5 @@
 using System;
+using Fourgate.Core.Data;
 using Fourgate.Core.Rendering;
 using Fourgate.Entities;
 using Fourgate.Weapons;
@@ -6,32 +7,42 @@ using Microsoft.Xna.Framework;
 
 namespace Fourgate.UI;
 
-/// <summary>One player's overlay in the corners of their view: health, dash and weapon.</summary>
+/// <summary>One player's overlay in the corners of their view: level, health, dash and weapon.</summary>
 public sealed class PlayerHud
 {
     private const float Margin = 28f;
     private const float BarWidth = 320f;
     private const float HpBarHeight = 28f;
     private const float DashBarHeight = 8f;
+    private const float XpBarHeight = 10f;
     private const float BarGap = 6f;
     private const float Border = 3f;
     private const float HpTextSize = 24f;
+    private const float LevelTextSize = 26f;
     private const float WeaponNameSize = 26f;
     private const float AmmoSize = 46f;
 
     private static readonly Color PanelColor = new(8, 9, 12, 200);
     private static readonly Color HpColor = new(215, 60, 60);
     private static readonly Color HpLowColor = new(255, 150, 60);
+    private static readonly Color XpColor = new(170, 120, 255);
     private static readonly Color DashReadyColor = new(110, 200, 255);
     private static readonly Color DashChargingColor = new(60, 95, 130);
     private static readonly Color TextColor = new(240, 240, 245);
     private static readonly Color DimTextColor = new(170, 175, 190);
-    private static readonly Color ReloadTextColor = new(255, 225, 120);
+    private static readonly Color HighlightTextColor = new(255, 225, 120);
+
+    private readonly XpConfig _xpConfig;
 
     // The texts are rebuilt only when their numbers change, to avoid allocating every frame.
     private int _hpShown = -1;
     private int _maxHpShown = -1;
     private string _hpText = string.Empty;
+
+    private int _levelShown = -1;
+    private string _levelText = string.Empty;
+    private int _picksShown = -1;
+    private string _picksText = string.Empty;
 
     private Weapon? _weaponShown;
     private int _magazineShown = -1;
@@ -40,16 +51,35 @@ public sealed class PlayerHud
     private string _weaponName = string.Empty;
     private string _ammoText = string.Empty;
 
+    public PlayerHud(XpConfig xpConfig)
+    {
+        _xpConfig = xpConfig;
+    }
+
     /// <param name="renderer">Renderer in a screen-space pass.</param>
     /// <param name="player">The player to show.</param>
     /// <param name="view">The player's area of the virtual screen.</param>
     public void Draw(IRenderer renderer, Player player, Rectangle view)
     {
-        DrawHealthAndDash(renderer, player, view);
+        var left = view.Left + Margin;
+        var dashTop = view.Bottom - Margin - DashBarHeight;
+        var hpTop = dashTop - BarGap - HpBarHeight;
+        var xpTop = hpTop - BarGap - Border - XpBarHeight;
+        var levelTop = xpTop - Border - LevelTextSize;
+
+        DrawDash(renderer, player, new Vector2(left, dashTop));
+        DrawHealth(renderer, player, new Vector2(left, hpTop));
+        DrawProgression(renderer, player.Progression, new Vector2(left, xpTop), levelTop);
         DrawWeapon(renderer, player, view);
     }
 
-    private void DrawHealthAndDash(IRenderer renderer, Player player, Rectangle view)
+    private static void DrawDash(IRenderer renderer, Player player, Vector2 topLeft)
+    {
+        var readiness = Math.Clamp(player.DashReadiness, 0f, 1f);
+        DrawBar(renderer, topLeft, DashBarHeight, readiness, readiness >= 1f ? DashReadyColor : DashChargingColor);
+    }
+
+    private void DrawHealth(IRenderer renderer, Player player, Vector2 topLeft)
     {
         var hp = (int)MathF.Ceiling(player.Hp);
         var maxHp = (int)MathF.Ceiling(player.MaxHp);
@@ -60,19 +90,36 @@ public sealed class PlayerHud
             _hpText = $"{hp} / {maxHp}";
         }
 
-        var dashTop = view.Bottom - Margin - DashBarHeight;
-        var hpTop = dashTop - BarGap - HpBarHeight;
-        var left = view.Left + Margin;
-
         var fraction = player.MaxHp > 0f ? Math.Clamp(player.Hp / player.MaxHp, 0f, 1f) : 0f;
-        DrawBar(renderer, new Vector2(left, hpTop), HpBarHeight, fraction, fraction <= 0.3f ? HpLowColor : HpColor);
+        DrawBar(renderer, topLeft, HpBarHeight, fraction, fraction <= 0.3f ? HpLowColor : HpColor);
         renderer.DrawText(
-            _hpText, new Vector2(left + BarWidth / 2f, hpTop + 1f), HpTextSize, TextColor, TextAlign.Center);
+            _hpText, topLeft + new Vector2(BarWidth / 2f, 1f), HpTextSize, TextColor, TextAlign.Center);
+    }
 
-        var readiness = Math.Clamp(player.DashReadiness, 0f, 1f);
-        DrawBar(
-            renderer, new Vector2(left, dashTop), DashBarHeight, readiness,
-            readiness >= 1f ? DashReadyColor : DashChargingColor);
+    private void DrawProgression(IRenderer renderer, PlayerProgression progression, Vector2 barTopLeft, float textTop)
+    {
+        if (progression.Level != _levelShown)
+        {
+            _levelShown = progression.Level;
+            _levelText = $"LEVEL {progression.Level}";
+        }
+
+        if (progression.BankedPicks != _picksShown)
+        {
+            _picksShown = progression.BankedPicks;
+            _picksText = progression.BankedPicks == 1 ? "1 UPGRADE READY" : $"{progression.BankedPicks} UPGRADES READY";
+        }
+
+        var fraction = Math.Clamp(progression.Xp / (float)_xpConfig.XpToNext(progression.Level), 0f, 1f);
+        DrawBar(renderer, barTopLeft, XpBarHeight, fraction, XpColor);
+
+        renderer.DrawText(_levelText, new Vector2(barTopLeft.X, textTop), LevelTextSize, TextColor);
+        if (progression.BankedPicks > 0)
+        {
+            renderer.DrawText(
+                _picksText, new Vector2(barTopLeft.X + BarWidth, textTop), LevelTextSize, HighlightTextColor,
+                TextAlign.Right);
+        }
     }
 
     private void DrawWeapon(IRenderer renderer, Player player, Rectangle view)
@@ -102,7 +149,7 @@ public sealed class PlayerHud
         var ammoTop = view.Bottom - Margin - AmmoSize;
         renderer.DrawText(
             _ammoText, new Vector2(right, ammoTop), AmmoSize,
-            weapon.IsReloading ? ReloadTextColor : TextColor, TextAlign.Right);
+            weapon.IsReloading ? HighlightTextColor : TextColor, TextAlign.Right);
         renderer.DrawText(
             _weaponName, new Vector2(right, ammoTop - WeaponNameSize), WeaponNameSize, DimTextColor, TextAlign.Right);
     }

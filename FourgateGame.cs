@@ -15,6 +15,7 @@ public sealed class FourgateGame : Game
 {
     private const int SimulationHz = 60;
     private const int DebugSpawnGroupSize = 10;
+    private const int DebugXpGrant = 50;
 
     private static readonly string FontPath =
         Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts", "Rajdhani-SemiBold.ttf");
@@ -110,6 +111,11 @@ public sealed class FourgateGame : Game
         if (_debugHotkeys.SpawnManyPressed)
         {
             _scene?.DebugSpawnEnemies(enemyId, DebugSpawnGroupSize);
+        }
+
+        if (_debugHotkeys.GrantXpPressed)
+        {
+            _scene?.DebugGrantXp(DebugXpGrant);
         }
     }
 

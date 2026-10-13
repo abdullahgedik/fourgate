@@ -47,6 +47,7 @@ public sealed class GameplayScene
     private readonly ShotSystem _shots;
     private readonly EnemySystem _enemies;
     private readonly WaveSystem? _waves;
+    private readonly XpSystem _xp;
     private readonly WaveHud _waveHud = new();
     private readonly GameOverOverlay _gameOverOverlay = new();
     private readonly IAudioManager _audio;
@@ -68,6 +69,7 @@ public sealed class GameplayScene
         _enemies = new EnemySystem(audio);
         _shots = new ShotSystem(_arena);
         _shots.AddSource(_enemies);
+        _xp = new XpSystem(config.Xp, audio);
         _waves = config.Debug.DisableWaves ? null : new WaveSystem(data, _enemies, _arena, _random, audio);
 
         var player = new Player(0, playerOneInput, config.Player, audio, _arena.Center);
@@ -105,6 +107,7 @@ public sealed class GameplayScene
 
         _waves?.Update(deltaSeconds);
         _enemies.Update(deltaSeconds, _players, _arena);
+        RewardKills();
 
         for (var i = 0; i < _players.Count; i++)
         {
@@ -150,6 +153,24 @@ public sealed class GameplayScene
         }
 
         return false;
+    }
+
+    private void RewardKills()
+    {
+        var deaths = _enemies.Deaths;
+        for (var i = 0; i < deaths.Count; i++)
+        {
+            _xp.Award(deaths[i].Config.Xp, deaths[i].KilledBy, _players);
+        }
+    }
+
+    /// <summary>Debug helper: gives every player XP.</summary>
+    public void DebugGrantXp(int amount)
+    {
+        for (var i = 0; i < _players.Count; i++)
+        {
+            _players[i].Progression.AddXp(amount, _data.Game.Xp);
+        }
     }
 
     /// <summary>Debug helper: spawns enemies of the given type at random doors.</summary>
@@ -264,7 +285,7 @@ public sealed class GameplayScene
 
         _players.Add(player);
         _cameras.Add(camera);
-        _playerHuds.Add(new PlayerHud());
+        _playerHuds.Add(new PlayerHud(_data.Game.Xp));
     }
 
     private void DrawPlayers(IRenderer renderer)

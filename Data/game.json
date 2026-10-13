@@ -6,6 +6,7 @@
   "debug": { "hotkeys": true, "practiceTargets": false },
   "maxAliveEnemies": 60,
   "restCountdownSeconds": 5,
+  "xp": { "base": 60, "exponent": 1.35, "sharedFullToAllPlayers": true },
   "reloadsEnabled": true,
   "globalReloadTimeMultiplier": 1.0,
   "player": {

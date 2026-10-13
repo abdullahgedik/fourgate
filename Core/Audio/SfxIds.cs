@@ -6,6 +6,7 @@ public static class SfxIds
     public const string PlayerDash = "player_dash";
     public const string PlayerHurt = "player_hurt";
     public const string PlayerDeath = "player_death";
+    public const string LevelUp = "level_up";
     public const string GameOver = "game_over";
     public const string WaveStart = "wave_start";
     public const string WaveEnd = "wave_end";

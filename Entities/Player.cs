@@ -41,6 +41,8 @@ public sealed class Player
 
     public IPlayerInput Input { get; }
 
+    public PlayerProgression Progression { get; } = new();
+
     public Vector2 Position { get; private set; }
 
     /// <summary>Unit-length facing direction in world space.</summary>
