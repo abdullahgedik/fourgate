@@ -4,6 +4,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <RollForward>Major</RollForward>
     <Nullable>enable</Nullable>
+    <DefaultItemExcludes>$(DefaultItemExcludes);tests\**</DefaultItemExcludes>
     <PublishReadyToRun>false</PublishReadyToRun>
     <TieredCompilation>false</TieredCompilation>
   </PropertyGroup>

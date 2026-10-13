@@ -1,0 +1,47 @@
+namespace Fourgate.Core.Data;
+
+/// <summary>Global rules loaded from <c>game.json</c>.</summary>
+public sealed class GameConfig
+{
+    public required int VirtualWidth { get; init; }
+
+    public required int VirtualHeight { get; init; }
+
+    public required ArenaConfig Arena { get; init; }
+
+    public required CameraConfig Camera { get; init; }
+
+    public required PlayerConfig Player { get; init; }
+
+    /// <summary>Checks value ranges; throws <see cref="DataLoadException"/> naming the bad field.</summary>
+    public void Validate(string file)
+    {
+        DataLoadException.Require(VirtualWidth > 0, file, "virtualWidth", "must be greater than 0");
+        DataLoadException.Require(VirtualHeight > 0, file, "virtualHeight", "must be greater than 0");
+
+        DataLoadException.Require(Arena is not null, file, "arena", "is required");
+        var arena = Arena!;
+        DataLoadException.Require(arena.Size > 0, file, "arena.size", "must be greater than 0");
+        DataLoadException.Require(arena.WallThickness > 0, file, "arena.wallThickness", "must be greater than 0");
+        DataLoadException.Require(
+            arena.DoorWidth > 0 && arena.DoorWidth < arena.Size,
+            file, "arena.doorWidth", "must be greater than 0 and smaller than arena.size");
+
+        DataLoadException.Require(Camera is not null, file, "camera", "is required");
+        var camera = Camera!;
+        DataLoadException.Require(camera.Zoom > 0, file, "camera.zoom", "must be greater than 0");
+        DataLoadException.Require(
+            camera.LeadFraction >= 0 && camera.LeadFraction <= 1,
+            file, "camera.leadFraction", "must be between 0 and 1");
+        DataLoadException.Require(camera.LeadMaxDistance >= 0, file, "camera.leadMaxDistance", "must not be negative");
+        DataLoadException.Require(camera.Smoothing >= 0, file, "camera.smoothing", "must not be negative");
+        DataLoadException.Require(camera.EdgeMargin >= 0, file, "camera.edgeMargin", "must not be negative");
+
+        DataLoadException.Require(Player is not null, file, "player", "is required");
+        var player = Player!;
+        DataLoadException.Require(player.MoveSpeed > 0, file, "player.moveSpeed", "must be greater than 0");
+        DataLoadException.Require(
+            player.Radius > 0 && player.Radius * 2 < arena.Size,
+            file, "player.radius", "must be greater than 0 and fit inside the arena");
+    }
+}
