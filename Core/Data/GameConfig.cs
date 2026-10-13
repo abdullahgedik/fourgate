@@ -15,6 +15,12 @@ public sealed class GameConfig
 
     public DebugConfig Debug { get; init; } = new();
 
+    /// <summary>Most enemies allowed in the arena at once; further spawns wait at the doors.</summary>
+    public required int MaxAliveEnemies { get; init; }
+
+    /// <summary>Seconds of rest between waves, and before the first one.</summary>
+    public required float RestCountdownSeconds { get; init; }
+
     /// <summary>When false, weapons have no magazine and fire straight from their ammo pool.</summary>
     public required bool ReloadsEnabled { get; init; }
 
@@ -26,6 +32,11 @@ public sealed class GameConfig
     {
         DataLoadException.Require(VirtualWidth > 0, file, "virtualWidth", "must be greater than 0");
         DataLoadException.Require(VirtualHeight > 0, file, "virtualHeight", "must be greater than 0");
+
+        DataLoadException.Require(MaxAliveEnemies >= 1, file, "maxAliveEnemies", "must be 1 or greater");
+        DataLoadException.Require(RestCountdownSeconds >= 0, file, "restCountdownSeconds", "must not be negative");
+        DataLoadException.Require(
+            Debug is not null && Debug.StartWave >= 1, file, "debug.startWave", "must be 1 or greater");
 
         DataLoadException.Require(Arena is not null, file, "arena", "is required");
         var arena = Arena!;

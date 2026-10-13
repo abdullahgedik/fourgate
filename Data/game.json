@@ -3,7 +3,9 @@
   "virtualHeight": 1080,
   "arena": { "x": 0, "y": 0, "size": 3000, "doorWidth": 420, "wallThickness": 24 },
   "camera": { "zoom": 1.15, "leadFraction": 0.35, "leadMaxDistance": 260, "smoothing": 10, "edgeMargin": 120 },
-  "debug": { "hotkeys": true, "practiceTargets": true },
+  "debug": { "hotkeys": true, "practiceTargets": false },
+  "maxAliveEnemies": 60,
+  "restCountdownSeconds": 5,
   "reloadsEnabled": true,
   "globalReloadTimeMultiplier": 1.0,
   "player": {

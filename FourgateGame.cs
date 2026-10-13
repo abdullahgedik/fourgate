@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Fourgate.Core.Audio;
 using Fourgate.Core.Data;
 using Fourgate.Core.Input;
@@ -14,6 +15,9 @@ public sealed class FourgateGame : Game
 {
     private const int SimulationHz = 60;
     private const int DebugSpawnGroupSize = 10;
+
+    private static readonly string FontPath =
+        Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts", "Rajdhani-SemiBold.ttf");
 
     private static readonly Color BackgroundColor = new(16, 17, 22);
 
@@ -47,7 +51,7 @@ public sealed class FourgateGame : Game
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _screen = new VirtualScreen(GraphicsDevice, _data.Game.VirtualWidth, _data.Game.VirtualHeight);
-        _renderer = new ShapeRenderer(GraphicsDevice, _spriteBatch);
+        _renderer = new ShapeRenderer(GraphicsDevice, _spriteBatch, File.ReadAllBytes(FontPath));
 
         // Single-player: keyboard+mouse or the first gamepad, whichever was used last.
         var playerOneInput = new SwitchingInput(new KeyboardMouseInput(_screen), new GamepadInput(PlayerIndex.One));

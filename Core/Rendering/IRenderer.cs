@@ -24,4 +24,12 @@ public interface IRenderer
     void FillCircle(Vector2 center, float radius, Color color);
 
     void DrawLine(Vector2 from, Vector2 to, float thickness, Color color);
+
+    /// <summary>Draws one line of text; <paramref name="position"/> is its top edge at the aligned side.</summary>
+    /// <param name="text">Text to draw.</param>
+    /// <param name="position">Top-left, top-center or top-right of the text, depending on <paramref name="align"/>.</param>
+    /// <param name="size">Font size in pixels.</param>
+    /// <param name="color">Text color.</param>
+    /// <param name="align">Horizontal alignment relative to <paramref name="position"/>.</param>
+    void DrawText(string text, Vector2 position, float size, Color color, TextAlign align = TextAlign.Left);
 }

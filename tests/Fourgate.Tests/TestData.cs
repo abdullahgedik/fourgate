@@ -10,7 +10,12 @@ public static class TestData
         return new ArenaConfig { X = 0, Y = 0, Size = 3000, DoorWidth = 420, WallThickness = 24 };
     }
 
-    public static GameConfig Game(bool reloadsEnabled = true, float reloadMultiplier = 1f, bool dashIFrames = true)
+    public static GameConfig Game(
+        bool reloadsEnabled = true,
+        float reloadMultiplier = 1f,
+        bool dashIFrames = true,
+        int maxAlive = 60,
+        int startWave = 1)
     {
         return new GameConfig
         {
@@ -28,16 +33,35 @@ public static class TestData
                 StartingWeapon = "pistol",
                 Dash = new DashConfig { Cooldown = 2f, Duration = 0.18f, Distance = 200, IFrames = dashIFrames },
             },
+            MaxAliveEnemies = maxAlive,
+            RestCountdownSeconds = 5,
+            Debug = new DebugConfig { StartWave = startWave },
             ReloadsEnabled = reloadsEnabled,
             GlobalReloadTimeMultiplier = reloadMultiplier,
         };
     }
 
-    public static EnemyConfig Zombie()
+    public static WavesConfig Waves()
+    {
+        return new WavesConfig
+        {
+            Budget = new WaveBudgetConfig { Base = 6, PerWave = 2.2f, Quadratic = 0.04f },
+            NewerTypeBias = 0.5f,
+            SpawnIntervalStart = 1.2f,
+            SpawnIntervalStepPerWave = 0.03f,
+            SpawnIntervalMin = 0.35f,
+            GroupSizeBase = 2,
+            GroupSizePerWave = 0.15f,
+            GroupSizeMax = 6,
+            DoorWarningSeconds = 0.8f,
+        };
+    }
+
+    public static EnemyConfig Zombie(string id = "normal", float cost = 1, int unlockWave = 1)
     {
         return new EnemyConfig
         {
-            Id = "normal",
+            Id = id,
             DisplayName = "Zombie",
             Hp = 60,
             Speed = 110,
@@ -46,8 +70,8 @@ public static class TestData
             ContactCooldown = 0.8f,
             Xp = 10,
             ScoreValue = 10,
-            Cost = 1,
-            UnlockWave = 1,
+            Cost = cost,
+            UnlockWave = unlockWave,
             DropChance = 0.12f,
         };
     }

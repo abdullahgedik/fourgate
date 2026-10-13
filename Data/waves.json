@@ -1,0 +1,11 @@
+{
+  "budget": { "base": 6, "perWave": 2.2, "quadratic": 0.04 },
+  "newerTypeBias": 0.5,
+  "spawnIntervalStart": 1.2,
+  "spawnIntervalStepPerWave": 0.03,
+  "spawnIntervalMin": 0.35,
+  "groupSizeBase": 2,
+  "groupSizePerWave": 0.15,
+  "groupSizeMax": 6,
+  "doorWarningSeconds": 0.8
+}

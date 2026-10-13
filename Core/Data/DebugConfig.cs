@@ -9,6 +9,12 @@ public sealed class DebugConfig
     /// <summary>Places a still and a moving dummy target in the arena for trying out weapons.</summary>
     public bool PracticeTargets { get; init; }
 
+    /// <summary>Turns the wave system off, leaving an empty arena for testing.</summary>
+    public bool DisableWaves { get; init; }
+
+    /// <summary>Wave number the run starts at.</summary>
+    public int StartWave { get; init; } = 1;
+
     /// <summary>Fixed random seed so a run can be reproduced; a new seed is picked each run when missing.</summary>
     public int? Seed { get; init; }
 }

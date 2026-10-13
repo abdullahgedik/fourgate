@@ -1,10 +1,14 @@
 using System;
+using FontStashSharp;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Fourgate.Core.Rendering;
 
-/// <summary>Geometric-shape renderer built on generated textures (no content pipeline assets).</summary>
+/// <summary>
+/// Geometric-shape renderer built on generated textures and a runtime-loaded TTF font
+/// (no content pipeline assets).
+/// </summary>
 public sealed class ShapeRenderer : IRenderer, IDisposable
 {
     private const int CircleTextureSize = 128;
@@ -15,9 +19,15 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
     private readonly SpriteBatch _spriteBatch;
     private readonly Texture2D _pixel;
     private readonly Texture2D _circle;
+    private readonly FontSystem _fonts = new();
 
-    public ShapeRenderer(GraphicsDevice device, SpriteBatch spriteBatch)
+    /// <param name="device">Graphics device to create textures on.</param>
+    /// <param name="spriteBatch">Shared sprite batch.</param>
+    /// <param name="fontData">Contents of the TTF file used for all text.</param>
+    public ShapeRenderer(GraphicsDevice device, SpriteBatch spriteBatch, byte[] fontData)
     {
+        _fonts.AddFont(fontData);
+
         _device = device;
         _spriteBatch = spriteBatch;
 
@@ -80,8 +90,21 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
         _spriteBatch.Draw(_pixel, from, null, color, rotation, new Vector2(0f, 0.5f), scale, SpriteEffects.None, 0f);
     }
 
+    public void DrawText(string text, Vector2 position, float size, Color color, TextAlign align = TextAlign.Left)
+    {
+        var font = _fonts.GetFont(size);
+        if (align != TextAlign.Left)
+        {
+            var width = font.MeasureString(text).X;
+            position.X -= align == TextAlign.Center ? width / 2f : width;
+        }
+
+        _spriteBatch.DrawString(font, text, position, color);
+    }
+
     public void Dispose()
     {
+        _fonts.Dispose();
         _pixel.Dispose();
         _circle.Dispose();
     }

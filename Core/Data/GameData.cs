@@ -9,8 +9,13 @@ public sealed class GameData
     private readonly Dictionary<string, EnemyConfig> _enemiesById = new();
 
     /// <summary>Combines the loaded files and checks the references between them.</summary>
-    public GameData(GameConfig game, IReadOnlyList<WeaponConfig> weapons, IReadOnlyList<EnemyConfig> enemies)
+    public GameData(
+        GameConfig game,
+        IReadOnlyList<WeaponConfig> weapons,
+        IReadOnlyList<EnemyConfig> enemies,
+        WavesConfig waves)
     {
+        Waves = waves;
         Game = game;
         Weapons = weapons;
         Enemies = enemies;
@@ -37,6 +42,8 @@ public sealed class GameData
     public IReadOnlyList<WeaponConfig> Weapons { get; }
 
     public IReadOnlyList<EnemyConfig> Enemies { get; }
+
+    public WavesConfig Waves { get; }
 
     public WeaponConfig GetWeapon(string id)
     {

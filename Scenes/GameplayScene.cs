@@ -7,6 +7,7 @@ using Fourgate.Core.Rendering;
 using Fourgate.Core.Rng;
 using Fourgate.Entities;
 using Fourgate.Systems;
+using Fourgate.UI;
 using Fourgate.Weapons;
 using Microsoft.Xna.Framework;
 
@@ -24,11 +25,17 @@ public sealed class GameplayScene
     private const float ReloadBarExtraWidth = 12f;
     private const float ReloadBarHeight = 6f;
     private const float ReloadBarGap = 10f;
+    private const float DoorHaloDepth = 110f;
+    private const float DoorHaloOpacity = 0.3f;
+    private const float EdgeIndicatorInset = 40f;
+    private const float EdgeIndicatorRadius = 18f;
 
     private static readonly Color WallColor = new(70, 74, 92);
     private static readonly Color FloorColor = new(34, 36, 46);
     private static readonly Color GridColor = new(42, 45, 57);
     private static readonly Color GateColor = new(150, 60, 50);
+    private static readonly Color GateGlowColor = new(255, 190, 70);
+    private static readonly Color EdgeIndicatorCoreColor = new(40, 20, 10);
     private static readonly Color FacingColor = new(225, 230, 240);
     private static readonly Color CrosshairColor = new(240, 240, 240);
     private static readonly Color ReloadBarBackColor = new(12, 13, 18);
@@ -39,6 +46,8 @@ public sealed class GameplayScene
     private readonly Arena _arena;
     private readonly ShotSystem _shots;
     private readonly EnemySystem _enemies;
+    private readonly WaveSystem? _waves;
+    private readonly WaveHud _waveHud = new();
     private readonly List<PracticeTarget> _practiceTargets = new();
 
     // _cameras[i] is the view of _players[i].
@@ -54,6 +63,7 @@ public sealed class GameplayScene
         _enemies = new EnemySystem(audio);
         _shots = new ShotSystem(_arena);
         _shots.AddSource(_enemies);
+        _waves = config.Debug.DisableWaves ? null : new WaveSystem(data, _enemies, _arena, _random, audio);
 
         var player = new Player(0, playerOneInput, config.Player, audio, _arena.Center);
         player.GiveWeapon(new Weapon(data.GetWeapon(config.Player.StartingWeapon), config, audio));
@@ -74,6 +84,7 @@ public sealed class GameplayScene
             _practiceTargets[i].Update(deltaSeconds);
         }
 
+        _waves?.Update(deltaSeconds);
         _enemies.Update(deltaSeconds, _players, _arena);
 
         for (var i = 0; i < _players.Count; i++)
@@ -120,6 +131,8 @@ public sealed class GameplayScene
         renderer.BeginScreen();
         for (var i = 0; i < _players.Count; i++)
         {
+            DrawDoorIndicators(renderer, _cameras[i]);
+
             var input = _players[i].Input;
             if (input.HasPointer)
             {
@@ -127,7 +140,46 @@ public sealed class GameplayScene
             }
         }
 
+        if (_waves is not null)
+        {
+            _waveHud.Draw(renderer, _waves, _data.Game.VirtualWidth);
+        }
+
         renderer.End();
+    }
+
+    // Points toward glowing doors that are outside a view, so a spawn warning is never
+    // missed just because the door is off screen.
+    private void DrawDoorIndicators(IRenderer renderer, Camera2D camera)
+    {
+        if (_waves is null)
+        {
+            return;
+        }
+
+        var view = camera.ViewRect;
+        var doors = _arena.Doors;
+        for (var i = 0; i < doors.Count; i++)
+        {
+            var glow = _waves.Spawner.GetDoorGlow(i);
+            if (glow <= 0f)
+            {
+                continue;
+            }
+
+            var screen = camera.WorldToScreen(doors[i].Center);
+            if (screen.X >= view.Left && screen.X <= view.Right && screen.Y >= view.Top && screen.Y <= view.Bottom)
+            {
+                continue;
+            }
+
+            var marker = new Vector2(
+                Math.Clamp(screen.X, view.Left + EdgeIndicatorInset, view.Right - EdgeIndicatorInset),
+                Math.Clamp(screen.Y, view.Top + EdgeIndicatorInset, view.Bottom - EdgeIndicatorInset));
+            var radius = EdgeIndicatorRadius * (0.6f + 0.4f * glow);
+            renderer.FillCircle(marker, radius, GateGlowColor);
+            renderer.FillCircle(marker, radius * 0.45f, EdgeIndicatorCoreColor);
+        }
     }
 
     // Debug dummies near the spawn point: one still, one patrolling left and right.
@@ -209,8 +261,37 @@ public sealed class GameplayScene
         var doors = _arena.Doors;
         for (var i = 0; i < doors.Count; i++)
         {
-            renderer.FillRect(doors[i].TopLeft, doors[i].Size, GateColor);
+            var glow = _waves?.Spawner.GetDoorGlow(i) ?? 0f;
+            if (glow > 0f)
+            {
+                DrawDoorHalo(renderer, doors[i], glow);
+            }
+
+            renderer.FillRect(doors[i].TopLeft, doors[i].Size, Color.Lerp(GateColor, GateGlowColor, glow));
         }
+    }
+
+    // Light spilling from a glowing door onto the floor in front of it.
+    private static void DrawDoorHalo(IRenderer renderer, Door door, float glow)
+    {
+        Vector2 topLeft;
+        Vector2 size;
+        if (door.Inward.X == 0f)
+        {
+            size = new Vector2(door.Size.X, DoorHaloDepth);
+            topLeft = door.Inward.Y > 0f
+                ? door.TopLeft + new Vector2(0f, door.Size.Y)
+                : door.TopLeft - new Vector2(0f, DoorHaloDepth);
+        }
+        else
+        {
+            size = new Vector2(DoorHaloDepth, door.Size.Y);
+            topLeft = door.Inward.X > 0f
+                ? door.TopLeft + new Vector2(door.Size.X, 0f)
+                : door.TopLeft - new Vector2(DoorHaloDepth, 0f);
+        }
+
+        renderer.FillRect(topLeft, size, GateGlowColor * (DoorHaloOpacity * glow));
     }
 
     private static void DrawCrosshair(IRenderer renderer, Vector2 position)

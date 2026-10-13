@@ -13,6 +13,8 @@ public class DataLoaderTests
           "virtualHeight": 1080,
           "arena": { "x": 0, "y": 0, "size": 2000, "doorWidth": 280, "wallThickness": 24 },
           "camera": { "zoom": 1.15, "leadFraction": 0.35, "leadMaxDistance": 260, "smoothing": 10, "edgeMargin": 120 },
+          "maxAliveEnemies": 60,
+          "restCountdownSeconds": 5,
           "reloadsEnabled": true,
           "globalReloadTimeMultiplier": 1.0,
           "player": {
@@ -42,6 +44,7 @@ public class DataLoaderTests
 
         Assert.NotNull(data.GetWeapon(data.Game.Player.StartingWeapon));
         Assert.Equal(60f, data.GetEnemy("normal").Hp);
+        Assert.Equal(6f, data.Waves.Budget.Base);
     }
 
     [Fact]
@@ -126,12 +129,30 @@ public class DataLoaderTests
     }
 
     [Fact]
+    public void WavesFile_WithIntervalBelowItsMinimum_IsRejected()
+    {
+        const string json = """
+            {
+              "budget": { "base": 6, "perWave": 2.2, "quadratic": 0.04 },
+              "newerTypeBias": 0.5,
+              "spawnIntervalStart": 0.2, "spawnIntervalStepPerWave": 0.03, "spawnIntervalMin": 0.35,
+              "groupSizeBase": 2, "groupSizePerWave": 0.15, "groupSizeMax": 6,
+              "doorWarningSeconds": 0.8
+            }
+            """;
+
+        var error = Assert.Throws<DataLoadException>(() => DataLoader.ParseWaves(json, "waves.json"));
+
+        Assert.Equal("spawnIntervalStart", error.Field);
+    }
+
+    [Fact]
     public void StartingWeaponMissingFromWeaponsFile_IsRejected()
     {
         var game = DataLoader.ParseGameConfig(ValidGameJson.Replace("\"pistol\"", "\"bazooka\""), GameFile);
         var weapons = DataLoader.ParseWeapons(ValidWeaponsJson, WeaponsFile);
 
-        var error = Assert.Throws<DataLoadException>(() => new GameData(game, weapons, new[] { TestData.Zombie() }));
+        var error = Assert.Throws<DataLoadException>(() => new GameData(game, weapons, new[] { TestData.Zombie() }, TestData.Waves()));
 
         Assert.Equal("player.startingWeapon", error.Field);
     }
