@@ -7,11 +7,14 @@ using Microsoft.Xna.Framework;
 
 namespace Fourgate.Weapons;
 
-/// <summary>One player's copy of a weapon: fire timing, magazine, reserve and reload state.</summary>
+/// <summary>One player's copy of a weapon: level, fire timing, magazine, reserve and reload state.</summary>
 public sealed class Weapon
 {
     // Absorbs float error so a cooldown that should end exactly on a frame does.
     private const float TimeEpsilon = 0.0001f;
+
+    // Half the gap between the two muzzles of a dual-wielded weapon.
+    private const float DualWieldOffset = 7f;
 
     private readonly GameConfig _rules;
     private readonly IAudioManager _audio;
@@ -30,11 +33,20 @@ public sealed class Weapon
         _rules = rules;
         _audio = audio;
         _random = random;
-        Magazine = config.Ammo.MagSize;
+
+        Level = 1;
+        Stats = WeaponStats.Compute(config, Level);
+        Magazine = Stats.MagSize;
         Reserve = config.Ammo.InfiniteReserve ? 0 : config.Ammo.ReserveMax;
     }
 
     public WeaponConfig Config { get; }
+
+    /// <summary>Weapon level, 1 to <see cref="WeaponConfig.MaxLevel"/>.</summary>
+    public int Level { get; private set; }
+
+    /// <summary>The weapon's effective numbers at its current level.</summary>
+    public WeaponStats Stats { get; private set; }
 
     /// <summary>Rounds in the magazine. Unused when reloads are disabled.</summary>
     public int Magazine { get; private set; }
@@ -69,9 +81,16 @@ public sealed class Weapon
         }
     }
 
-    private float ReloadSeconds => Config.Ammo.ReloadTime * _rules.GlobalReloadTimeMultiplier;
+    private float ReloadSeconds => Stats.ReloadTime * _rules.GlobalReloadTimeMultiplier;
 
     private bool ReserveHasAmmo => HasInfiniteReserve || Reserve > 0;
+
+    /// <summary>Sets the weapon's level and recomputes its stats. Rounds already loaded are kept.</summary>
+    public void SetLevel(int level)
+    {
+        Level = Math.Clamp(level, 1, WeaponConfig.MaxLevel);
+        Stats = WeaponStats.Compute(Config, Level);
+    }
 
     /// <summary>Advances timers and fires or reloads according to the input.</summary>
     /// <param name="deltaSeconds">Frame time.</param>
@@ -121,12 +140,12 @@ public sealed class Weapon
         {
             // A dry trigger pull also waits out the fire interval, so holding fire on an
             // empty weapon does not click every frame.
-            _cooldown = 1f / Config.FireRate;
+            _cooldown = 1f / Stats.FireRate;
             return;
         }
 
-        _cooldown += 1f / Config.FireRate;
-        shots.FireProjectile(muzzle, Scatter(direction), Config.Projectile, Config.Damage, ownerIndex);
+        _cooldown += 1f / Stats.FireRate;
+        Fire(muzzle, direction, ownerIndex, shots);
         _audio.PlaySfx(SfxIds.WeaponFire);
 
         if (_rules.ReloadsEnabled && Magazine == 0)
@@ -164,15 +183,42 @@ public sealed class Weapon
         }
     }
 
+    private void Fire(Vector2 muzzle, Vector2 direction, int ownerIndex, IShotHandler shots)
+    {
+        if (!Stats.DualWield)
+        {
+            FireBullet(muzzle, direction, ownerIndex, shots);
+            return;
+        }
+
+        // Two muzzles side by side, one bullet from each.
+        var side = new Vector2(-direction.Y, direction.X) * DualWieldOffset;
+        FireBullet(muzzle + side, direction, ownerIndex, shots);
+        FireBullet(muzzle - side, direction, ownerIndex, shots);
+    }
+
+    private void FireBullet(Vector2 muzzle, Vector2 direction, int ownerIndex, IShotHandler shots)
+    {
+        shots.FireProjectile(
+            muzzle,
+            Scatter(direction),
+            Config.Projectile,
+            Stats.Damage,
+            ownerIndex,
+            Stats.Range,
+            Stats.Pierce,
+            Stats.Ricochets);
+    }
+
     // Turns the aim by a random angle inside the weapon's spread cone.
     private Vector2 Scatter(Vector2 direction)
     {
-        if (_random is null || Config.SpreadDegrees <= 0f)
+        if (_random is null || Stats.SpreadDegrees <= 0f)
         {
             return direction;
         }
 
-        var half = MathHelper.ToRadians(Config.SpreadDegrees) / 2f;
+        var half = MathHelper.ToRadians(Stats.SpreadDegrees) / 2f;
         var angle = _random.Range(-half, half);
         var cos = MathF.Cos(angle);
         var sin = MathF.Sin(angle);
@@ -234,7 +280,7 @@ public sealed class Weapon
 
     private bool TryStartReload()
     {
-        if (IsReloading || Magazine >= Config.Ammo.MagSize || !ReserveHasAmmo)
+        if (IsReloading || Magazine >= Stats.MagSize || !ReserveHasAmmo)
         {
             return false;
         }
@@ -254,7 +300,7 @@ public sealed class Weapon
     {
         _reloadLeft = 0f;
 
-        var needed = Config.Ammo.MagSize - Magazine;
+        var needed = Stats.MagSize - Magazine;
         var loaded = HasInfiniteReserve ? needed : Math.Min(needed, Reserve);
         Magazine += loaded;
         if (!HasInfiniteReserve)

@@ -12,5 +12,16 @@ public interface IShotHandler
     /// <param name="projectile">Flight values.</param>
     /// <param name="damage">Damage dealt on hit.</param>
     /// <param name="ownerIndex">Index of the player who fired.</param>
-    void FireProjectile(Vector2 origin, Vector2 direction, ProjectileConfig projectile, float damage, int ownerIndex);
+    /// <param name="range">World units the bullet travels; the projectile's own range when not given.</param>
+    /// <param name="pierce">Enemies the bullet passes through before it stops at the next one.</param>
+    /// <param name="ricochets">Times the bullet bounces off a wall instead of stopping.</param>
+    void FireProjectile(
+        Vector2 origin,
+        Vector2 direction,
+        ProjectileConfig projectile,
+        float damage,
+        int ownerIndex,
+        float? range = null,
+        int pierce = 0,
+        int ricochets = 0);
 }

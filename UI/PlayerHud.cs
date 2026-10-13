@@ -50,6 +50,7 @@ public sealed class PlayerHud
     private string _picksText = string.Empty;
 
     private Weapon? _weaponShown;
+    private int _weaponLevelShown = -1;
     private int _magazineShown = -1;
     private int _reserveShown = -1;
     private bool _reloadingShown;
@@ -137,16 +138,18 @@ public sealed class PlayerHud
         }
 
         if (!ReferenceEquals(weapon, _weaponShown)
+            || weapon.Level != _weaponLevelShown
             || weapon.Magazine != _magazineShown
             || weapon.Reserve != _reserveShown
             || weapon.IsReloading != _reloadingShown)
         {
             _weaponShown = weapon;
+            _weaponLevelShown = weapon.Level;
             _magazineShown = weapon.Magazine;
             _reserveShown = weapon.Reserve;
             _reloadingShown = weapon.IsReloading;
 
-            _weaponName = weapon.Config.DisplayName.ToUpperInvariant();
+            _weaponName = $"{weapon.Config.DisplayName.ToUpperInvariant()}   LV {weapon.Level}";
             var reserve = weapon.HasInfiniteReserve ? "INF" : weapon.Reserve.ToString();
             _ammoText = weapon.IsReloading ? "RELOADING" : $"{weapon.Magazine} / {reserve}";
         }

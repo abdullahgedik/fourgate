@@ -145,7 +145,9 @@ public static class TestData
         float fireRate = 3,
         string id = "pistol",
         int slot = 1,
-        float spreadDegrees = 0)
+        float spreadDegrees = 0,
+        List<WeaponLevelConfig>? levels = null,
+        WeaponLevelTenConfig? levelTen = null)
     {
         return new WeaponConfig
         {
@@ -153,6 +155,8 @@ public static class TestData
             DisplayName = "Pistol",
             Slot = slot,
             SpreadDegrees = spreadDegrees,
+            Levels = levels ?? new List<WeaponLevelConfig>(),
+            LevelTen = levelTen,
             UnlockWave = 1,
             Type = WeaponType.Projectile,
             Damage = 15,

@@ -11,6 +11,7 @@ public sealed class DebugHotkeys
     private const Keys DropCratesKey = Keys.F4;
     private const Keys GrantWeaponsKey = Keys.F5;
     private const Keys OneShotKillsKey = Keys.F6;
+    private const Keys LevelUpWeaponKey = Keys.F7;
 
     private KeyboardState _previous;
 
@@ -32,6 +33,9 @@ public sealed class DebugHotkeys
     /// <summary>Turn one-shot kills on or off.</summary>
     public bool OneShotKillsPressed { get; private set; }
 
+    /// <summary>Raise the level of every player's weapon in hand by one.</summary>
+    public bool LevelUpWeaponPressed { get; private set; }
+
     public void Update()
     {
         var current = Keyboard.GetState();
@@ -41,6 +45,7 @@ public sealed class DebugHotkeys
         DropCratesPressed = current.IsKeyDown(DropCratesKey) && _previous.IsKeyUp(DropCratesKey);
         GrantWeaponsPressed = current.IsKeyDown(GrantWeaponsKey) && _previous.IsKeyUp(GrantWeaponsKey);
         OneShotKillsPressed = current.IsKeyDown(OneShotKillsKey) && _previous.IsKeyUp(OneShotKillsKey);
+        LevelUpWeaponPressed = current.IsKeyDown(LevelUpWeaponKey) && _previous.IsKeyUp(LevelUpWeaponKey);
         _previous = current;
     }
 }

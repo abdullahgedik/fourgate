@@ -14,16 +14,18 @@ namespace Fourgate.Systems;
 public sealed class UpgradeSystem
 {
     private readonly UpgradesConfig _config;
+    private readonly WeaponUnlocks _unlocks;
     private readonly GameRandom _random;
     private readonly IAudioManager _audio;
 
     // _offers[i] belongs to players[i]; an empty list means no offer is open.
     private readonly List<List<UpgradeCard>> _offers = new();
-    private readonly List<UpgradeConfig> _eligible = new();
+    private readonly List<Candidate> _eligible = new();
 
-    public UpgradeSystem(UpgradesConfig config, GameRandom random, IAudioManager audio)
+    public UpgradeSystem(UpgradesConfig config, WeaponUnlocks unlocks, GameRandom random, IAudioManager audio)
     {
         _config = config;
+        _unlocks = unlocks;
         _random = random;
         _audio = audio;
     }
@@ -87,6 +89,10 @@ public sealed class UpgradeSystem
         {
             player.ApplyUpgrade(card.Upgrade);
         }
+        else if (card.Weapon is not null)
+        {
+            player.LevelUpWeapon(card.Weapon.Id);
+        }
         else
         {
             player.HealToFull();
@@ -97,7 +103,8 @@ public sealed class UpgradeSystem
         _audio.PlaySfx(SfxIds.UpgradePicked);
     }
 
-    // Draws distinct random cards from the upgrades the player has not maxed out.
+    // Draws distinct random cards from everything the player can still take: stat upgrades
+    // below their cap, and weapons unlocked in this run that are below the top level.
     private void Deal(Player player, List<UpgradeCard> offer)
     {
         _eligible.Clear();
@@ -106,7 +113,16 @@ public sealed class UpgradeSystem
             var upgrade = _config.Upgrades[i];
             if (player.GetUpgradeLevel(upgrade.Id) < upgrade.MaxLevel)
             {
-                _eligible.Add(upgrade);
+                _eligible.Add(new Candidate(upgrade, null));
+            }
+        }
+
+        var weapons = _unlocks.Unlocked;
+        for (var i = 0; i < weapons.Count; i++)
+        {
+            if (player.GetWeaponLevel(weapons[i].Id) < WeaponConfig.MaxLevel)
+            {
+                _eligible.Add(new Candidate(null, weapons[i]));
             }
         }
 
@@ -121,7 +137,13 @@ public sealed class UpgradeSystem
         {
             var pick = i + _random.NextIndex(_eligible.Count - i);
             (_eligible[i], _eligible[pick]) = (_eligible[pick], _eligible[i]);
-            offer.Add(UpgradeCard.ForUpgrade(_eligible[i], player.GetUpgradeLevel(_eligible[i].Id)));
+
+            var chosen = _eligible[i];
+            offer.Add(chosen.Upgrade is not null
+                ? UpgradeCard.ForUpgrade(chosen.Upgrade, player.GetUpgradeLevel(chosen.Upgrade.Id))
+                : UpgradeCard.ForWeapon(chosen.Weapon!, player.GetWeaponLevel(chosen.Weapon!.Id)));
         }
     }
+
+    private readonly record struct Candidate(UpgradeConfig? Upgrade, WeaponConfig? Weapon);
 }

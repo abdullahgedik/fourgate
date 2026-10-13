@@ -21,6 +21,8 @@ public sealed class GameplayScene
     private const float GridLineThickness = 2f;
     private const float FacingLineLength = 14f;
     private const float FacingLineThickness = 6f;
+    private const float DualBarrelOffset = 7f;
+    private const float DualBarrelThickness = 5f;
     private const float CrosshairArm = 14f;
     private const float CrosshairThickness = 2f;
     private const float ReloadBarExtraWidth = 12f;
@@ -81,7 +83,7 @@ public sealed class GameplayScene
         _shots.OneShotKills = config.Debug.OneShotKills;
         _unlocks = new WeaponUnlocks(config, audio, _random);
         _drops = new DropSystem(config.Crates, _random, audio, _unlocks);
-        _upgrades = new UpgradeSystem(data.Upgrades, _random, audio);
+        _upgrades = new UpgradeSystem(data.Upgrades, _unlocks, _random, audio);
         _upgradeScreen = new UpgradeScreen(_upgrades);
         _waves = config.Debug.DisableWaves ? null : new WaveSystem(data, _enemies, _arena, _random, audio);
 
@@ -228,6 +230,19 @@ public sealed class GameplayScene
             for (var p = 0; p < _players.Count; p++)
             {
                 _unlocks.Grant(_players[p], weapons[i]);
+            }
+        }
+    }
+
+    /// <summary>Debug helper: raises the level of every player's weapon in hand by one.</summary>
+    public void DebugLevelUpCurrentWeapons()
+    {
+        for (var i = 0; i < _players.Count; i++)
+        {
+            var weapon = _players[i].CurrentWeapon;
+            if (weapon is not null)
+            {
+                _players[i].LevelUpWeapon(weapon.Config.Id);
             }
         }
     }
@@ -422,8 +437,18 @@ public sealed class GameplayScene
             renderer.DrawVisual(player.Visual, player.Position, 0f);
 
             var muzzle = player.Position + player.AimDirection * player.Radius;
-            renderer.DrawLine(
-                muzzle, muzzle + player.AimDirection * FacingLineLength, FacingLineThickness, FacingColor);
+            var barrel = player.AimDirection * FacingLineLength;
+            if (player.CurrentWeapon is { Stats.DualWield: true })
+            {
+                // Two barrels for a dual-wielded weapon.
+                var side = new Vector2(-player.AimDirection.Y, player.AimDirection.X) * DualBarrelOffset;
+                renderer.DrawLine(muzzle + side, muzzle + side + barrel, DualBarrelThickness, FacingColor);
+                renderer.DrawLine(muzzle - side, muzzle - side + barrel, DualBarrelThickness, FacingColor);
+            }
+            else
+            {
+                renderer.DrawLine(muzzle, muzzle + barrel, FacingLineThickness, FacingColor);
+            }
 
             var weapon = player.CurrentWeapon;
             if (weapon is { IsReloading: true })

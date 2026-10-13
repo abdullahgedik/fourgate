@@ -132,6 +132,11 @@ public sealed class FourgateGame : Game
         {
             _scene?.DebugToggleOneShotKills();
         }
+
+        if (_debugHotkeys.LevelUpWeaponPressed)
+        {
+            _scene?.DebugLevelUpCurrentWeapons();
+        }
     }
 
     protected override void Draw(GameTime gameTime)

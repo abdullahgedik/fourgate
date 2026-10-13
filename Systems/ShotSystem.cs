@@ -17,6 +17,9 @@ public sealed class ShotSystem : IShotHandler
     private const float StreakLength = 90f;
     private const float StreakThickness = 4f;
 
+    // How close to a wall line counts as touching it when working out a bounce.
+    private const float WallSlack = 0.5f;
+
     private static readonly Color BulletColor = new(255, 225, 120);
 
     private readonly Arena _arena;
@@ -48,10 +51,25 @@ public sealed class ShotSystem : IShotHandler
     }
 
     public void FireProjectile(
-        Vector2 origin, Vector2 direction, ProjectileConfig projectile, float damage, int ownerIndex)
+        Vector2 origin,
+        Vector2 direction,
+        ProjectileConfig projectile,
+        float damage,
+        int ownerIndex,
+        float? range = null,
+        int pierce = 0,
+        int ricochets = 0)
     {
         _bullets.Rent().Launch(
-            origin, direction, projectile.Speed, projectile.Radius, projectile.Range, damage, ownerIndex);
+            origin,
+            direction,
+            projectile.Speed,
+            projectile.Radius,
+            range ?? projectile.Range,
+            damage,
+            ownerIndex,
+            pierce,
+            ricochets);
     }
 
     public void Update(float deltaSeconds)
@@ -87,19 +105,21 @@ public sealed class ShotSystem : IShotHandler
         var direction = bullet.Direction;
 
         var distance = bullet.Speed * deltaSeconds;
-        var stops = false;
+        var outOfRange = false;
+        var atWall = false;
 
         if (bullet.RangeLeft <= distance)
         {
             distance = bullet.RangeLeft;
-            stops = true;
+            outOfRange = true;
         }
 
         var wallDistance = _arena.DistanceToWall(origin, direction);
         if (wallDistance <= distance)
         {
             distance = wallDistance;
-            stops = true;
+            atWall = true;
+            outOfRange = false;
         }
 
         // Gather everything near the line travelled this frame, then test each exactly.
@@ -111,29 +131,77 @@ public sealed class ShotSystem : IShotHandler
             _sources[i].Collect(middle, distance * 0.5f + bullet.Radius, _candidates);
         }
 
-        IHittable? hit = null;
-        for (var i = 0; i < _candidates.Count; i++)
+        // Hit targets nearest first; a piercing bullet carries on to the next one.
+        while (true)
         {
-            var target = _candidates[i];
-            if (TryIntersect(origin, direction, target.Position, target.Radius + bullet.Radius, out var targetDistance)
-                && targetDistance <= distance)
+            var hit = FindNearest(bullet, origin, direction, distance, out var hitDistance);
+            if (hit is null)
             {
-                distance = targetDistance;
-                hit = target;
+                break;
             }
+
+            hit.Hit(OneShotKills ? float.MaxValue : bullet.Damage, bullet.OwnerIndex);
+            if (bullet.PierceLeft > 0)
+            {
+                bullet.PassThrough(hit);
+                continue;
+            }
+
+            bullet.Advance(hitDistance);
+            bullet.Stop();
+            return;
         }
 
         bullet.Advance(distance);
-        if (hit is not null)
+        if (atWall && bullet.RicochetsLeft > 0 && bullet.RangeLeft > 0f)
         {
-            hit.Hit(OneShotKills ? float.MaxValue : bullet.Damage, bullet.OwnerIndex);
-            stops = true;
+            // The rest of this frame's travel is dropped; the bullet continues next frame.
+            bullet.Bounce(Reflect(bullet.Position, direction));
         }
-
-        if (stops)
+        else if (atWall || outOfRange)
         {
             bullet.Stop();
         }
+    }
+
+    private IHittable? FindNearest(
+        Bullet bullet, Vector2 origin, Vector2 direction, float maxDistance, out float nearestDistance)
+    {
+        IHittable? nearest = null;
+        nearestDistance = maxDistance;
+        for (var i = 0; i < _candidates.Count; i++)
+        {
+            var target = _candidates[i];
+            if (bullet.HasHit(target))
+            {
+                continue;
+            }
+
+            if (TryIntersect(origin, direction, target.Position, target.Radius + bullet.Radius, out var distance)
+                && distance <= nearestDistance)
+            {
+                nearestDistance = distance;
+                nearest = target;
+            }
+        }
+
+        return nearest;
+    }
+
+    // Mirrors the direction on whichever wall (or two, in a corner) the point is touching.
+    private Vector2 Reflect(Vector2 position, Vector2 direction)
+    {
+        if (position.X <= _arena.Left + WallSlack || position.X >= _arena.Right - WallSlack)
+        {
+            direction.X = -direction.X;
+        }
+
+        if (position.Y <= _arena.Top + WallSlack || position.Y >= _arena.Bottom - WallSlack)
+        {
+            direction.Y = -direction.Y;
+        }
+
+        return direction;
     }
 
     /// <summary>Distance along a ray to where it enters a circle; 0 when the ray starts inside it.</summary>

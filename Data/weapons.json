@@ -10,7 +10,22 @@
       "fireRate": 3,
       "automatic": false,
       "ammo": { "magSize": 12, "reserveMax": 0, "reloadTime": 0.8, "infiniteReserve": true },
-      "projectile": { "speed": 6000, "radius": 4, "range": 1100 }
+      "projectile": { "speed": 6000, "radius": 4, "range": 1100 },
+      "levels": [
+        { "level": 2, "damageMult": 1.08, "fireRateMult": 1.10 },
+        { "level": 3, "damageMult": 1.08, "magSizeBonus": 2 },
+        { "level": 4, "damageMult": 1.08, "reloadTimeMult": 0.90 },
+        { "level": 5, "damageMult": 1.08, "rangeMult": 1.10 },
+        { "level": 6, "damageMult": 1.08, "fireRateMult": 1.10 },
+        { "level": 7, "damageMult": 1.08, "magSizeBonus": 2 },
+        { "level": 8, "damageMult": 1.08, "reloadTimeMult": 0.90 },
+        { "level": 9, "damageMult": 1.08, "rangeMult": 1.10 }
+      ],
+      "levelTen": {
+        "description": [ "Dual pistols", "Bullets pierce 1 enemy", "+8% damage" ],
+        "damageMult": 1.08,
+        "abilities": [ { "id": "dualWield" }, { "id": "pierce", "count": 1 } ]
+      }
     },
     {
       "id": "smg",
@@ -23,7 +38,22 @@
       "automatic": true,
       "spreadDegrees": 5,
       "ammo": { "magSize": 30, "reserveMax": 240, "reloadTime": 1.2, "infiniteReserve": false },
-      "projectile": { "speed": 6000, "radius": 4, "range": 950 }
+      "projectile": { "speed": 6000, "radius": 4, "range": 950 },
+      "levels": [
+        { "level": 2, "damageMult": 1.08, "fireRateMult": 1.08 },
+        { "level": 3, "damageMult": 1.08, "magSizeBonus": 5 },
+        { "level": 4, "damageMult": 1.08, "reloadTimeMult": 0.90 },
+        { "level": 5, "damageMult": 1.08, "spreadMult": 0.85 },
+        { "level": 6, "damageMult": 1.08, "fireRateMult": 1.08 },
+        { "level": 7, "damageMult": 1.08, "magSizeBonus": 5 },
+        { "level": 8, "damageMult": 1.08, "reloadTimeMult": 0.90 },
+        { "level": 9, "damageMult": 1.08, "spreadMult": 0.85 }
+      ],
+      "levelTen": {
+        "description": [ "Bullets ricochet off walls once", "+8% damage" ],
+        "damageMult": 1.08,
+        "abilities": [ { "id": "ricochet", "count": 1 } ]
+      }
     }
   ]
 }

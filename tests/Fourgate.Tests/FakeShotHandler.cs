@@ -4,7 +4,7 @@ using Microsoft.Xna.Framework;
 
 namespace Fourgate.Tests;
 
-/// <summary>Records fired shots instead of resolving them.</summary>
+/// <summary>Records fired shots instead of simulating them.</summary>
 public sealed class FakeShotHandler : IShotHandler
 {
     public int Count { get; private set; }
@@ -15,12 +15,28 @@ public sealed class FakeShotHandler : IShotHandler
 
     public float LastDamage { get; private set; }
 
+    public float? LastRange { get; private set; }
+
+    public int LastPierce { get; private set; }
+
+    public int LastRicochets { get; private set; }
+
     public void FireProjectile(
-        Vector2 origin, Vector2 direction, ProjectileConfig projectile, float damage, int ownerIndex)
+        Vector2 origin,
+        Vector2 direction,
+        ProjectileConfig projectile,
+        float damage,
+        int ownerIndex,
+        float? range = null,
+        int pierce = 0,
+        int ricochets = 0)
     {
         Count++;
         LastOrigin = origin;
         LastDirection = direction;
         LastDamage = damage;
+        LastRange = range;
+        LastPierce = pierce;
+        LastRicochets = ricochets;
     }
 }

@@ -56,7 +56,7 @@ public class UpgradeTests
     public void Offer_LeavesOutMaxedUpgrades()
     {
         var config = TestData.Upgrades();
-        var upgrades = new UpgradeSystem(config, new GameRandom(3), new NullAudioManager());
+        var upgrades = new UpgradeSystem(config, TestData.Unlocks(), new GameRandom(3), new NullAudioManager());
         var players = PlayersWithPicks(1);
         MaxOut(players[0], config, "maxHp");
         MaxOut(players[0], config, "moveSpeed");
@@ -71,7 +71,7 @@ public class UpgradeTests
     public void Offer_ShowsFewerCards_WhenFewUpgradesAreLeft()
     {
         var config = TestData.Upgrades();
-        var upgrades = new UpgradeSystem(config, new GameRandom(3), new NullAudioManager());
+        var upgrades = new UpgradeSystem(config, TestData.Unlocks(), new GameRandom(3), new NullAudioManager());
         var players = PlayersWithPicks(1);
         foreach (var id in new[] { "maxHp", "moveSpeed", "dashCooldown", "ammoCapacity" })
         {
@@ -88,7 +88,7 @@ public class UpgradeTests
     public void Offer_FallsBackToAFullHeal_WhenEverythingIsMaxed()
     {
         var config = TestData.Upgrades();
-        var upgrades = new UpgradeSystem(config, new GameRandom(3), new NullAudioManager());
+        var upgrades = new UpgradeSystem(config, TestData.Unlocks(), new GameRandom(3), new NullAudioManager());
         var players = PlayersWithPicks(1);
         foreach (var upgrade in config.Upgrades)
         {
@@ -153,8 +153,8 @@ public class UpgradeTests
     [Fact]
     public void SameSeed_DealsTheSameCards()
     {
-        var first = new UpgradeSystem(TestData.Upgrades(), new GameRandom(21), new NullAudioManager());
-        var second = new UpgradeSystem(TestData.Upgrades(), new GameRandom(21), new NullAudioManager());
+        var first = new UpgradeSystem(TestData.Upgrades(), TestData.Unlocks(), new GameRandom(21), new NullAudioManager());
+        var second = new UpgradeSystem(TestData.Upgrades(), TestData.Unlocks(), new GameRandom(21), new NullAudioManager());
         first.OpenOffers(PlayersWithPicks(1));
         second.OpenOffers(PlayersWithPicks(1));
 
@@ -241,7 +241,7 @@ public class UpgradeTests
 
     private static UpgradeSystem CreateSystem()
     {
-        return new UpgradeSystem(TestData.Upgrades(), new GameRandom(8), new NullAudioManager());
+        return new UpgradeSystem(TestData.Upgrades(), TestData.Unlocks(), new GameRandom(8), new NullAudioManager());
     }
 
     private static List<Player> PlayersWithPicks(int count, int picks = 1)

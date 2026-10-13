@@ -26,6 +26,7 @@ public sealed class UpgradeScreen
     private const float SubHeaderSize = 30f;
     private const float TitleSize = 38f;
     private const float DescriptionSize = 27f;
+    private const float DescriptionLineHeight = 34f;
     private const float DetailSize = 24f;
     private const float HintSize = 26f;
 
@@ -169,9 +170,15 @@ public sealed class UpgradeScreen
             var card = offer[i];
             renderer.DrawText(
                 card.Title, new Vector2(cardCenterX, topLeft.Y + 46f), TitleSize, TitleColor, TextAlign.Center);
-            renderer.DrawText(
-                card.Description, new Vector2(cardCenterX, topLeft.Y + 128f), DescriptionSize, TextColor,
-                TextAlign.Center);
+            for (var line = 0; line < card.Lines.Count; line++)
+            {
+                renderer.DrawText(
+                    card.Lines[line],
+                    new Vector2(cardCenterX, topLeft.Y + 112f + line * DescriptionLineHeight),
+                    DescriptionSize,
+                    TextColor,
+                    TextAlign.Center);
+            }
             renderer.DrawText(
                 card.Detail, new Vector2(cardCenterX, topLeft.Y + size.Y - 60f), DetailSize, DetailColor,
                 TextAlign.Center);

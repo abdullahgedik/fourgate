@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 
 namespace Fourgate.Entities.Projectiles;
@@ -6,6 +7,7 @@ namespace Fourgate.Entities.Projectiles;
 /// <summary>A fast, straight-flying player bullet. Pooled; <see cref="Launch"/> resets all state.</summary>
 public sealed class Bullet
 {
+    private readonly List<IHittable> _alreadyHit = new();
     private Vector2 _origin;
     private float _travelled;
 
@@ -25,6 +27,12 @@ public sealed class Bullet
     /// <summary>World units left before the bullet runs out of range.</summary>
     public float RangeLeft { get; private set; }
 
+    /// <summary>Enemies the bullet can still pass through.</summary>
+    public int PierceLeft { get; private set; }
+
+    /// <summary>Wall bounces the bullet has left.</summary>
+    public int RicochetsLeft { get; private set; }
+
     /// <summary>
     /// True once the bullet has hit something or run out of range. It stays for one more
     /// frame so it is seen arriving at the point where it stopped.
@@ -33,16 +41,28 @@ public sealed class Bullet
 
     public Vector2 Position => _origin + Direction * _travelled;
 
-    public void Launch(Vector2 origin, Vector2 direction, float speed, float radius, float range, float damage, int ownerIndex)
+    public void Launch(
+        Vector2 origin,
+        Vector2 direction,
+        float speed,
+        float radius,
+        float range,
+        float damage,
+        int ownerIndex,
+        int pierce,
+        int ricochets)
     {
         _origin = origin;
         _travelled = 0f;
+        _alreadyHit.Clear();
         Direction = direction;
         Speed = speed;
         Radius = radius;
         RangeLeft = range;
         Damage = damage;
         OwnerIndex = ownerIndex;
+        PierceLeft = pierce;
+        RicochetsLeft = ricochets;
         IsSpent = false;
     }
 
@@ -59,7 +79,30 @@ public sealed class Bullet
         IsSpent = true;
     }
 
-    /// <summary>Trailing end of a streak of the given length; never behind the muzzle.</summary>
+    /// <summary>True when the bullet has passed through this target and must not hit it again.</summary>
+    public bool HasHit(IHittable target)
+    {
+        return _alreadyHit.Contains(target);
+    }
+
+    /// <summary>Uses up one pierce on a target the bullet now passes through.</summary>
+    public void PassThrough(IHittable target)
+    {
+        PierceLeft--;
+        _alreadyHit.Add(target);
+    }
+
+    /// <summary>Uses up one ricochet and continues from the current position in a new direction.</summary>
+    public void Bounce(Vector2 newDirection)
+    {
+        _origin = Position;
+        _travelled = 0f;
+        _alreadyHit.Clear();
+        Direction = newDirection;
+        RicochetsLeft--;
+    }
+
+    /// <summary>Trailing end of a streak of the given length; never behind where the bullet started or last bounced.</summary>
     public Vector2 GetTail(float length)
     {
         return _origin + Direction * Math.Max(0f, _travelled - length);

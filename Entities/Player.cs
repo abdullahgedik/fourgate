@@ -22,6 +22,7 @@ public sealed class Player
     private readonly IAudioManager _audio;
     private readonly List<Weapon> _weapons = new();
     private readonly Dictionary<string, int> _upgradeLevels = new();
+    private readonly Dictionary<string, int> _weaponLevels = new();
     private float _maxHpBonus;
     private float _moveSpeedMultiplier = 1f;
     private float _dashCooldownMultiplier = 1f;
@@ -111,6 +112,7 @@ public sealed class Player
     public void GiveWeapon(Weapon weapon)
     {
         weapon.ReserveCapacityMultiplier = _ammoCapacityMultiplier;
+        weapon.SetLevel(GetWeaponLevel(weapon.Config.Id));
 
         // Keep the inventory in slot order so cycling follows the slot numbers.
         var index = 0;
@@ -134,6 +136,32 @@ public sealed class Player
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// This player's level for a weapon. It is kept whether or not the weapon is carried,
+    /// so a weapon that is lost and found again comes back at its level.
+    /// </summary>
+    public int GetWeaponLevel(string weaponId)
+    {
+        return _weaponLevels.TryGetValue(weaponId, out var level) ? level : 1;
+    }
+
+    /// <summary>Raises a weapon's level by one, up to the maximum, and updates the carried copy if there is one.</summary>
+    public void LevelUpWeapon(string weaponId)
+    {
+        var level = Math.Min(WeaponConfig.MaxLevel, GetWeaponLevel(weaponId) + 1);
+        _weaponLevels[weaponId] = level;
+
+        for (var i = 0; i < _weapons.Count; i++)
+        {
+            if (_weapons[i].Config.Id == weaponId)
+            {
+                _weapons[i].SetLevel(level);
+            }
+        }
+
+        _audio.PlaySfx(SfxIds.WeaponLevelUp);
     }
 
     /// <summary>Switches to a carried weapon. An unfinished reload of the old weapon is lost.</summary>

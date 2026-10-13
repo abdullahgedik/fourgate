@@ -1,8 +1,13 @@
+using System.Collections.Generic;
+
 namespace Fourgate.Core.Data;
 
 /// <summary>One weapon entry from <c>weapons.json</c>.</summary>
 public sealed class WeaponConfig
 {
+    /// <summary>Highest weapon level; reaching it grants the weapon's special abilities.</summary>
+    public const int MaxLevel = 10;
+
     public required string Id { get; init; }
 
     public required string DisplayName { get; init; }
@@ -29,6 +34,12 @@ public sealed class WeaponConfig
 
     public required ProjectileConfig Projectile { get; init; }
 
+    /// <summary>Bonuses of levels 2 to 9. A level without an entry changes nothing.</summary>
+    public List<WeaponLevelConfig> Levels { get; init; } = new();
+
+    /// <summary>What level 10 grants; null for a weapon without a special ability.</summary>
+    public WeaponLevelTenConfig? LevelTen { get; init; }
+
     /// <summary>Checks value ranges; <paramref name="path"/> locates this entry inside the file.</summary>
     public void Validate(string file, string path)
     {
@@ -47,6 +58,19 @@ public sealed class WeaponConfig
         DataLoadException.Require(ammo.MagSize >= 1, file, $"{path}.ammo.magSize", "must be 1 or greater");
         DataLoadException.Require(ammo.ReserveMax >= 0, file, $"{path}.ammo.reserveMax", "must not be negative");
         DataLoadException.Require(ammo.ReloadTime >= 0, file, $"{path}.ammo.reloadTime", "must not be negative");
+
+        DataLoadException.Require(Levels is not null, file, $"{path}.levels", "must not be null");
+        var seenLevels = new HashSet<int>();
+        for (var i = 0; i < Levels!.Count; i++)
+        {
+            var levelPath = $"{path}.levels[{i}]";
+            DataLoadException.Require(Levels[i] is not null, file, levelPath, "must not be null");
+            Levels[i].Validate(file, levelPath);
+            DataLoadException.Require(
+                seenLevels.Add(Levels[i].Level), file, $"{levelPath}.level", $"level {Levels[i].Level} is listed twice");
+        }
+
+        LevelTen?.Validate(file, $"{path}.levelTen");
 
         DataLoadException.Require(Projectile is not null, file, $"{path}.projectile", "is required");
         var projectile = Projectile!;
