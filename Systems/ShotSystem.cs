@@ -22,6 +22,8 @@ public sealed class ShotSystem : IShotHandler
     private readonly Arena _arena;
     private readonly Pool<Bullet> _bullets = new(InitialBullets);
     private readonly List<IHittable> _targets = new();
+    private readonly List<IHittableSource> _sources = new();
+    private readonly List<IHittable> _candidates = new();
 
     public ShotSystem(Arena arena)
     {
@@ -30,10 +32,16 @@ public sealed class ShotSystem : IShotHandler
 
     public int BulletCount => _bullets.Count;
 
-    /// <summary>Registers something bullets can hit.</summary>
+    /// <summary>Registers a single thing bullets can hit.</summary>
     public void AddTarget(IHittable target)
     {
         _targets.Add(target);
+    }
+
+    /// <summary>Registers a searchable group of things bullets can hit (the enemies).</summary>
+    public void AddSource(IHittableSource source)
+    {
+        _sources.Add(source);
     }
 
     public void FireProjectile(
@@ -91,10 +99,19 @@ public sealed class ShotSystem : IShotHandler
             stops = true;
         }
 
-        IHittable? hit = null;
-        for (var i = 0; i < _targets.Count; i++)
+        // Gather everything near the line travelled this frame, then test each exactly.
+        _candidates.Clear();
+        _candidates.AddRange(_targets);
+        var middle = origin + direction * (distance * 0.5f);
+        for (var i = 0; i < _sources.Count; i++)
         {
-            var target = _targets[i];
+            _sources[i].Collect(middle, distance * 0.5f + bullet.Radius, _candidates);
+        }
+
+        IHittable? hit = null;
+        for (var i = 0; i < _candidates.Count; i++)
+        {
+            var target = _candidates[i];
             if (TryIntersect(origin, direction, target.Position, target.Radius + bullet.Radius, out var targetDistance)
                 && targetDistance <= distance)
             {

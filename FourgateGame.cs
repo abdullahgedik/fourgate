@@ -13,11 +13,13 @@ namespace Fourgate;
 public sealed class FourgateGame : Game
 {
     private const int SimulationHz = 60;
+    private const int DebugSpawnGroupSize = 10;
 
     private static readonly Color BackgroundColor = new(16, 17, 22);
 
     private readonly DisplayManager _display;
     private readonly WindowHotkeys _hotkeys = new();
+    private readonly DebugHotkeys _debugHotkeys = new();
     private readonly IAudioManager _audio = new NullAudioManager();
     private readonly GameData _data;
 
@@ -75,10 +77,31 @@ public sealed class FourgateGame : Game
                 _display.CycleWindowedResolution();
             }
 
+            if (_data.Game.Debug.Hotkeys)
+            {
+                UpdateDebugHotkeys();
+            }
+
             _scene?.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
         }
 
         base.Update(gameTime);
+    }
+
+    private void UpdateDebugHotkeys()
+    {
+        _debugHotkeys.Update();
+
+        var enemyId = _data.Enemies[0].Id;
+        if (_debugHotkeys.SpawnOnePressed)
+        {
+            _scene?.DebugSpawnEnemies(enemyId, 1);
+        }
+
+        if (_debugHotkeys.SpawnManyPressed)
+        {
+            _scene?.DebugSpawnEnemies(enemyId, DebugSpawnGroupSize);
+        }
     }
 
     protected override void Draw(GameTime gameTime)

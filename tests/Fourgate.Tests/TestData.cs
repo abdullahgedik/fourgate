@@ -33,6 +33,25 @@ public static class TestData
         };
     }
 
+    public static EnemyConfig Zombie()
+    {
+        return new EnemyConfig
+        {
+            Id = "normal",
+            DisplayName = "Zombie",
+            Hp = 60,
+            Speed = 110,
+            Radius = 20,
+            ContactDamage = 10,
+            ContactCooldown = 0.8f,
+            Xp = 10,
+            ScoreValue = 10,
+            Cost = 1,
+            UnlockWave = 1,
+            DropChance = 0.12f,
+        };
+    }
+
     public static WeaponConfig Pistol(
         bool automatic = false, int magSize = 12, int reserveMax = 0, bool infiniteReserve = true)
     {

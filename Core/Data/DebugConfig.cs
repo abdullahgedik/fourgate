@@ -3,6 +3,12 @@ namespace Fourgate.Core.Data;
 /// <summary>Optional testing switches in <c>game.json</c>; everything is off when the section is missing.</summary>
 public sealed class DebugConfig
 {
+    /// <summary>Enables the debug keys (spawning enemies and so on).</summary>
+    public bool Hotkeys { get; init; }
+
     /// <summary>Places a still and a moving dummy target in the arena for trying out weapons.</summary>
     public bool PracticeTargets { get; init; }
+
+    /// <summary>Fixed random seed so a run can be reproduced; a new seed is picked each run when missing.</summary>
+    public int? Seed { get; init; }
 }

@@ -1,0 +1,18 @@
+{
+  "enemies": [
+    {
+      "id": "normal",
+      "displayName": "Zombie",
+      "hp": 60,
+      "speed": 110,
+      "radius": 20,
+      "contactDamage": 10,
+      "contactCooldown": 0.8,
+      "xp": 10,
+      "scoreValue": 10,
+      "cost": 1,
+      "unlockWave": 1,
+      "dropChance": 0.12
+    }
+  ]
+}

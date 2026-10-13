@@ -11,6 +11,7 @@ public static class DataLoader
 {
     public const string GameFileName = "game.json";
     public const string WeaponsFileName = "weapons.json";
+    public const string EnemiesFileName = "enemies.json";
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -28,7 +29,26 @@ public static class DataLoader
     {
         var game = ParseGameConfig(ReadFile(dataDirectory, GameFileName), GameFileName);
         var weapons = ParseWeapons(ReadFile(dataDirectory, WeaponsFileName), WeaponsFileName);
-        return new GameData(game, weapons);
+        var enemies = ParseEnemies(ReadFile(dataDirectory, EnemiesFileName), EnemiesFileName);
+        return new GameData(game, weapons, enemies);
+    }
+
+    /// <summary>Parses and validates <c>enemies.json</c> content; <paramref name="file"/> is only used in error messages.</summary>
+    public static IReadOnlyList<EnemyConfig> ParseEnemies(string json, string file)
+    {
+        var enemies = Parse<EnemiesFile>(json, file).Enemies;
+        DataLoadException.Require(enemies is { Count: > 0 }, file, "enemies", "must contain at least one enemy");
+
+        var ids = new HashSet<string>();
+        for (var i = 0; i < enemies!.Count; i++)
+        {
+            var path = $"enemies[{i}]";
+            DataLoadException.Require(enemies[i] is not null, file, path, "must not be null");
+            enemies[i].Validate(file, path);
+            DataLoadException.Require(ids.Add(enemies[i].Id), file, $"{path}.id", $"'{enemies[i].Id}' is used more than once");
+        }
+
+        return enemies;
     }
 
     /// <summary>Parses and validates <c>game.json</c> content; <paramref name="file"/> is only used in error messages.</summary>

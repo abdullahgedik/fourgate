@@ -6,16 +6,23 @@ namespace Fourgate.Core.Data;
 public sealed class GameData
 {
     private readonly Dictionary<string, WeaponConfig> _weaponsById = new();
+    private readonly Dictionary<string, EnemyConfig> _enemiesById = new();
 
     /// <summary>Combines the loaded files and checks the references between them.</summary>
-    public GameData(GameConfig game, IReadOnlyList<WeaponConfig> weapons)
+    public GameData(GameConfig game, IReadOnlyList<WeaponConfig> weapons, IReadOnlyList<EnemyConfig> enemies)
     {
         Game = game;
         Weapons = weapons;
+        Enemies = enemies;
 
         for (var i = 0; i < weapons.Count; i++)
         {
             _weaponsById[weapons[i].Id] = weapons[i];
+        }
+
+        for (var i = 0; i < enemies.Count; i++)
+        {
+            _enemiesById[enemies[i].Id] = enemies[i];
         }
 
         DataLoadException.Require(
@@ -29,8 +36,15 @@ public sealed class GameData
 
     public IReadOnlyList<WeaponConfig> Weapons { get; }
 
+    public IReadOnlyList<EnemyConfig> Enemies { get; }
+
     public WeaponConfig GetWeapon(string id)
     {
         return _weaponsById[id];
+    }
+
+    public EnemyConfig GetEnemy(string id)
+    {
+        return _enemiesById[id];
     }
 }

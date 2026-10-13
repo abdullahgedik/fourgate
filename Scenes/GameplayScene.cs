@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using Fourgate.Core.Audio;
 using Fourgate.Core.Data;
 using Fourgate.Core.Input;
 using Fourgate.Core.Rendering;
+using Fourgate.Core.Rng;
 using Fourgate.Entities;
 using Fourgate.Systems;
 using Fourgate.Weapons;
@@ -32,8 +34,11 @@ public sealed class GameplayScene
     private static readonly Color ReloadBarBackColor = new(12, 13, 18);
     private static readonly Color ReloadBarFillColor = new(255, 225, 120);
 
+    private readonly GameData _data;
+    private readonly GameRandom _random;
     private readonly Arena _arena;
     private readonly ShotSystem _shots;
+    private readonly EnemySystem _enemies;
     private readonly List<PracticeTarget> _practiceTargets = new();
 
     // _cameras[i] is the view of _players[i].
@@ -42,9 +47,13 @@ public sealed class GameplayScene
 
     public GameplayScene(GameData data, IPlayerInput playerOneInput, IAudioManager audio)
     {
+        _data = data;
         var config = data.Game;
+        _random = new GameRandom(config.Debug.Seed ?? Environment.TickCount);
         _arena = new Arena(config.Arena);
+        _enemies = new EnemySystem(audio);
         _shots = new ShotSystem(_arena);
+        _shots.AddSource(_enemies);
 
         var player = new Player(0, playerOneInput, config.Player, audio, _arena.Center);
         player.GiveWeapon(new Weapon(data.GetWeapon(config.Player.StartingWeapon), config, audio));
@@ -65,6 +74,8 @@ public sealed class GameplayScene
             _practiceTargets[i].Update(deltaSeconds);
         }
 
+        _enemies.Update(deltaSeconds, _players, _arena);
+
         for (var i = 0; i < _players.Count; i++)
         {
             var player = _players[i];
@@ -78,6 +89,17 @@ public sealed class GameplayScene
         _shots.Update(deltaSeconds);
     }
 
+    /// <summary>Debug helper: spawns enemies of the given type at random doors.</summary>
+    public void DebugSpawnEnemies(string enemyId, int count)
+    {
+        var config = _data.GetEnemy(enemyId);
+        for (var i = 0; i < count; i++)
+        {
+            var door = _arena.Doors[_random.NextIndex(_arena.Doors.Count)];
+            _enemies.Spawn(config, _arena.GetDoorSpawnPoint(door, config.Radius, _random.Range(-1f, 1f)));
+        }
+    }
+
     public void Draw(IRenderer renderer)
     {
         for (var i = 0; i < _cameras.Count; i++)
@@ -89,6 +111,7 @@ public sealed class GameplayScene
                 renderer.DrawVisual(_practiceTargets[t].Visual, _practiceTargets[t].Position, 0f);
             }
 
+            _enemies.Draw(renderer);
             _shots.Draw(renderer);
             DrawPlayers(renderer);
             renderer.End();

@@ -46,6 +46,20 @@ public sealed class Arena
 
     public IReadOnlyList<Door> Doors => _doors;
 
+    /// <summary>Floor position just inside a door for something of the given radius.</summary>
+    /// <param name="door">The door to enter through.</param>
+    /// <param name="radius">Radius of the thing entering.</param>
+    /// <param name="lateral">Position across the door opening, from -1 (one edge) to 1 (the other).</param>
+    public Vector2 GetDoorSpawnPoint(Door door, float radius, float lateral)
+    {
+        var across = new Vector2(-door.Inward.Y, door.Inward.X);
+        var halfOpening = Math.Max(0f, Math.Max(door.Size.X, door.Size.Y) / 2f - radius);
+
+        return door.Center
+            + door.Inward * (WallThickness / 2f + radius)
+            + across * (Math.Clamp(lateral, -1f, 1f) * halfOpening);
+    }
+
     /// <summary>
     /// Distance from a point on the floor to the wall along a unit direction.
     /// Returns 0 when the point is already at or beyond the wall it faces.
