@@ -23,6 +23,9 @@ public sealed class FakeShotHandler : IShotHandler
 
     public float LastRicochetRadius { get; private set; }
 
+    /// <summary>Direction of every shot fired, in order.</summary>
+    public List<Vector2> Directions { get; } = new();
+
     public void FireProjectile(
         Vector2 origin,
         Vector2 direction,
@@ -38,6 +41,7 @@ public sealed class FakeShotHandler : IShotHandler
         Count++;
         LastOrigin = origin;
         LastDirection = direction;
+        Directions.Add(direction);
         LastDamage = damage;
         LastRange = range;
         LastPierce = pierce;

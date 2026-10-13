@@ -146,6 +146,7 @@ public static class TestData
         string id = "pistol",
         int slot = 1,
         float spreadDegrees = 0,
+        int pellets = 1,
         List<WeaponLevelConfig>? levels = null,
         WeaponLevelTenConfig? levelTen = null)
     {
@@ -155,6 +156,7 @@ public static class TestData
             DisplayName = "Pistol",
             Slot = slot,
             SpreadDegrees = spreadDegrees,
+            Pellets = pellets,
             Levels = levels ?? new List<WeaponLevelConfig>(),
             LevelTen = levelTen,
             UnlockWave = 1,

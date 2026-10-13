@@ -187,21 +187,29 @@ public sealed class Weapon
     {
         if (!Stats.DualWield)
         {
-            FireBullet(muzzle, direction, ownerIndex, shots);
+            FireVolley(muzzle, direction, ownerIndex, shots);
             return;
         }
 
-        // Two muzzles side by side, one bullet from each.
+        // Two muzzles side by side, one volley from each.
         var side = new Vector2(-direction.Y, direction.X) * DualWieldOffset;
-        FireBullet(muzzle + side, direction, ownerIndex, shots);
-        FireBullet(muzzle - side, direction, ownerIndex, shots);
+        FireVolley(muzzle + side, direction, ownerIndex, shots);
+        FireVolley(muzzle - side, direction, ownerIndex, shots);
+    }
+
+    private void FireVolley(Vector2 muzzle, Vector2 direction, int ownerIndex, IShotHandler shots)
+    {
+        for (var pellet = 0; pellet < Stats.Pellets; pellet++)
+        {
+            FireBullet(muzzle, Scatter(direction, pellet, Stats.Pellets), ownerIndex, shots);
+        }
     }
 
     private void FireBullet(Vector2 muzzle, Vector2 direction, int ownerIndex, IShotHandler shots)
     {
         shots.FireProjectile(
             muzzle,
-            Scatter(direction),
+            direction,
             Config.Projectile,
             Stats.Damage,
             ownerIndex,
@@ -212,16 +220,24 @@ public sealed class Weapon
             Stats.RicochetDamageMult);
     }
 
-    // Turns the aim by a random angle inside the weapon's spread cone.
-    private Vector2 Scatter(Vector2 direction)
+    // Turns the aim inside the weapon's spread cone. A single bullet lands anywhere in the
+    // cone at random; several pellets each get their own slice of it, so a volley always
+    // covers the whole cone instead of clumping by chance.
+    private Vector2 Scatter(Vector2 direction, int pellet, int pelletCount)
     {
-        if (_random is null || Stats.SpreadDegrees <= 0f)
+        var spread = MathHelper.ToRadians(Stats.SpreadDegrees);
+        if (spread <= 0f || (pelletCount <= 1 && _random is null))
         {
             return direction;
         }
 
-        var half = MathHelper.ToRadians(Stats.SpreadDegrees) / 2f;
-        var angle = _random.Range(-half, half);
+        var slice = spread / pelletCount;
+        var angle = -spread / 2f + slice * (pellet + 0.5f);
+        if (_random is not null)
+        {
+            angle += _random.Range(-slice / 2f, slice / 2f);
+        }
+
         var cos = MathF.Cos(angle);
         var sin = MathF.Sin(angle);
         return new Vector2(direction.X * cos - direction.Y * sin, direction.X * sin + direction.Y * cos);
@@ -229,7 +245,7 @@ public sealed class Weapon
 
     private bool WantsToFire(IPlayerInput input)
     {
-        if (Config.Automatic)
+        if (Stats.Automatic)
         {
             return input.FireHeld;
         }

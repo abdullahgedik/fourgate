@@ -12,6 +12,8 @@ public readonly record struct WeaponStats(
     float ReloadTime,
     float Range,
     float SpreadDegrees,
+    int Pellets,
+    bool Automatic,
     int Pierce,
     int Ricochets,
     float RicochetRadius,
@@ -55,9 +57,12 @@ public readonly record struct WeaponStats(
         var ricochetRadius = 0f;
         var ricochetDamageMult = 1f;
         var dualWield = false;
+        var automatic = config.Automatic;
         if (level >= WeaponConfig.MaxLevel && config.LevelTen is not null)
         {
             damage *= config.LevelTen.DamageMult;
+            fireRate *= config.LevelTen.FireRateMult;
+            magSize += config.LevelTen.MagSizeBonus;
 
             var abilities = config.LevelTen.Abilities;
             for (var i = 0; i < abilities.Count; i++)
@@ -77,12 +82,16 @@ public readonly record struct WeaponStats(
                     case WeaponAbility.DualWield:
                         dualWield = true;
                         break;
+
+                    case WeaponAbility.FullAuto:
+                        automatic = true;
+                        break;
                 }
             }
         }
 
         return new WeaponStats(
-            damage, fireRate, magSize, reloadTime, range, spread,
+            damage, fireRate, magSize, reloadTime, range, spread, config.Pellets, automatic,
             pierce, ricochets, ricochetRadius, ricochetDamageMult, dualWield);
     }
 

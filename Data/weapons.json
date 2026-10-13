@@ -10,7 +10,7 @@
       "fireRate": 3,
       "automatic": false,
       "ammo": { "magSize": 12, "reserveMax": 0, "reloadTime": 0.8, "infiniteReserve": true },
-      "projectile": { "speed": 6000, "radius": 4, "range": 1100 },
+      "projectile": { "speed": 6000, "radius": 4, "range": 1200 },
       "levels": [
         { "level": 2, "damageMult": 1.08, "fireRateMult": 1.10 },
         { "level": 3, "damageMult": 1.08, "magSizeBonus": 2 },
@@ -38,7 +38,7 @@
       "automatic": true,
       "spreadDegrees": 5,
       "ammo": { "magSize": 30, "reserveMax": 240, "reloadTime": 1.2, "infiniteReserve": false },
-      "projectile": { "speed": 6000, "radius": 4, "range": 950 },
+      "projectile": { "speed": 6000, "radius": 4, "range": 1400 },
       "levels": [
         { "level": 2, "damageMult": 1.08, "fireRateMult": 1.08 },
         { "level": 3, "damageMult": 1.08, "magSizeBonus": 5 },
@@ -53,6 +53,37 @@
         "description": [ "Bullets ricochet once,", "to a nearby enemy or off a wall", "+8% damage" ],
         "damageMult": 1.08,
         "abilities": [ { "id": "ricochet", "count": 1, "radius": 350, "damageMult": 1.0 } ]
+      }
+    },
+    {
+      "id": "shotgun",
+      "displayName": "Shotgun",
+      "slot": 3,
+      "unlockWave": 3,
+      "type": "projectile",
+      "damage": 8,
+      "pellets": 7,
+      "fireRate": 2.0,
+      "automatic": false,
+      "spreadDegrees": 14,
+      "ammo": { "magSize": 8, "reserveMax": 48, "reloadTime": 1.5, "infiniteReserve": false },
+      "projectile": { "speed": 5000, "radius": 4, "range": 1600 },
+      "levels": [
+        { "level": 2, "damageMult": 1.08, "fireRateMult": 1.10 },
+        { "level": 3, "damageMult": 1.08, "magSizeBonus": 2 },
+        { "level": 4, "damageMult": 1.08, "reloadTimeMult": 0.90 },
+        { "level": 5, "damageMult": 1.08, "magSizeBonus": 2, "spreadMult": 0.90 },
+        { "level": 6, "damageMult": 1.08, "fireRateMult": 1.10 },
+        { "level": 7, "damageMult": 1.08, "magSizeBonus": 2 },
+        { "level": 8, "damageMult": 1.08, "reloadTimeMult": 0.90 },
+        { "level": 9, "damageMult": 1.08, "magSizeBonus": 2, "spreadMult": 0.90 }
+      ],
+      "levelTen": {
+        "description": [ "Fully automatic fire", "Double fire rate, +4 magazine", "+8% damage" ],
+        "damageMult": 1.08,
+        "fireRateMult": 2.0,
+        "magSizeBonus": 4,
+        "abilities": [ { "id": "fullAuto" } ]
       }
     }
   ]

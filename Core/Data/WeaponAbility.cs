@@ -14,4 +14,7 @@ public enum WeaponAbility
 
     /// <summary>Every shot fires two bullets side by side.</summary>
     DualWield,
+
+    /// <summary>Holding fire keeps shooting.</summary>
+    FullAuto,
 }

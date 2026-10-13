@@ -21,6 +21,9 @@ public sealed class WeaponConfig
 
     public required float Damage { get; init; }
 
+    /// <summary>Bullets fired by each shot, fanned across the spread cone; each deals the full damage.</summary>
+    public int Pellets { get; init; } = 1;
+
     /// <summary>Shots per second.</summary>
     public required float FireRate { get; init; }
 
@@ -49,6 +52,7 @@ public sealed class WeaponConfig
         DataLoadException.Require(Slot >= 1, file, $"{path}.slot", "must be 1 or greater");
         DataLoadException.Require(UnlockWave >= 1, file, $"{path}.unlockWave", "must be 1 or greater");
         DataLoadException.Require(Damage > 0, file, $"{path}.damage", "must be greater than 0");
+        DataLoadException.Require(Pellets >= 1, file, $"{path}.pellets", "must be 1 or greater");
         DataLoadException.Require(FireRate > 0, file, $"{path}.fireRate", "must be greater than 0");
         DataLoadException.Require(
             SpreadDegrees >= 0 && SpreadDegrees <= 180, file, $"{path}.spreadDegrees", "must be between 0 and 180");
