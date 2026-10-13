@@ -21,6 +21,11 @@ public sealed class Player
     private readonly PlayerConfig _config;
     private readonly IAudioManager _audio;
     private readonly List<Weapon> _weapons = new();
+    private readonly Dictionary<string, int> _upgradeLevels = new();
+    private float _maxHpBonus;
+    private float _moveSpeedMultiplier = 1f;
+    private float _dashCooldownMultiplier = 1f;
+    private float _ammoCapacityMultiplier = 1f;
     private Vector2 _dashDirection;
     private float _dashTimeLeft;
     private float _dashCooldownLeft;
@@ -52,7 +57,16 @@ public sealed class Player
 
     public float Hp { get; private set; }
 
-    public float MaxHp => _config.MaxHp;
+    public float MaxHp => _config.MaxHp + _maxHpBonus;
+
+    /// <summary>World units per second, including upgrades.</summary>
+    public float MoveSpeed => _config.MoveSpeed * _moveSpeedMultiplier;
+
+    /// <summary>Seconds between dash starts, including upgrades.</summary>
+    public float DashCooldown => _config.Dash.Cooldown * _dashCooldownMultiplier;
+
+    /// <summary>Scales the crate pickup radius (pickup range upgrade).</summary>
+    public float PickupRangeMultiplier { get; private set; } = 1f;
 
     public bool IsAlive => Hp > 0f;
 
@@ -71,7 +85,7 @@ public sealed class Player
 
     /// <summary>1 when the dash is ready, rising from 0 while it recharges.</summary>
     public float DashReadiness =>
-        _config.Dash.Cooldown > 0f ? 1f - _dashCooldownLeft / _config.Dash.Cooldown : 1f;
+        DashCooldown > 0f ? 1f - _dashCooldownLeft / DashCooldown : 1f;
 
     public VisualDescriptor Visual
     {
@@ -96,8 +110,61 @@ public sealed class Player
     /// <summary>Adds a weapon to the inventory and selects it if nothing is selected yet.</summary>
     public void GiveWeapon(Weapon weapon)
     {
+        weapon.ReserveCapacityMultiplier = _ammoCapacityMultiplier;
         _weapons.Add(weapon);
         CurrentWeapon ??= weapon;
+    }
+
+    /// <summary>How many times this player has taken the upgrade with the given id.</summary>
+    public int GetUpgradeLevel(string upgradeId)
+    {
+        return _upgradeLevels.TryGetValue(upgradeId, out var level) ? level : 0;
+    }
+
+    /// <summary>Raises an upgrade by one level and applies its effect.</summary>
+    public void ApplyUpgrade(UpgradeConfig upgrade)
+    {
+        var level = GetUpgradeLevel(upgrade.Id) + 1;
+        _upgradeLevels[upgrade.Id] = level;
+
+        var total = upgrade.AmountPerLevel * level;
+        switch (upgrade.Stat)
+        {
+            case UpgradeStat.MaxHp:
+                _maxHpBonus = total;
+                Heal(upgrade.AmountPerLevel);
+                break;
+
+            case UpgradeStat.MoveSpeed:
+                _moveSpeedMultiplier = 1f + total;
+                break;
+
+            case UpgradeStat.DashCooldown:
+                _dashCooldownMultiplier = Math.Max(0f, 1f - total);
+                break;
+
+            case UpgradeStat.AmmoCapacity:
+                _ammoCapacityMultiplier = 1f + total;
+                for (var i = 0; i < _weapons.Count; i++)
+                {
+                    _weapons[i].ReserveCapacityMultiplier = _ammoCapacityMultiplier;
+                }
+
+                break;
+
+            case UpgradeStat.PickupRange:
+                PickupRangeMultiplier = 1f + total;
+                break;
+        }
+    }
+
+    /// <summary>Restores all HP of a living player.</summary>
+    public void HealToFull()
+    {
+        if (IsAlive)
+        {
+            Hp = MaxHp;
+        }
     }
 
     /// <summary>Restores HP up to the maximum. Returns false when dead or already at full HP.</summary>
@@ -175,7 +242,7 @@ public sealed class Player
             walkSeconds -= dashSeconds;
         }
 
-        Position += move * _config.MoveSpeed * walkSeconds;
+        Position += move * MoveSpeed * walkSeconds;
         Position = arena.ClampInside(Position, Radius);
     }
 
@@ -184,7 +251,7 @@ public sealed class Player
         // Dash where the player is heading; standing still dashes toward the aim.
         _dashDirection = move != Vector2.Zero ? Vector2.Normalize(move) : AimDirection;
         _dashTimeLeft = _config.Dash.Duration;
-        _dashCooldownLeft = _config.Dash.Cooldown;
+        _dashCooldownLeft = DashCooldown;
         _audio.PlaySfx(SfxIds.PlayerDash);
     }
 }

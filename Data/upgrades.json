@@ -1,0 +1,26 @@
+{
+  "cardsPerPick": 3,
+  "fallback": { "displayName": "Second Wind", "description": "Restore all HP" },
+  "upgrades": [
+    {
+      "id": "maxHp", "displayName": "Vitality", "description": "+20 max HP, and heal 20",
+      "stat": "maxHp", "amountPerLevel": 20, "maxLevel": 5
+    },
+    {
+      "id": "moveSpeed", "displayName": "Swift Feet", "description": "+6% move speed",
+      "stat": "moveSpeed", "amountPerLevel": 0.06, "maxLevel": 5
+    },
+    {
+      "id": "dashCooldown", "displayName": "Quick Recovery", "description": "-10% dash cooldown",
+      "stat": "dashCooldown", "amountPerLevel": 0.10, "maxLevel": 5
+    },
+    {
+      "id": "ammoCapacity", "displayName": "Deep Pockets", "description": "+10% reserve ammo capacity",
+      "stat": "ammoCapacity", "amountPerLevel": 0.10, "maxLevel": 5
+    },
+    {
+      "id": "pickupRange", "displayName": "Long Reach", "description": "+20% crate pickup range",
+      "stat": "pickupRange", "amountPerLevel": 0.20, "maxLevel": 3
+    }
+  ]
+}

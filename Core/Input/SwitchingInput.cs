@@ -38,6 +38,10 @@ public sealed class SwitchingInput : IPlayerInput
 
     public bool ConfirmPressed => _current.ConfirmPressed;
 
+    public bool MenuLeftPressed => _current.MenuLeftPressed;
+
+    public bool MenuRightPressed => _current.MenuRightPressed;
+
     public bool HasActivity => _current.HasActivity;
 
     public void Update(Vector2 playerPosition, Camera2D camera)

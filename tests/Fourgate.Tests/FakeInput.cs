@@ -25,6 +25,10 @@ public sealed class FakeInput : IPlayerInput
 
     public bool ConfirmPressed { get; set; }
 
+    public bool MenuLeftPressed { get; set; }
+
+    public bool MenuRightPressed { get; set; }
+
     public bool HasActivity { get; set; }
 
     public void Update(Vector2 playerPosition, Camera2D camera)

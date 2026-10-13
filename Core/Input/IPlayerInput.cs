@@ -29,6 +29,12 @@ public interface IPlayerInput
     /// <summary>Accept/continue in menus and on the game over screen.</summary>
     bool ConfirmPressed { get; }
 
+    /// <summary>Move the menu selection one step left.</summary>
+    bool MenuLeftPressed { get; }
+
+    /// <summary>Move the menu selection one step right.</summary>
+    bool MenuRightPressed { get; }
+
     /// <summary>True when any control of this device was used this frame.</summary>
     bool HasActivity { get; }
 

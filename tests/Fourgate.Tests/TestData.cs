@@ -49,6 +49,36 @@ public static class TestData
         return new XpConfig { Base = 60, Exponent = 1.35f, SharedFullToAllPlayers = shared };
     }
 
+    public static UpgradeConfig Upgrade(string id, UpgradeStat stat, float amount, int maxLevel)
+    {
+        return new UpgradeConfig
+        {
+            Id = id,
+            DisplayName = id,
+            Description = id,
+            Stat = stat,
+            AmountPerLevel = amount,
+            MaxLevel = maxLevel,
+        };
+    }
+
+    public static UpgradesConfig Upgrades()
+    {
+        return new UpgradesConfig
+        {
+            CardsPerPick = 3,
+            Fallback = new UpgradeFallbackConfig { DisplayName = "Second Wind", Description = "Restore all HP" },
+            Upgrades = new List<UpgradeConfig>
+            {
+                Upgrade("maxHp", UpgradeStat.MaxHp, 20, 5),
+                Upgrade("moveSpeed", UpgradeStat.MoveSpeed, 0.06f, 5),
+                Upgrade("dashCooldown", UpgradeStat.DashCooldown, 0.10f, 5),
+                Upgrade("ammoCapacity", UpgradeStat.AmmoCapacity, 0.10f, 5),
+                Upgrade("pickupRange", UpgradeStat.PickupRange, 0.20f, 3),
+            },
+        };
+    }
+
     public static CratesConfig Crates()
     {
         return new CratesConfig

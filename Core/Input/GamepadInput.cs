@@ -9,6 +9,7 @@ namespace Fourgate.Core.Input;
 public sealed class GamepadInput : IPlayerInput
 {
     private const float TriggerThreshold = 0.5f;
+    private const float MenuStickThreshold = 0.5f;
 
     private readonly PlayerIndex _index;
     private GamePadState _previous;
@@ -37,6 +38,10 @@ public sealed class GamepadInput : IPlayerInput
     public bool ReloadPressed { get; private set; }
 
     public bool ConfirmPressed { get; private set; }
+
+    public bool MenuLeftPressed { get; private set; }
+
+    public bool MenuRightPressed { get; private set; }
 
     public bool HasActivity { get; private set; }
 
@@ -73,7 +78,16 @@ public sealed class GamepadInput : IPlayerInput
         ConfirmPressed = (state.IsButtonDown(Buttons.A) && _previous.IsButtonUp(Buttons.A))
             || (state.IsButtonDown(Buttons.Start) && _previous.IsButtonUp(Buttons.Start));
 
-        HasActivity = move != Vector2.Zero || aim != Vector2.Zero || FireHeld || DashPressed || ReloadPressed || ConfirmPressed;
+        // A stick flick counts as one step, like a d-pad press.
+        var stickX = state.ThumbSticks.Left.X;
+        var previousStickX = _previous.ThumbSticks.Left.X;
+        MenuLeftPressed = (state.IsButtonDown(Buttons.DPadLeft) && _previous.IsButtonUp(Buttons.DPadLeft))
+            || (stickX < -MenuStickThreshold && previousStickX >= -MenuStickThreshold);
+        MenuRightPressed = (state.IsButtonDown(Buttons.DPadRight) && _previous.IsButtonUp(Buttons.DPadRight))
+            || (stickX > MenuStickThreshold && previousStickX <= MenuStickThreshold);
+
+        HasActivity = move != Vector2.Zero || aim != Vector2.Zero || FireHeld || DashPressed || ReloadPressed
+            || ConfirmPressed || MenuLeftPressed || MenuRightPressed;
 
         _previous = state;
     }

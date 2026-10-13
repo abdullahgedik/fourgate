@@ -37,6 +37,15 @@ public sealed class PlayerProgression
         return gained;
     }
 
+    /// <summary>Uses up one banked pick.</summary>
+    public void SpendPick()
+    {
+        if (BankedPicks > 0)
+        {
+            BankedPicks--;
+        }
+    }
+
     /// <summary>Banks one extra upgrade pick (upgrade crate).</summary>
     public void AddPick()
     {

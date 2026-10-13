@@ -225,7 +225,7 @@ public class WaveTests
         {
             var config = TestData.Game(maxAlive: maxAlive, startWave: startWave);
             var data = new GameData(
-                config, new[] { TestData.Pistol() }, new[] { TestData.Zombie() }, TestData.Waves());
+                config, new[] { TestData.Pistol() }, new[] { TestData.Zombie() }, TestData.Waves(), TestData.Upgrades());
             var audio = new NullAudioManager();
 
             Arena = new Arena(config.Arena);

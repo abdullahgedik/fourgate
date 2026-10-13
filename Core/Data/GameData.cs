@@ -13,9 +13,11 @@ public sealed class GameData
         GameConfig game,
         IReadOnlyList<WeaponConfig> weapons,
         IReadOnlyList<EnemyConfig> enemies,
-        WavesConfig waves)
+        WavesConfig waves,
+        UpgradesConfig upgrades)
     {
         Waves = waves;
+        Upgrades = upgrades;
         Game = game;
         Weapons = weapons;
         Enemies = enemies;
@@ -44,6 +46,8 @@ public sealed class GameData
     public IReadOnlyList<EnemyConfig> Enemies { get; }
 
     public WavesConfig Waves { get; }
+
+    public UpgradesConfig Upgrades { get; }
 
     public WeaponConfig GetWeapon(string id)
     {

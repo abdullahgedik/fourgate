@@ -52,6 +52,7 @@ public class DataLoaderTests
         Assert.NotNull(data.GetWeapon(data.Game.Player.StartingWeapon));
         Assert.Equal(60f, data.GetEnemy("normal").Hp);
         Assert.Equal(6f, data.Waves.Budget.Base);
+        Assert.Equal(5, data.Upgrades.Upgrades.Count);
     }
 
     [Fact]
@@ -163,7 +164,7 @@ public class DataLoaderTests
         var game = DataLoader.ParseGameConfig(ValidGameJson.Replace("\"pistol\"", "\"bazooka\""), GameFile);
         var weapons = DataLoader.ParseWeapons(ValidWeaponsJson, WeaponsFile);
 
-        var error = Assert.Throws<DataLoadException>(() => new GameData(game, weapons, new[] { TestData.Zombie() }, TestData.Waves()));
+        var error = Assert.Throws<DataLoadException>(() => new GameData(game, weapons, new[] { TestData.Zombie() }, TestData.Waves(), TestData.Upgrades()));
 
         Assert.Equal("player.startingWeapon", error.Field);
     }

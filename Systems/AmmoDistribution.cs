@@ -51,7 +51,7 @@ public static class AmmoDistribution
             }
 
             var fraction = ReferenceEquals(weapon, lowest) ? primaryFraction : othersFraction;
-            weapon.AddReserve((int)MathF.Ceiling(weapon.Config.Ammo.ReserveMax * fraction));
+            weapon.AddReserve((int)MathF.Ceiling(weapon.ReserveMax * fraction));
         }
 
         return true;

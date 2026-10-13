@@ -50,6 +50,8 @@ public sealed class GameplayScene
     private readonly WaveSystem? _waves;
     private readonly XpSystem _xp;
     private readonly DropSystem _drops;
+    private readonly UpgradeSystem _upgrades;
+    private readonly UpgradeScreen _upgradeScreen;
     private readonly WaveHud _waveHud = new();
     private readonly GameOverOverlay _gameOverOverlay = new();
     private readonly IAudioManager _audio;
@@ -73,6 +75,8 @@ public sealed class GameplayScene
         _shots.AddSource(_enemies);
         _xp = new XpSystem(config.Xp, audio);
         _drops = new DropSystem(config.Crates, _random, audio);
+        _upgrades = new UpgradeSystem(data.Upgrades, _random, audio);
+        _upgradeScreen = new UpgradeScreen(_upgrades);
         _waves = config.Debug.DisableWaves ? null : new WaveSystem(data, _enemies, _arena, _random, audio);
 
         var player = new Player(0, playerOneInput, config.Player, audio, _arena.Center);
@@ -98,6 +102,14 @@ public sealed class GameplayScene
         if (IsGameOver)
         {
             UpdateGameOver();
+            return;
+        }
+
+        // Banked picks are spent between waves. The world stands still while anyone is choosing.
+        var isResting = _waves is null || _waves.Phase == WavePhase.Rest;
+        if (isResting && _upgrades.OpenOffers(_players))
+        {
+            _upgradeScreen.Update(deltaSeconds, _players, _cameras);
             return;
         }
 
@@ -221,17 +233,26 @@ public sealed class GameplayScene
         {
             DrawDoorIndicators(renderer, _cameras[i]);
             _playerHuds[i].Draw(renderer, _players[i], _cameras[i].ViewRect);
-
-            var input = _players[i].Input;
-            if (input.HasPointer && !IsGameOver)
-            {
-                DrawCrosshair(renderer, input.AimScreen);
-            }
         }
 
         if (_waves is not null)
         {
             _waveHud.Draw(renderer, _waves, _data.Game.VirtualWidth);
+        }
+
+        if (_upgrades.AnyOfferOpen && !IsGameOver)
+        {
+            _upgradeScreen.Draw(renderer, _players, _cameras);
+        }
+
+        // The crosshair doubles as the menu pointer, so it goes on top of the cards.
+        for (var i = 0; i < _players.Count; i++)
+        {
+            var input = _players[i].Input;
+            if (input.HasPointer && !IsGameOver)
+            {
+                DrawCrosshair(renderer, input.AimScreen);
+            }
         }
 
         if (IsGameOver)

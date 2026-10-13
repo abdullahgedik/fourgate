@@ -37,14 +37,20 @@ public sealed class Weapon
 
     public bool HasInfiniteReserve => Config.Ammo.InfiniteReserve;
 
+    /// <summary>Scales the maximum reserve (ammo capacity upgrade of the owner).</summary>
+    public float ReserveCapacityMultiplier { get; set; } = 1f;
+
+    /// <summary>Largest reserve this weapon can hold right now.</summary>
+    public int ReserveMax => (int)MathF.Round(Config.Ammo.ReserveMax * ReserveCapacityMultiplier);
+
     public bool IsReloading => _reloadLeft > 0f;
 
     /// <summary>True when the reserve is limited and not full.</summary>
-    public bool NeedsAmmo => !HasInfiniteReserve && Reserve < Config.Ammo.ReserveMax;
+    public bool NeedsAmmo => !HasInfiniteReserve && Reserve < ReserveMax;
 
     /// <summary>How full the reserve is, from 0 to 1; always 1 for an unlimited reserve.</summary>
     public float ReserveFraction =>
-        HasInfiniteReserve || Config.Ammo.ReserveMax <= 0 ? 1f : Reserve / (float)Config.Ammo.ReserveMax;
+        HasInfiniteReserve || ReserveMax <= 0 ? 1f : Reserve / (float)ReserveMax;
 
     /// <summary>0 at the start of a reload, 1 when it finishes; 0 when not reloading.</summary>
     public float ReloadProgress
@@ -130,7 +136,7 @@ public sealed class Weapon
             return 0;
         }
 
-        var added = Math.Min(rounds, Config.Ammo.ReserveMax - Reserve);
+        var added = Math.Max(0, Math.Min(rounds, ReserveMax - Reserve));
         Reserve += added;
         return added;
     }

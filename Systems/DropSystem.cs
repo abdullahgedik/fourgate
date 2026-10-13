@@ -129,10 +129,10 @@ public sealed class DropSystem
     // Whoever touches the crate first gets it, if they can use it.
     private bool TryPickUp(Crate crate, IReadOnlyList<Player> players)
     {
-        var reach = _config.PickupRadius;
         for (var i = 0; i < players.Count; i++)
         {
             var player = players[i];
+            var reach = _config.PickupRadius * player.PickupRangeMultiplier;
             if (!player.IsAlive || Vector2.DistanceSquared(player.Position, crate.Position) > reach * reach)
             {
                 continue;
