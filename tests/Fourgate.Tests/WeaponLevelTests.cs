@@ -257,6 +257,107 @@ public class WeaponLevelTests
     }
 
     [Fact]
+    public void RicochetBullet_BouncesFromAnEnemy_ToTheNearestOtherEnemy()
+    {
+        var shots = new ShotSystem(TestArena);
+        var first = AddTarget(shots, 1800);
+        var near = new PracticeTarget(new Vector2(1800, 1700), 20);
+        var farther = new PracticeTarget(new Vector2(1800, 1200), 20);
+        shots.AddTarget(near);
+        shots.AddTarget(farther);
+
+        shots.FireProjectile(Center, Vector2.UnitX, Projectile, 15, 0, ricochets: 1, ricochetRadius: 350);
+        Run(shots, 30);
+
+        Assert.Equal(1, first.HitCount);
+        Assert.Equal(1, near.HitCount);
+        Assert.Equal(0, farther.HitCount);
+        Assert.Equal(0, shots.BulletCount);
+    }
+
+    [Fact]
+    public void RicochetBullet_WithNoEnemyInRadius_StopsAtTheFirstOne()
+    {
+        var shots = new ShotSystem(TestArena);
+        var first = AddTarget(shots, 1800);
+        var tooFar = new PracticeTarget(new Vector2(1800, 1900), 20);
+        shots.AddTarget(tooFar);
+
+        shots.FireProjectile(Center, Vector2.UnitX, Projectile, 15, 0, ricochets: 1, ricochetRadius: 350);
+        Run(shots, 30);
+
+        Assert.Equal(1, first.HitCount);
+        Assert.Equal(0, tooFar.HitCount);
+    }
+
+    [Fact]
+    public void RicochetBullet_BouncesOnlyOnce_AndNeverBackToTheSameEnemy()
+    {
+        var shots = new ShotSystem(TestArena);
+        var first = AddTarget(shots, 1800);
+        var second = new PracticeTarget(new Vector2(1800, 1650), 20);
+        var third = new PracticeTarget(new Vector2(1800, 1800), 20);
+        shots.AddTarget(second);
+        shots.AddTarget(third);
+
+        shots.FireProjectile(Center, Vector2.UnitX, Projectile, 15, 0, ricochets: 1, ricochetRadius: 350);
+        Run(shots, 30);
+
+        Assert.Equal(1, first.HitCount);
+        Assert.Equal(1, second.HitCount);
+        Assert.Equal(0, third.HitCount);
+    }
+
+    [Fact]
+    public void RicochetBullet_ReachesItsBounceTarget_EvenAtTheEndOfItsRange()
+    {
+        var shots = new ShotSystem(TestArena);
+
+        // The first target sits at the very end of the 1100 range.
+        var first = AddTarget(shots, 2610);
+        var second = new PracticeTarget(new Vector2(2610, 1800), 20);
+        shots.AddTarget(second);
+
+        shots.FireProjectile(Center, Vector2.UnitX, Projectile, 15, 0, ricochets: 1, ricochetRadius: 350);
+        Run(shots, 30);
+
+        Assert.Equal(1, first.HitCount);
+        Assert.Equal(1, second.HitCount);
+    }
+
+    [Fact]
+    public void RicochetDamageMultiplier_AppliesToTheBouncedHit()
+    {
+        var enemies = new EnemySystem(new NullAudioManager());
+        var shots = new ShotSystem(TestArena);
+        shots.AddSource(enemies);
+        var players = new List<Player> { CreatePlayer() };
+        var first = enemies.Spawn(TestData.Zombie(), new Vector2(2000, 1500));
+        var second = enemies.Spawn(TestData.Zombie(), new Vector2(2000, 1700));
+        enemies.Update(Step, players, TestArena);
+
+        shots.FireProjectile(
+            new Vector2(1540, 1500), Vector2.UnitX, Projectile, 20, 0,
+            ricochets: 1, ricochetRadius: 350, ricochetDamageMult: 0.5f);
+        Run(shots, 30);
+
+        Assert.Equal(40f, first.Hp);
+        Assert.Equal(50f, second.Hp);
+    }
+
+    [Fact]
+    public void ShippedSmg_AtLevelTen_RicochetsToEnemies()
+    {
+        var smg = DataLoader.LoadAll(DataLoader.DefaultDirectory).GetWeapon("smg");
+
+        var stats = WeaponStats.Compute(smg, 10);
+
+        Assert.Equal(1, stats.Ricochets);
+        Assert.True(stats.RicochetRadius > 0f);
+        Assert.Equal(0, WeaponStats.Compute(smg, 9).Ricochets);
+    }
+
+    [Fact]
     public void RicochetBullet_BouncesOffTheWall_AndCanHitOnTheWayBack()
     {
         var shots = new ShotSystem(TestArena);

@@ -207,7 +207,9 @@ public sealed class Weapon
             ownerIndex,
             Stats.Range,
             Stats.Pierce,
-            Stats.Ricochets);
+            Stats.Ricochets,
+            Stats.RicochetRadius,
+            Stats.RicochetDamageMult);
     }
 
     // Turns the aim by a random angle inside the weapon's spread cone.

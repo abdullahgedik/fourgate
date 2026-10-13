@@ -21,6 +21,8 @@ public sealed class FakeShotHandler : IShotHandler
 
     public int LastRicochets { get; private set; }
 
+    public float LastRicochetRadius { get; private set; }
+
     public void FireProjectile(
         Vector2 origin,
         Vector2 direction,
@@ -29,7 +31,9 @@ public sealed class FakeShotHandler : IShotHandler
         int ownerIndex,
         float? range = null,
         int pierce = 0,
-        int ricochets = 0)
+        int ricochets = 0,
+        float ricochetRadius = 0f,
+        float ricochetDamageMult = 1f)
     {
         Count++;
         LastOrigin = origin;
@@ -38,5 +42,6 @@ public sealed class FakeShotHandler : IShotHandler
         LastRange = range;
         LastPierce = pierce;
         LastRicochets = ricochets;
+        LastRicochetRadius = ricochetRadius;
     }
 }

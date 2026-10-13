@@ -6,7 +6,10 @@ public enum WeaponAbility
     /// <summary>Bullets pass through this many enemies before stopping.</summary>
     Pierce,
 
-    /// <summary>Bullets bounce off walls this many times.</summary>
+    /// <summary>
+    /// Bullets bounce this many times: off a wall, or from an enemy they hit to the nearest
+    /// other enemy within the ability's radius.
+    /// </summary>
     Ricochet,
 
     /// <summary>Every shot fires two bullets side by side.</summary>

@@ -50,9 +50,9 @@
         { "level": 9, "damageMult": 1.08, "spreadMult": 0.85 }
       ],
       "levelTen": {
-        "description": [ "Bullets ricochet off walls once", "+8% damage" ],
+        "description": [ "Bullets ricochet once,", "to a nearby enemy or off a wall", "+8% damage" ],
         "damageMult": 1.08,
-        "abilities": [ { "id": "ricochet", "count": 1 } ]
+        "abilities": [ { "id": "ricochet", "count": 1, "radius": 350, "damageMult": 1.0 } ]
       }
     }
   ]

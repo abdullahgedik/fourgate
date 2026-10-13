@@ -58,7 +58,9 @@ public sealed class ShotSystem : IShotHandler
         int ownerIndex,
         float? range = null,
         int pierce = 0,
-        int ricochets = 0)
+        int ricochets = 0,
+        float ricochetRadius = 0f,
+        float ricochetDamageMult = 1f)
     {
         _bullets.Rent().Launch(
             origin,
@@ -69,7 +71,9 @@ public sealed class ShotSystem : IShotHandler
             damage,
             ownerIndex,
             pierce,
-            ricochets);
+            ricochets,
+            ricochetRadius,
+            ricochetDamageMult);
     }
 
     public void Update(float deltaSeconds)
@@ -148,7 +152,11 @@ public sealed class ShotSystem : IShotHandler
             }
 
             bullet.Advance(hitDistance);
-            bullet.Stop();
+            if (!TryBounceToEnemy(bullet, hit))
+            {
+                bullet.Stop();
+            }
+
             return;
         }
 
@@ -162,6 +170,56 @@ public sealed class ShotSystem : IShotHandler
         {
             bullet.Stop();
         }
+    }
+
+    // Sends a bullet that still has a ricochet from the enemy it just hit to the nearest
+    // other enemy within its ricochet radius. The rest of this frame's travel is dropped.
+    private bool TryBounceToEnemy(Bullet bullet, IHittable from)
+    {
+        if (bullet.RicochetsLeft <= 0 || bullet.RicochetRadius <= 0f)
+        {
+            return false;
+        }
+
+        _candidates.Clear();
+        _candidates.AddRange(_targets);
+        for (var i = 0; i < _sources.Count; i++)
+        {
+            _sources[i].Collect(from.Position, bullet.RicochetRadius, _candidates);
+        }
+
+        IHittable? next = null;
+        var nextDistance = bullet.RicochetRadius;
+        for (var i = 0; i < _candidates.Count; i++)
+        {
+            var target = _candidates[i];
+            if (ReferenceEquals(target, from) || bullet.HasHit(target))
+            {
+                continue;
+            }
+
+            var distance = Vector2.Distance(from.Position, target.Position);
+            if (distance <= nextDistance)
+            {
+                nextDistance = distance;
+                next = target;
+            }
+        }
+
+        if (next is null)
+        {
+            return false;
+        }
+
+        var toNext = next.Position - bullet.Position;
+        var length = toNext.Length();
+        if (length < 0.001f)
+        {
+            return false;
+        }
+
+        bullet.BounceTo(from, toNext / length, length);
+        return true;
     }
 
     private IHittable? FindNearest(

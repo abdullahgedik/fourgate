@@ -14,7 +14,9 @@ public interface IShotHandler
     /// <param name="ownerIndex">Index of the player who fired.</param>
     /// <param name="range">World units the bullet travels; the projectile's own range when not given.</param>
     /// <param name="pierce">Enemies the bullet passes through before it stops at the next one.</param>
-    /// <param name="ricochets">Times the bullet bounces off a wall instead of stopping.</param>
+    /// <param name="ricochets">Times the bullet bounces instead of stopping.</param>
+    /// <param name="ricochetRadius">How far from an enemy it hit the bullet looks for another enemy to bounce to; 0 bounces off walls only.</param>
+    /// <param name="ricochetDamageMult">Damage multiplier applied each time the bullet bounces to an enemy.</param>
     void FireProjectile(
         Vector2 origin,
         Vector2 direction,
@@ -23,5 +25,7 @@ public interface IShotHandler
         int ownerIndex,
         float? range = null,
         int pierce = 0,
-        int ricochets = 0);
+        int ricochets = 0,
+        float ricochetRadius = 0f,
+        float ricochetDamageMult = 1f);
 }

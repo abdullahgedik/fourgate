@@ -14,6 +14,8 @@ public readonly record struct WeaponStats(
     float SpreadDegrees,
     int Pierce,
     int Ricochets,
+    float RicochetRadius,
+    float RicochetDamageMult,
     bool DualWield)
 {
     /// <summary>
@@ -50,6 +52,8 @@ public readonly record struct WeaponStats(
 
         var pierce = 0;
         var ricochets = 0;
+        var ricochetRadius = 0f;
+        var ricochetDamageMult = 1f;
         var dualWield = false;
         if (level >= WeaponConfig.MaxLevel && config.LevelTen is not null)
         {
@@ -66,6 +70,8 @@ public readonly record struct WeaponStats(
 
                     case WeaponAbility.Ricochet:
                         ricochets += abilities[i].Count;
+                        ricochetRadius = abilities[i].Radius;
+                        ricochetDamageMult = abilities[i].DamageMult;
                         break;
 
                     case WeaponAbility.DualWield:
@@ -75,7 +81,9 @@ public readonly record struct WeaponStats(
             }
         }
 
-        return new WeaponStats(damage, fireRate, magSize, reloadTime, range, spread, pierce, ricochets, dualWield);
+        return new WeaponStats(
+            damage, fireRate, magSize, reloadTime, range, spread,
+            pierce, ricochets, ricochetRadius, ricochetDamageMult, dualWield);
     }
 
     /// <summary>

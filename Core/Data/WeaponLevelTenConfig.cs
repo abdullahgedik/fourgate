@@ -25,6 +25,10 @@ public sealed class WeaponLevelTenConfig
             DataLoadException.Require(Abilities[i] is not null, file, $"{path}.abilities[{i}]", "must not be null");
             DataLoadException.Require(
                 Abilities[i].Count >= 1, file, $"{path}.abilities[{i}].count", "must be 1 or greater");
+            DataLoadException.Require(
+                Abilities[i].Radius >= 0, file, $"{path}.abilities[{i}].radius", "must not be negative");
+            DataLoadException.Require(
+                Abilities[i].DamageMult > 0, file, $"{path}.abilities[{i}].damageMult", "must be greater than 0");
         }
     }
 }

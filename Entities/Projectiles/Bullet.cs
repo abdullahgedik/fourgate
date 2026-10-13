@@ -30,8 +30,14 @@ public sealed class Bullet
     /// <summary>Enemies the bullet can still pass through.</summary>
     public int PierceLeft { get; private set; }
 
-    /// <summary>Wall bounces the bullet has left.</summary>
+    /// <summary>Bounces the bullet has left.</summary>
     public int RicochetsLeft { get; private set; }
+
+    /// <summary>How far from an enemy it hit the bullet looks for another to bounce to; 0 bounces off walls only.</summary>
+    public float RicochetRadius { get; private set; }
+
+    /// <summary>Damage multiplier applied each time the bullet bounces to an enemy.</summary>
+    public float RicochetDamageMult { get; private set; }
 
     /// <summary>
     /// True once the bullet has hit something or run out of range. It stays for one more
@@ -50,7 +56,9 @@ public sealed class Bullet
         float damage,
         int ownerIndex,
         int pierce,
-        int ricochets)
+        int ricochets,
+        float ricochetRadius,
+        float ricochetDamageMult)
     {
         _origin = origin;
         _travelled = 0f;
@@ -63,6 +71,8 @@ public sealed class Bullet
         OwnerIndex = ownerIndex;
         PierceLeft = pierce;
         RicochetsLeft = ricochets;
+        RicochetRadius = ricochetRadius;
+        RicochetDamageMult = ricochetDamageMult;
         IsSpent = false;
     }
 
@@ -100,6 +110,21 @@ public sealed class Bullet
         _alreadyHit.Clear();
         Direction = newDirection;
         RicochetsLeft--;
+    }
+
+    /// <summary>
+    /// Uses up one ricochet to bounce from an enemy just hit toward another one.
+    /// The bullet gets exactly the range it needs for the bounce.
+    /// </summary>
+    /// <param name="from">The enemy just hit; it is not hit again.</param>
+    /// <param name="newDirection">Unit direction toward the next enemy.</param>
+    /// <param name="range">World units the bullet may travel after the bounce.</param>
+    public void BounceTo(IHittable from, Vector2 newDirection, float range)
+    {
+        Bounce(newDirection);
+        _alreadyHit.Add(from);
+        RangeLeft = range;
+        Damage *= RicochetDamageMult;
     }
 
     /// <summary>Trailing end of a streak of the given length; never behind where the bullet started or last bounced.</summary>
