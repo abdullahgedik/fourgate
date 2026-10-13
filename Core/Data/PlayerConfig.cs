@@ -7,4 +7,6 @@ public sealed class PlayerConfig
     public required float MoveSpeed { get; init; }
 
     public required float Radius { get; init; }
+
+    public required DashConfig Dash { get; init; }
 }

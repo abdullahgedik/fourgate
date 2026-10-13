@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Fourgate.Core.Data;
 using Microsoft.Xna.Framework;
@@ -44,4 +45,12 @@ public sealed class Arena
     public Vector2 Center => new(Left + Size / 2f, Top + Size / 2f);
 
     public IReadOnlyList<Door> Doors => _doors;
+
+    /// <summary>Pushes a circle back onto the floor; walls and sealed doors are solid.</summary>
+    public Vector2 ClampInside(Vector2 position, float radius)
+    {
+        return new Vector2(
+            Math.Clamp(position.X, Left + radius, Right - radius),
+            Math.Clamp(position.Y, Top + radius, Bottom - radius));
+    }
 }

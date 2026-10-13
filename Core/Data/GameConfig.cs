@@ -43,5 +43,11 @@ public sealed class GameConfig
         DataLoadException.Require(
             player.Radius > 0 && player.Radius * 2 < arena.Size,
             file, "player.radius", "must be greater than 0 and fit inside the arena");
+
+        DataLoadException.Require(player.Dash is not null, file, "player.dash", "is required");
+        var dash = player.Dash!;
+        DataLoadException.Require(dash.Cooldown >= 0, file, "player.dash.cooldown", "must not be negative");
+        DataLoadException.Require(dash.Duration > 0, file, "player.dash.duration", "must be greater than 0");
+        DataLoadException.Require(dash.Distance > 0, file, "player.dash.distance", "must be greater than 0");
     }
 }

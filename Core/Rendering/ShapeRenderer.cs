@@ -27,14 +27,12 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
         _circle = CreateCircleTexture(device, CircleTextureSize);
     }
 
-    /// <summary>Starts a screen-space pass: coordinates are virtual-screen pixels (HUD, menus).</summary>
-    public void Begin()
+    public void BeginScreen()
     {
         _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp);
     }
 
-    /// <summary>Starts a world-space pass seen through <paramref name="camera"/>, clipped to its view.</summary>
-    public void Begin(Camera2D camera)
+    public void BeginWorld(Camera2D camera)
     {
         _device.ScissorRectangle = camera.ViewRect;
         _spriteBatch.Begin(
@@ -50,6 +48,16 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
     public void End()
     {
         _spriteBatch.End();
+    }
+
+    public void DrawVisual(in VisualDescriptor visual, Vector2 position, float rotation)
+    {
+        switch (visual.Shape)
+        {
+            case ShapeKind.Circle:
+                FillCircle(position, visual.Radius, visual.Color);
+                break;
+        }
     }
 
     public void FillRect(Vector2 topLeft, Vector2 size, Color color)

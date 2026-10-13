@@ -12,7 +12,10 @@ public class DataLoaderTests
           "virtualHeight": 1080,
           "arena": { "x": 0, "y": 0, "size": 2000, "doorWidth": 280, "wallThickness": 24 },
           "camera": { "zoom": 1.15, "leadFraction": 0.35, "leadMaxDistance": 260, "smoothing": 10, "edgeMargin": 120 },
-          "player": { "moveSpeed": 300, "radius": 20 }
+          "player": {
+            "moveSpeed": 300, "radius": 20,
+            "dash": { "cooldown": 2.0, "duration": 0.18, "distance": 200, "iFrames": true }
+          }
         }
         """;
 
@@ -43,6 +46,7 @@ public class DataLoaderTests
     [InlineData("\"zoom\": 1.15", "\"zoom\": 0", "camera.zoom")]
     [InlineData("\"leadFraction\": 0.35", "\"leadFraction\": 1.5", "camera.leadFraction")]
     [InlineData("\"moveSpeed\": 300", "\"moveSpeed\": -1", "player.moveSpeed")]
+    [InlineData("\"duration\": 0.18", "\"duration\": 0", "player.dash.duration")]
     public void OutOfRangeValue_NamesTheField(string original, string replacement, string expectedField)
     {
         var json = ValidJson.Replace(original, replacement);
