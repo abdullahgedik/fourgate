@@ -11,6 +11,10 @@ public static class SfxIds
     public const string WaveStart = "wave_start";
     public const string WaveEnd = "wave_end";
     public const string DoorWarning = "door_warning";
+    public const string CrateDrop = "crate_drop";
+    public const string PickupAmmo = "pickup_ammo";
+    public const string PickupHealth = "pickup_health";
+    public const string PickupUpgrade = "pickup_upgrade";
     public const string EnemyHit = "enemy_hit";
     public const string EnemyDeath = "enemy_death";
     public const string WeaponFire = "weapon_fire";

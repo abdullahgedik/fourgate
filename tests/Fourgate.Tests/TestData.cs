@@ -38,6 +38,7 @@ public static class TestData
             RestCountdownSeconds = 5,
             Debug = new DebugConfig { StartWave = startWave },
             Xp = Xp(),
+            Crates = Crates(),
             ReloadsEnabled = reloadsEnabled,
             GlobalReloadTimeMultiplier = reloadMultiplier,
         };
@@ -46,6 +47,23 @@ public static class TestData
     public static XpConfig Xp(bool shared = true)
     {
         return new XpConfig { Base = 60, Exponent = 1.35f, SharedFullToAllPlayers = shared };
+    }
+
+    public static CratesConfig Crates()
+    {
+        return new CratesConfig
+        {
+            DespawnSeconds = 20,
+            BlinkSeconds = 5,
+            PickupRadius = 40,
+            HealAmount = 25,
+            LowHpThreshold = 0.4f,
+            HealthChanceNormal = 0.15f,
+            HealthChanceLowHp = 0.6f,
+            UpgradeCrateChance = 0.015f,
+            AmmoPrimaryFraction = 0.35f,
+            AmmoOthersFraction = 0.08f,
+        };
     }
 
     public static WavesConfig Waves()
@@ -64,7 +82,8 @@ public static class TestData
         };
     }
 
-    public static EnemyConfig Zombie(string id = "normal", float cost = 1, int unlockWave = 1)
+    public static EnemyConfig Zombie(
+        string id = "normal", float cost = 1, int unlockWave = 1, float dropChance = 0.12f)
     {
         return new EnemyConfig
         {
@@ -79,22 +98,27 @@ public static class TestData
             ScoreValue = 10,
             Cost = cost,
             UnlockWave = unlockWave,
-            DropChance = 0.12f,
+            DropChance = dropChance,
         };
     }
 
     public static WeaponConfig Pistol(
-        bool automatic = false, int magSize = 12, int reserveMax = 0, bool infiniteReserve = true)
+        bool automatic = false,
+        int magSize = 12,
+        int reserveMax = 0,
+        bool infiniteReserve = true,
+        float fireRate = 3,
+        string id = "pistol")
     {
         return new WeaponConfig
         {
-            Id = "pistol",
+            Id = id,
             DisplayName = "Pistol",
             Slot = 1,
             UnlockWave = 1,
             Type = WeaponType.Projectile,
             Damage = 15,
-            FireRate = 3,
+            FireRate = fireRate,
             Automatic = automatic,
             Ammo = new WeaponAmmoConfig
             {

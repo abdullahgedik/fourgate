@@ -39,6 +39,13 @@ public sealed class Weapon
 
     public bool IsReloading => _reloadLeft > 0f;
 
+    /// <summary>True when the reserve is limited and not full.</summary>
+    public bool NeedsAmmo => !HasInfiniteReserve && Reserve < Config.Ammo.ReserveMax;
+
+    /// <summary>How full the reserve is, from 0 to 1; always 1 for an unlimited reserve.</summary>
+    public float ReserveFraction =>
+        HasInfiniteReserve || Config.Ammo.ReserveMax <= 0 ? 1f : Reserve / (float)Config.Ammo.ReserveMax;
+
     /// <summary>0 at the start of a reload, 1 when it finishes; 0 when not reloading.</summary>
     public float ReloadProgress
     {
@@ -113,6 +120,19 @@ public sealed class Weapon
         {
             TryStartReload();
         }
+    }
+
+    /// <summary>Adds rounds to the reserve up to its maximum. Returns how many fit.</summary>
+    public int AddReserve(int rounds)
+    {
+        if (HasInfiniteReserve || rounds <= 0)
+        {
+            return 0;
+        }
+
+        var added = Math.Min(rounds, Config.Ammo.ReserveMax - Reserve);
+        Reserve += added;
+        return added;
     }
 
     /// <summary>Drops an unfinished reload; its progress is lost (weapon switch).</summary>

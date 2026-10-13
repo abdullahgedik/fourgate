@@ -7,6 +7,12 @@
   "maxAliveEnemies": 60,
   "restCountdownSeconds": 5,
   "xp": { "base": 60, "exponent": 1.35, "sharedFullToAllPlayers": true },
+  "crates": {
+    "despawnSeconds": 20, "blinkSeconds": 5, "pickupRadius": 40,
+    "healAmount": 25, "lowHpThreshold": 0.4,
+    "healthChanceNormal": 0.15, "healthChanceLowHp": 0.6, "upgradeCrateChance": 0.015,
+    "ammoPrimaryFraction": 0.35, "ammoOthersFraction": 0.08
+  },
   "reloadsEnabled": true,
   "globalReloadTimeMultiplier": 1.0,
   "player": {

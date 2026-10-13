@@ -117,6 +117,11 @@ public sealed class FourgateGame : Game
         {
             _scene?.DebugGrantXp(DebugXpGrant);
         }
+
+        if (_debugHotkeys.DropCratesPressed)
+        {
+            _scene?.DebugDropCrates();
+        }
     }
 
     protected override void Draw(GameTime gameTime)

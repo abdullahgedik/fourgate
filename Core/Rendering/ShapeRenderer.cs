@@ -67,6 +67,10 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
             case ShapeKind.Circle:
                 FillCircle(position, visual.Radius, visual.Color);
                 break;
+
+            case ShapeKind.Square:
+                FillRect(position - new Vector2(visual.Radius), new Vector2(visual.Radius * 2f), visual.Color);
+                break;
         }
     }
 

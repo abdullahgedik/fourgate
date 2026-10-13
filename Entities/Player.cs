@@ -100,6 +100,18 @@ public sealed class Player
         CurrentWeapon ??= weapon;
     }
 
+    /// <summary>Restores HP up to the maximum. Returns false when dead or already at full HP.</summary>
+    public bool Heal(float amount)
+    {
+        if (!IsAlive || Hp >= MaxHp || amount <= 0f)
+        {
+            return false;
+        }
+
+        Hp = Math.Min(MaxHp, Hp + amount);
+        return true;
+    }
+
     /// <summary>
     /// Deals damage unless the player is dead or invulnerable. Returns true when it landed.
     /// </summary>

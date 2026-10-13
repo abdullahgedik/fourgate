@@ -16,6 +16,12 @@ public class DataLoaderTests
           "maxAliveEnemies": 60,
           "restCountdownSeconds": 5,
           "xp": { "base": 60, "exponent": 1.35, "sharedFullToAllPlayers": true },
+          "crates": {
+            "despawnSeconds": 20, "blinkSeconds": 5, "pickupRadius": 40,
+            "healAmount": 25, "lowHpThreshold": 0.4,
+            "healthChanceNormal": 0.15, "healthChanceLowHp": 0.6, "upgradeCrateChance": 0.015,
+            "ammoPrimaryFraction": 0.35, "ammoOthersFraction": 0.08
+          },
           "reloadsEnabled": true,
           "globalReloadTimeMultiplier": 1.0,
           "player": {
@@ -78,6 +84,8 @@ public class DataLoaderTests
     [InlineData("\"moveSpeed\": 300", "\"moveSpeed\": -1", "player.moveSpeed")]
     [InlineData("\"maxHp\": 100", "\"maxHp\": 0", "player.maxHp")]
     [InlineData("\"base\": 60", "\"base\": 0", "xp.base")]
+    [InlineData("\"healthChanceLowHp\": 0.6", "\"healthChanceLowHp\": 1.6", "crates.healthChanceLowHp")]
+    [InlineData("\"pickupRadius\": 40", "\"pickupRadius\": 0", "crates.pickupRadius")]
     [InlineData("\"duration\": 0.18", "\"duration\": 0", "player.dash.duration")]
     [InlineData("\"globalReloadTimeMultiplier\": 1.0", "\"globalReloadTimeMultiplier\": -1", "globalReloadTimeMultiplier")]
     public void OutOfRangeGameValue_NamesTheField(string original, string replacement, string expectedField)

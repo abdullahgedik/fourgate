@@ -6,6 +6,7 @@ using Fourgate.Core.Input;
 using Fourgate.Core.Rendering;
 using Fourgate.Core.Rng;
 using Fourgate.Entities;
+using Fourgate.Entities.Pickups;
 using Fourgate.Systems;
 using Fourgate.UI;
 using Fourgate.Weapons;
@@ -48,6 +49,7 @@ public sealed class GameplayScene
     private readonly EnemySystem _enemies;
     private readonly WaveSystem? _waves;
     private readonly XpSystem _xp;
+    private readonly DropSystem _drops;
     private readonly WaveHud _waveHud = new();
     private readonly GameOverOverlay _gameOverOverlay = new();
     private readonly IAudioManager _audio;
@@ -70,6 +72,7 @@ public sealed class GameplayScene
         _shots = new ShotSystem(_arena);
         _shots.AddSource(_enemies);
         _xp = new XpSystem(config.Xp, audio);
+        _drops = new DropSystem(config.Crates, _random, audio);
         _waves = config.Debug.DisableWaves ? null : new WaveSystem(data, _enemies, _arena, _random, audio);
 
         var player = new Player(0, playerOneInput, config.Player, audio, _arena.Center);
@@ -120,6 +123,7 @@ public sealed class GameplayScene
         }
 
         _shots.Update(deltaSeconds);
+        _drops.Update(deltaSeconds, _players);
 
         if (!AnyPlayerAlive())
         {
@@ -161,7 +165,17 @@ public sealed class GameplayScene
         for (var i = 0; i < deaths.Count; i++)
         {
             _xp.Award(deaths[i].Config.Xp, deaths[i].KilledBy, _players);
+            _drops.OnEnemyKilled(deaths[i], _players);
         }
+    }
+
+    /// <summary>Debug helper: drops one crate of each type in a row beside the first player.</summary>
+    public void DebugDropCrates()
+    {
+        var origin = _players[0].Position + new Vector2(90f, -70f);
+        _drops.Spawn(CrateType.Ammo, _arena.ClampInside(origin, Crate.HalfSize));
+        _drops.Spawn(CrateType.Health, _arena.ClampInside(origin + new Vector2(0f, 70f), Crate.HalfSize));
+        _drops.Spawn(CrateType.Upgrade, _arena.ClampInside(origin + new Vector2(0f, 140f), Crate.HalfSize));
     }
 
     /// <summary>Debug helper: gives every player XP.</summary>
@@ -195,6 +209,7 @@ public sealed class GameplayScene
                 renderer.DrawVisual(_practiceTargets[t].Visual, _practiceTargets[t].Position, 0f);
             }
 
+            _drops.Draw(renderer);
             _enemies.Draw(renderer);
             _shots.Draw(renderer);
             DrawPlayers(renderer);
