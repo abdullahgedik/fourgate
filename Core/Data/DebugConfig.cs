@@ -9,6 +9,9 @@ public sealed class DebugConfig
     /// <summary>Places a still and a moving dummy target in the arena for trying out weapons.</summary>
     public bool PracticeTargets { get; init; }
 
+    /// <summary>Every player bullet kills what it hits.</summary>
+    public bool OneShotKills { get; init; }
+
     /// <summary>Turns the wave system off, leaving an empty arena for testing.</summary>
     public bool DisableWaves { get; init; }
 

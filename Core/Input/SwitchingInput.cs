@@ -36,6 +36,10 @@ public sealed class SwitchingInput : IPlayerInput
 
     public bool ReloadPressed => _current.ReloadPressed;
 
+    public int WeaponCycle => _current.WeaponCycle;
+
+    public int WeaponSlotPressed => _current.WeaponSlotPressed;
+
     public bool ConfirmPressed => _current.ConfirmPressed;
 
     public bool MenuLeftPressed => _current.MenuLeftPressed;

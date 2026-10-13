@@ -32,6 +32,9 @@ public sealed class ShotSystem : IShotHandler
 
     public int BulletCount => _bullets.Count;
 
+    /// <summary>Debug switch: every bullet kills what it hits.</summary>
+    public bool OneShotKills { get; set; }
+
     /// <summary>Registers a single thing bullets can hit.</summary>
     public void AddTarget(IHittable target)
     {
@@ -123,7 +126,7 @@ public sealed class ShotSystem : IShotHandler
         bullet.Advance(distance);
         if (hit is not null)
         {
-            hit.Hit(bullet.Damage, bullet.OwnerIndex);
+            hit.Hit(OneShotKills ? float.MaxValue : bullet.Damage, bullet.OwnerIndex);
             stops = true;
         }
 

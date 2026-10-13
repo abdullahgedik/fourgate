@@ -1,3 +1,4 @@
+using Fourgate.Core.Data;
 using Fourgate.Core.Rendering;
 using Microsoft.Xna.Framework;
 
@@ -14,12 +15,16 @@ public sealed class Crate
     private static readonly Color AmmoColor = new(200, 160, 70);
     private static readonly Color HealthColor = new(60, 170, 90);
     private static readonly Color UpgradeColor = new(170, 120, 255);
+    private static readonly Color WeaponColor = new(60, 170, 230);
 
     public CrateType Type { get; private set; }
 
+    /// <summary>The weapon inside a <see cref="CrateType.Weapon"/> crate.</summary>
+    public WeaponConfig? Weapon { get; private set; }
+
     public Vector2 Position { get; private set; }
 
-    /// <summary>Seconds until the crate disappears.</summary>
+    /// <summary>Seconds until the crate disappears; infinite for crates that never expire.</summary>
     public float SecondsLeft { get; private set; }
 
     public bool IsExpired => SecondsLeft <= 0f;
@@ -31,14 +36,16 @@ public sealed class Crate
         {
             CrateType.Health => HealthColor,
             CrateType.Upgrade => UpgradeColor,
+            CrateType.Weapon => WeaponColor,
             _ => AmmoColor,
         });
 
-    public void Drop(CrateType type, Vector2 position, float lifetimeSeconds)
+    public void Drop(CrateType type, Vector2 position, float lifetimeSeconds, WeaponConfig? weapon)
     {
         Type = type;
         Position = position;
         SecondsLeft = lifetimeSeconds;
+        Weapon = weapon;
     }
 
     public void Tick(float deltaSeconds)

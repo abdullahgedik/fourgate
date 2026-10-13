@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fourgate.Core.Data;
 using Fourgate.Core.Rendering;
 using Fourgate.Entities;
@@ -21,6 +22,9 @@ public sealed class PlayerHud
     private const float LevelTextSize = 26f;
     private const float WeaponNameSize = 26f;
     private const float AmmoSize = 46f;
+    private const float WeaponListSize = 22f;
+    private const float WeaponListLineHeight = 24f;
+    private const float WeaponListGap = 14f;
 
     private static readonly Color PanelColor = new(8, 9, 12, 200);
     private static readonly Color HpColor = new(215, 60, 60);
@@ -31,6 +35,7 @@ public sealed class PlayerHud
     private static readonly Color TextColor = new(240, 240, 245);
     private static readonly Color DimTextColor = new(170, 175, 190);
     private static readonly Color HighlightTextColor = new(255, 225, 120);
+    private static readonly Color EmptyTextColor = new(200, 80, 80);
 
     private readonly XpConfig _xpConfig;
 
@@ -50,6 +55,7 @@ public sealed class PlayerHud
     private bool _reloadingShown;
     private string _weaponName = string.Empty;
     private string _ammoText = string.Empty;
+    private readonly List<WeaponListEntry> _listEntries = new();
 
     public PlayerHud(XpConfig xpConfig)
     {
@@ -152,6 +158,64 @@ public sealed class PlayerHud
             weapon.IsReloading ? HighlightTextColor : TextColor, TextAlign.Right);
         renderer.DrawText(
             _weaponName, new Vector2(right, ammoTop - WeaponNameSize), WeaponNameSize, DimTextColor, TextAlign.Right);
+
+        DrawWeaponList(renderer, player, right, ammoTop - WeaponNameSize - WeaponListGap);
+    }
+
+    // Carried weapons by slot number, lowest at the top, with the one in hand highlighted.
+    private void DrawWeaponList(IRenderer renderer, Player player, float right, float bottom)
+    {
+        var weapons = player.Weapons;
+        if (weapons.Count < 2)
+        {
+            return;
+        }
+
+        while (_listEntries.Count < weapons.Count)
+        {
+            _listEntries.Add(new WeaponListEntry());
+        }
+
+        var top = bottom - weapons.Count * WeaponListLineHeight;
+        for (var i = 0; i < weapons.Count; i++)
+        {
+            var weapon = weapons[i];
+            var entry = _listEntries[i];
+            var ammo = weapon.HasInfiniteReserve ? -1 : weapon.Magazine + weapon.Reserve;
+            if (!ReferenceEquals(entry.Weapon, weapon) || entry.Ammo != ammo)
+            {
+                entry.Weapon = weapon;
+                entry.Ammo = ammo;
+                entry.Text = ammo < 0
+                    ? $"{SlotLabel(weapon.Config.Slot)}  {weapon.Config.DisplayName.ToUpperInvariant()}"
+                    : $"{SlotLabel(weapon.Config.Slot)}  {weapon.Config.DisplayName.ToUpperInvariant()}  {ammo}";
+            }
+
+            var isCurrent = ReferenceEquals(weapon, player.CurrentWeapon);
+            var color = isCurrent ? HighlightTextColor : (ammo == 0 ? EmptyTextColor : DimTextColor);
+            renderer.DrawText(
+                entry.Text, new Vector2(right, top + i * WeaponListLineHeight), WeaponListSize, color, TextAlign.Right);
+        }
+    }
+
+    // The key that selects the slot: 1-9, then 0 and minus.
+    private static string SlotLabel(int slot)
+    {
+        return slot switch
+        {
+            10 => "0",
+            11 => "-",
+            _ => slot.ToString(),
+        };
+    }
+
+    private sealed class WeaponListEntry
+    {
+        public Weapon? Weapon { get; set; }
+
+        public int Ammo { get; set; } = int.MinValue;
+
+        public string Text { get; set; } = string.Empty;
     }
 
     private static void DrawBar(IRenderer renderer, Vector2 topLeft, float height, float fraction, Color fill)

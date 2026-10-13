@@ -11,6 +11,19 @@
       "automatic": false,
       "ammo": { "magSize": 12, "reserveMax": 0, "reloadTime": 0.8, "infiniteReserve": true },
       "projectile": { "speed": 6000, "radius": 4, "range": 1100 }
+    },
+    {
+      "id": "smg",
+      "displayName": "SMG",
+      "slot": 2,
+      "unlockWave": 2,
+      "type": "projectile",
+      "damage": 8,
+      "fireRate": 12,
+      "automatic": true,
+      "spreadDegrees": 5,
+      "ammo": { "magSize": 30, "reserveMax": 240, "reloadTime": 1.2, "infiniteReserve": false },
+      "projectile": { "speed": 6000, "radius": 4, "range": 950 }
     }
   ]
 }

@@ -2,6 +2,7 @@ using System;
 using Fourgate.Core.Audio;
 using Fourgate.Core.Data;
 using Fourgate.Core.Input;
+using Fourgate.Core.Rng;
 using Microsoft.Xna.Framework;
 
 namespace Fourgate.Weapons;
@@ -14,15 +15,21 @@ public sealed class Weapon
 
     private readonly GameConfig _rules;
     private readonly IAudioManager _audio;
+    private readonly GameRandom? _random;
     private float _cooldown;
     private float _reloadLeft;
     private bool _fireQueued;
 
-    public Weapon(WeaponConfig config, GameConfig rules, IAudioManager audio)
+    /// <param name="config">The weapon's data.</param>
+    /// <param name="rules">Global reload rules.</param>
+    /// <param name="audio">Receives the weapon's sound events.</param>
+    /// <param name="random">Source of shot spread; without one the weapon fires dead straight.</param>
+    public Weapon(WeaponConfig config, GameConfig rules, IAudioManager audio, GameRandom? random = null)
     {
         Config = config;
         _rules = rules;
         _audio = audio;
+        _random = random;
         Magazine = config.Ammo.MagSize;
         Reserve = config.Ammo.InfiniteReserve ? 0 : config.Ammo.ReserveMax;
     }
@@ -119,7 +126,7 @@ public sealed class Weapon
         }
 
         _cooldown += 1f / Config.FireRate;
-        shots.FireProjectile(muzzle, direction, Config.Projectile, Config.Damage, ownerIndex);
+        shots.FireProjectile(muzzle, Scatter(direction), Config.Projectile, Config.Damage, ownerIndex);
         _audio.PlaySfx(SfxIds.WeaponFire);
 
         if (_rules.ReloadsEnabled && Magazine == 0)
@@ -145,6 +152,31 @@ public sealed class Weapon
     public void CancelReload()
     {
         _reloadLeft = 0f;
+        _fireQueued = false;
+    }
+
+    /// <summary>Called when the owner switches to this weapon; an empty magazine starts reloading at once.</summary>
+    public void OnSelected()
+    {
+        if (_rules.ReloadsEnabled && Magazine == 0)
+        {
+            TryStartReload();
+        }
+    }
+
+    // Turns the aim by a random angle inside the weapon's spread cone.
+    private Vector2 Scatter(Vector2 direction)
+    {
+        if (_random is null || Config.SpreadDegrees <= 0f)
+        {
+            return direction;
+        }
+
+        var half = MathHelper.ToRadians(Config.SpreadDegrees) / 2f;
+        var angle = _random.Range(-half, half);
+        var cos = MathF.Cos(angle);
+        var sin = MathF.Sin(angle);
+        return new Vector2(direction.X * cos - direction.Y * sin, direction.X * sin + direction.Y * cos);
     }
 
     private bool WantsToFire(IPlayerInput input)

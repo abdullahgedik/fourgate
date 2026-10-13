@@ -290,7 +290,7 @@ public class DropTests
 
     private static DropSystem CreateDrops()
     {
-        return new DropSystem(Config, new GameRandom(11), new NullAudioManager());
+        return new DropSystem(Config, new GameRandom(11), new NullAudioManager(), TestData.Unlocks());
     }
 
     private static Player CreatePlayer()

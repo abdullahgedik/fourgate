@@ -22,6 +22,9 @@ public sealed class WeaponConfig
     /// <summary>True when holding fire keeps shooting; false needs one press per shot.</summary>
     public required bool Automatic { get; init; }
 
+    /// <summary>Full width of the cone shots scatter in, in degrees; 0 fires dead straight.</summary>
+    public float SpreadDegrees { get; init; }
+
     public required WeaponAmmoConfig Ammo { get; init; }
 
     public required ProjectileConfig Projectile { get; init; }
@@ -36,6 +39,8 @@ public sealed class WeaponConfig
         DataLoadException.Require(UnlockWave >= 1, file, $"{path}.unlockWave", "must be 1 or greater");
         DataLoadException.Require(Damage > 0, file, $"{path}.damage", "must be greater than 0");
         DataLoadException.Require(FireRate > 0, file, $"{path}.fireRate", "must be greater than 0");
+        DataLoadException.Require(
+            SpreadDegrees >= 0 && SpreadDegrees <= 180, file, $"{path}.spreadDegrees", "must be between 0 and 180");
 
         DataLoadException.Require(Ammo is not null, file, $"{path}.ammo", "is required");
         var ammo = Ammo!;

@@ -111,8 +111,43 @@ public sealed class Player
     public void GiveWeapon(Weapon weapon)
     {
         weapon.ReserveCapacityMultiplier = _ammoCapacityMultiplier;
-        _weapons.Add(weapon);
+
+        // Keep the inventory in slot order so cycling follows the slot numbers.
+        var index = 0;
+        while (index < _weapons.Count && _weapons[index].Config.Slot < weapon.Config.Slot)
+        {
+            index++;
+        }
+
+        _weapons.Insert(index, weapon);
         CurrentWeapon ??= weapon;
+    }
+
+    public bool OwnsWeapon(string weaponId)
+    {
+        for (var i = 0; i < _weapons.Count; i++)
+        {
+            if (_weapons[i].Config.Id == weaponId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Switches to a carried weapon. An unfinished reload of the old weapon is lost.</summary>
+    public void SelectWeapon(Weapon weapon)
+    {
+        if (ReferenceEquals(weapon, CurrentWeapon) || !_weapons.Contains(weapon))
+        {
+            return;
+        }
+
+        CurrentWeapon?.CancelReload();
+        CurrentWeapon = weapon;
+        weapon.OnSelected();
+        _audio.PlaySfx(SfxIds.WeaponSwitch);
     }
 
     /// <summary>How many times this player has taken the upgrade with the given id.</summary>
@@ -205,9 +240,38 @@ public sealed class Player
         }
 
         UpdateMovement(deltaSeconds, arena);
+        HandleWeaponSwitch();
 
         var muzzle = Position + AimDirection * Radius;
         CurrentWeapon?.Update(deltaSeconds, Input, muzzle, AimDirection, Index, shots);
+    }
+
+    private void HandleWeaponSwitch()
+    {
+        var slot = Input.WeaponSlotPressed;
+        if (slot > 0)
+        {
+            for (var i = 0; i < _weapons.Count; i++)
+            {
+                if (_weapons[i].Config.Slot == slot)
+                {
+                    SelectWeapon(_weapons[i]);
+                    return;
+                }
+            }
+
+            return;
+        }
+
+        var cycle = Input.WeaponCycle;
+        if (cycle == 0 || _weapons.Count < 2 || CurrentWeapon is null)
+        {
+            return;
+        }
+
+        var current = _weapons.IndexOf(CurrentWeapon);
+        var next = ((current + Math.Sign(cycle)) % _weapons.Count + _weapons.Count) % _weapons.Count;
+        SelectWeapon(_weapons[next]);
     }
 
     private void UpdateMovement(float deltaSeconds, Arena arena)

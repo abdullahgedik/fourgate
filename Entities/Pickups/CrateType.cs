@@ -10,4 +10,7 @@ public enum CrateType
 
     /// <summary>Banks one extra upgrade pick.</summary>
     Upgrade,
+
+    /// <summary>Holds one specific weapon.</summary>
+    Weapon,
 }

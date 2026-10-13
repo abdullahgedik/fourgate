@@ -122,6 +122,16 @@ public sealed class FourgateGame : Game
         {
             _scene?.DebugDropCrates();
         }
+
+        if (_debugHotkeys.GrantWeaponsPressed)
+        {
+            _scene?.DebugGrantAllWeapons();
+        }
+
+        if (_debugHotkeys.OneShotKillsPressed)
+        {
+            _scene?.DebugToggleOneShotKills();
+        }
     }
 
     protected override void Draw(GameTime gameTime)

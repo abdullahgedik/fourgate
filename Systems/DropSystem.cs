@@ -22,13 +22,15 @@ public sealed class DropSystem
     private readonly CratesConfig _config;
     private readonly GameRandom _random;
     private readonly IAudioManager _audio;
+    private readonly WeaponUnlocks _unlocks;
     private readonly Pool<Crate> _crates = new(InitialCrates);
 
-    public DropSystem(CratesConfig config, GameRandom random, IAudioManager audio)
+    public DropSystem(CratesConfig config, GameRandom random, IAudioManager audio, WeaponUnlocks unlocks)
     {
         _config = config;
         _random = random;
         _audio = audio;
+        _unlocks = unlocks;
     }
 
     public int Count => _crates.Count;
@@ -50,24 +52,6 @@ public sealed class DropSystem
         return healthRoll < healthChance ? CrateType.Health : CrateType.Ammo;
     }
 
-    /// <summary>Gives a crate's contents to a player. Returns false when the player has no use for it.</summary>
-    public static bool TryApply(CrateType type, Player player, CratesConfig config)
-    {
-        switch (type)
-        {
-            case CrateType.Health:
-                return player.Heal(config.HealAmount);
-
-            case CrateType.Upgrade:
-                player.Progression.AddPick();
-                return true;
-
-            default:
-                return AmmoDistribution.Distribute(
-                    player.Weapons, config.AmmoPrimaryFraction, config.AmmoOthersFraction);
-        }
-    }
-
     /// <summary>Rolls the dead enemy's drop chance and leaves a crate where it died.</summary>
     public void OnEnemyKilled(in EnemyDeath death, IReadOnlyList<Player> players)
     {
@@ -79,7 +63,7 @@ public sealed class DropSystem
         var type = ChooseType(_config, AnyLivingPlayerLowOnHp(players), _random.NextFloat(), _random.NextFloat());
 
         // An ammo crate nobody could pick up would only clutter the floor.
-        if (type == CrateType.Ammo && !AnyLivingPlayerCanUseAmmo(players))
+        if (type == CrateType.Ammo && !AnyLivingPlayerCanUseAmmoCrate(players))
         {
             return;
         }
@@ -90,7 +74,16 @@ public sealed class DropSystem
     public Crate Spawn(CrateType type, Vector2 position)
     {
         var crate = _crates.Rent();
-        crate.Drop(type, position, _config.DespawnSeconds);
+        crate.Drop(type, position, _config.DespawnSeconds, null);
+        _audio.PlaySfx(SfxIds.CrateDrop);
+        return crate;
+    }
+
+    /// <summary>Places a crate holding a specific weapon. It stays until someone who lacks that weapon takes it.</summary>
+    public Crate SpawnWeaponCrate(WeaponConfig weapon, Vector2 position)
+    {
+        var crate = _crates.Rent();
+        crate.Drop(CrateType.Weapon, position, float.PositiveInfinity, weapon);
         _audio.PlaySfx(SfxIds.CrateDrop);
         return crate;
     }
@@ -138,19 +131,62 @@ public sealed class DropSystem
                 continue;
             }
 
-            if (TryApply(crate.Type, player, _config))
+            if (TryApply(crate, player))
             {
-                _audio.PlaySfx(crate.Type switch
-                {
-                    CrateType.Health => SfxIds.PickupHealth,
-                    CrateType.Upgrade => SfxIds.PickupUpgrade,
-                    _ => SfxIds.PickupAmmo,
-                });
                 return true;
             }
         }
 
         return false;
+    }
+
+    // Gives a crate's contents to a player. Returns false when the player has no use for it.
+    private bool TryApply(Crate crate, Player player)
+    {
+        switch (crate.Type)
+        {
+            case CrateType.Health:
+                if (!player.Heal(_config.HealAmount))
+                {
+                    return false;
+                }
+
+                _audio.PlaySfx(SfxIds.PickupHealth);
+                return true;
+
+            case CrateType.Upgrade:
+                player.Progression.AddPick();
+                _audio.PlaySfx(SfxIds.PickupUpgrade);
+                return true;
+
+            case CrateType.Weapon:
+                if (crate.Weapon is null || !_unlocks.Grant(player, crate.Weapon))
+                {
+                    return false;
+                }
+
+                _audio.PlaySfx(SfxIds.PickupWeapon);
+                return true;
+
+            default:
+                // A player's first crate after a weapon unlocks holds that weapon; later ones hold ammo.
+                var missing = _unlocks.FirstMissingFor(player);
+                if (missing is not null)
+                {
+                    _unlocks.Grant(player, missing);
+                    _audio.PlaySfx(SfxIds.PickupWeapon);
+                    return true;
+                }
+
+                if (!AmmoDistribution.Distribute(
+                    player.Weapons, _config.AmmoPrimaryFraction, _config.AmmoOthersFraction))
+                {
+                    return false;
+                }
+
+                _audio.PlaySfx(SfxIds.PickupAmmo);
+                return true;
+        }
     }
 
     private bool AnyLivingPlayerLowOnHp(IReadOnlyList<Player> players)
@@ -167,11 +203,13 @@ public sealed class DropSystem
         return false;
     }
 
-    private static bool AnyLivingPlayerCanUseAmmo(IReadOnlyList<Player> players)
+    private bool AnyLivingPlayerCanUseAmmoCrate(IReadOnlyList<Player> players)
     {
         for (var i = 0; i < players.Count; i++)
         {
-            if (players[i].IsAlive && AmmoDistribution.CanUse(players[i].Weapons))
+            var player = players[i];
+            if (player.IsAlive
+                && (AmmoDistribution.CanUse(player.Weapons) || _unlocks.FirstMissingFor(player) is not null))
             {
                 return true;
             }
@@ -195,6 +233,12 @@ public sealed class DropSystem
                 renderer.FillRect(center - new Vector2(3f, 2f), new Vector2(6f, 12f), GlyphColor);
                 renderer.FillRect(center - new Vector2(9f, 6f), new Vector2(18f, 5f), GlyphColor);
                 renderer.FillRect(center - new Vector2(4f, 11f), new Vector2(8f, 5f), GlyphColor);
+                break;
+
+            case CrateType.Weapon:
+                // A small gun: barrel and grip.
+                renderer.FillRect(center + new Vector2(-11f, -6f), new Vector2(22f, 7f), GlyphColor);
+                renderer.FillRect(center + new Vector2(-9f, 1f), new Vector2(7f, 9f), GlyphColor);
                 break;
 
             default:

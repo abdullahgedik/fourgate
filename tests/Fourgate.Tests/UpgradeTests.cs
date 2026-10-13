@@ -225,7 +225,7 @@ public class UpgradeTests
     [Fact]
     public void PickupRangeUpgrade_ReachesCratesFurtherAway()
     {
-        var drops = new DropSystem(TestData.Crates(), new GameRandom(1), new NullAudioManager());
+        var drops = new DropSystem(TestData.Crates(), new GameRandom(1), new NullAudioManager(), TestData.Unlocks());
         var player = CreatePlayer(new FakeInput());
         var players = new List<Player> { player };
         drops.Spawn(CrateType.Upgrade, Center + new Vector2(46, 0));

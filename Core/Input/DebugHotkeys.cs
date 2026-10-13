@@ -9,6 +9,8 @@ public sealed class DebugHotkeys
     private const Keys SpawnManyKey = Keys.F2;
     private const Keys GrantXpKey = Keys.F3;
     private const Keys DropCratesKey = Keys.F4;
+    private const Keys GrantWeaponsKey = Keys.F5;
+    private const Keys OneShotKillsKey = Keys.F6;
 
     private KeyboardState _previous;
 
@@ -24,6 +26,12 @@ public sealed class DebugHotkeys
     /// <summary>Drop one crate of each type next to the first player.</summary>
     public bool DropCratesPressed { get; private set; }
 
+    /// <summary>Unlock every weapon and give it to every player.</summary>
+    public bool GrantWeaponsPressed { get; private set; }
+
+    /// <summary>Turn one-shot kills on or off.</summary>
+    public bool OneShotKillsPressed { get; private set; }
+
     public void Update()
     {
         var current = Keyboard.GetState();
@@ -31,6 +39,8 @@ public sealed class DebugHotkeys
         SpawnManyPressed = current.IsKeyDown(SpawnManyKey) && _previous.IsKeyUp(SpawnManyKey);
         GrantXpPressed = current.IsKeyDown(GrantXpKey) && _previous.IsKeyUp(GrantXpKey);
         DropCratesPressed = current.IsKeyDown(DropCratesKey) && _previous.IsKeyUp(DropCratesKey);
+        GrantWeaponsPressed = current.IsKeyDown(GrantWeaponsKey) && _previous.IsKeyUp(GrantWeaponsKey);
+        OneShotKillsPressed = current.IsKeyDown(OneShotKillsKey) && _previous.IsKeyUp(OneShotKillsKey);
         _previous = current;
     }
 }

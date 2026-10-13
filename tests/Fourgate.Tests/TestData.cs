@@ -79,6 +79,11 @@ public static class TestData
         };
     }
 
+    public static Systems.WeaponUnlocks Unlocks()
+    {
+        return new Systems.WeaponUnlocks(Game(), new Core.Audio.NullAudioManager(), null);
+    }
+
     public static CratesConfig Crates()
     {
         return new CratesConfig
@@ -138,13 +143,16 @@ public static class TestData
         int reserveMax = 0,
         bool infiniteReserve = true,
         float fireRate = 3,
-        string id = "pistol")
+        string id = "pistol",
+        int slot = 1,
+        float spreadDegrees = 0)
     {
         return new WeaponConfig
         {
             Id = id,
             DisplayName = "Pistol",
-            Slot = 1,
+            Slot = slot,
+            SpreadDegrees = spreadDegrees,
             UnlockWave = 1,
             Type = WeaponType.Projectile,
             Damage = 15,

@@ -36,6 +36,9 @@ public sealed class WaveSystem
 
     public WavePhase Phase { get; private set; }
 
+    /// <summary>The highest wave that has begun so far; 0 before the first wave.</summary>
+    public int HighestStartedWave { get; private set; }
+
     /// <summary>Seconds until the next wave starts; only meaningful during a rest.</summary>
     public float RestSecondsLeft { get; private set; }
 
@@ -72,6 +75,7 @@ public sealed class WaveSystem
         Spawner.Begin(_composition, WaveMath.SpawnInterval(Wave, waves), WaveMath.GroupSize(Wave, waves));
 
         Phase = WavePhase.Active;
+        HighestStartedWave = Math.Max(HighestStartedWave, Wave);
         _audio.PlaySfx(SfxIds.WaveStart);
     }
 

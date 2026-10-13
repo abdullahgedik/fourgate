@@ -26,6 +26,12 @@ public interface IPlayerInput
 
     bool ReloadPressed { get; }
 
+    /// <summary>-1 to switch to the previous weapon, +1 to the next, 0 for no change.</summary>
+    int WeaponCycle { get; }
+
+    /// <summary>Weapon slot number chosen directly this frame, or 0 for none.</summary>
+    int WeaponSlotPressed { get; }
+
     /// <summary>Accept/continue in menus and on the game over screen.</summary>
     bool ConfirmPressed { get; }
 

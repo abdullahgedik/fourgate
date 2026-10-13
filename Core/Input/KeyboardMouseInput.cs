@@ -7,6 +7,12 @@ namespace Fourgate.Core.Input;
 /// <summary>Player 1 controls: WASD to move, mouse to aim and fire.</summary>
 public sealed class KeyboardMouseInput : IPlayerInput
 {
+    // Index + 1 is the weapon slot: 1-9, then 0 for slot 10 and minus for slot 11.
+    private static readonly Keys[] SlotKeys =
+    {
+        Keys.D1, Keys.D2, Keys.D3, Keys.D4, Keys.D5, Keys.D6, Keys.D7, Keys.D8, Keys.D9, Keys.D0, Keys.OemMinus,
+    };
+
     private readonly VirtualScreen _screen;
     private KeyboardState _previousKeyboard;
     private MouseState _previousMouse;
@@ -31,6 +37,10 @@ public sealed class KeyboardMouseInput : IPlayerInput
     public bool DashPressed { get; private set; }
 
     public bool ReloadPressed { get; private set; }
+
+    public int WeaponCycle { get; private set; }
+
+    public int WeaponSlotPressed { get; private set; }
 
     public bool ConfirmPressed { get; private set; }
 
@@ -85,6 +95,27 @@ public sealed class KeyboardMouseInput : IPlayerInput
         DashPressed = keyboard.IsKeyDown(Keys.Space) && _previousKeyboard.IsKeyUp(Keys.Space);
         ReloadPressed = keyboard.IsKeyDown(Keys.R) && _previousKeyboard.IsKeyUp(Keys.R);
         ConfirmPressed = keyboard.IsKeyDown(Keys.Enter) && _previousKeyboard.IsKeyUp(Keys.Enter);
+
+        var wheel = mouse.ScrollWheelValue - _previousMouse.ScrollWheelValue;
+        WeaponCycle = 0;
+        if (wheel < 0 || WasPressed(keyboard, Keys.E))
+        {
+            WeaponCycle = 1;
+        }
+        else if (wheel > 0 || WasPressed(keyboard, Keys.Q))
+        {
+            WeaponCycle = -1;
+        }
+
+        WeaponSlotPressed = 0;
+        for (var i = 0; i < SlotKeys.Length; i++)
+        {
+            if (WasPressed(keyboard, SlotKeys[i]))
+            {
+                WeaponSlotPressed = i + 1;
+                break;
+            }
+        }
         MenuLeftPressed = WasPressed(keyboard, Keys.A) || WasPressed(keyboard, Keys.Left);
         MenuRightPressed = WasPressed(keyboard, Keys.D) || WasPressed(keyboard, Keys.Right);
 
@@ -93,6 +124,8 @@ public sealed class KeyboardMouseInput : IPlayerInput
             || DashPressed
             || ReloadPressed
             || ConfirmPressed
+            || WeaponCycle != 0
+            || WeaponSlotPressed != 0
             || MenuLeftPressed
             || MenuRightPressed
             || mouse.X != _previousMouse.X

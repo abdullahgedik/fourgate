@@ -86,12 +86,15 @@ public static class DataLoader
         DataLoadException.Require(weapons is { Count: > 0 }, file, "weapons", "must contain at least one weapon");
 
         var ids = new HashSet<string>();
+        var slots = new HashSet<int>();
         for (var i = 0; i < weapons!.Count; i++)
         {
             var path = $"weapons[{i}]";
             DataLoadException.Require(weapons[i] is not null, file, path, "must not be null");
             weapons[i].Validate(file, path);
             DataLoadException.Require(ids.Add(weapons[i].Id), file, $"{path}.id", $"'{weapons[i].Id}' is used more than once");
+            DataLoadException.Require(
+                slots.Add(weapons[i].Slot), file, $"{path}.slot", $"slot {weapons[i].Slot} is used more than once");
         }
 
         return weapons;

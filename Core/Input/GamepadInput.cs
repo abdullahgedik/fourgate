@@ -37,6 +37,10 @@ public sealed class GamepadInput : IPlayerInput
 
     public bool ReloadPressed { get; private set; }
 
+    public int WeaponCycle { get; private set; }
+
+    public int WeaponSlotPressed => 0;
+
     public bool ConfirmPressed { get; private set; }
 
     public bool MenuLeftPressed { get; private set; }
@@ -78,6 +82,16 @@ public sealed class GamepadInput : IPlayerInput
         ConfirmPressed = (state.IsButtonDown(Buttons.A) && _previous.IsButtonUp(Buttons.A))
             || (state.IsButtonDown(Buttons.Start) && _previous.IsButtonUp(Buttons.Start));
 
+        WeaponCycle = 0;
+        if (state.IsButtonDown(Buttons.RightShoulder) && _previous.IsButtonUp(Buttons.RightShoulder))
+        {
+            WeaponCycle = 1;
+        }
+        else if (state.IsButtonDown(Buttons.LeftShoulder) && _previous.IsButtonUp(Buttons.LeftShoulder))
+        {
+            WeaponCycle = -1;
+        }
+
         // A stick flick counts as one step, like a d-pad press.
         var stickX = state.ThumbSticks.Left.X;
         var previousStickX = _previous.ThumbSticks.Left.X;
@@ -87,7 +101,7 @@ public sealed class GamepadInput : IPlayerInput
             || (stickX > MenuStickThreshold && previousStickX <= MenuStickThreshold);
 
         HasActivity = move != Vector2.Zero || aim != Vector2.Zero || FireHeld || DashPressed || ReloadPressed
-            || ConfirmPressed || MenuLeftPressed || MenuRightPressed;
+            || ConfirmPressed || MenuLeftPressed || MenuRightPressed || WeaponCycle != 0;
 
         _previous = state;
     }

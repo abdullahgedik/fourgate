@@ -30,6 +30,7 @@ public sealed class GameplayScene
     private const float DoorHaloOpacity = 0.3f;
     private const float EdgeIndicatorInset = 40f;
     private const float EdgeIndicatorRadius = 18f;
+    private const float WeaponCrateSpacing = 70f;
 
     private static readonly Color WallColor = new(70, 74, 92);
     private static readonly Color FloorColor = new(34, 36, 46);
@@ -37,6 +38,7 @@ public sealed class GameplayScene
     private static readonly Color GateColor = new(150, 60, 50);
     private static readonly Color GateGlowColor = new(255, 190, 70);
     private static readonly Color EdgeIndicatorCoreColor = new(40, 20, 10);
+    private static readonly Color WeaponCrateIndicatorColor = new(60, 170, 230);
     private static readonly Color FacingColor = new(225, 230, 240);
     private static readonly Color CrosshairColor = new(240, 240, 240);
     private static readonly Color ReloadBarBackColor = new(12, 13, 18);
@@ -51,6 +53,8 @@ public sealed class GameplayScene
     private readonly XpSystem _xp;
     private readonly DropSystem _drops;
     private readonly UpgradeSystem _upgrades;
+    private readonly WeaponUnlocks _unlocks;
+    private int _unlocksAppliedUpToWave;
     private readonly UpgradeScreen _upgradeScreen;
     private readonly WaveHud _waveHud = new();
     private readonly GameOverOverlay _gameOverOverlay = new();
@@ -74,13 +78,18 @@ public sealed class GameplayScene
         _shots = new ShotSystem(_arena);
         _shots.AddSource(_enemies);
         _xp = new XpSystem(config.Xp, audio);
-        _drops = new DropSystem(config.Crates, _random, audio);
+        _shots.OneShotKills = config.Debug.OneShotKills;
+        _unlocks = new WeaponUnlocks(config, audio, _random);
+        _drops = new DropSystem(config.Crates, _random, audio, _unlocks);
         _upgrades = new UpgradeSystem(data.Upgrades, _random, audio);
         _upgradeScreen = new UpgradeScreen(_upgrades);
         _waves = config.Debug.DisableWaves ? null : new WaveSystem(data, _enemies, _arena, _random, audio);
 
+        var startingWeapon = data.GetWeapon(config.Player.StartingWeapon);
+        _unlocks.Unlock(startingWeapon);
+
         var player = new Player(0, playerOneInput, config.Player, audio, _arena.Center);
-        player.GiveWeapon(new Weapon(data.GetWeapon(config.Player.StartingWeapon), config, audio));
+        _unlocks.Grant(player, startingWeapon);
 
         var fullScreen = new Rectangle(0, 0, config.VirtualWidth, config.VirtualHeight);
         AddPlayer(player, fullScreen, config.Camera);
@@ -121,6 +130,7 @@ public sealed class GameplayScene
         }
 
         _waves?.Update(deltaSeconds);
+        UnlockWeaponsForStartedWaves();
         _enemies.Update(deltaSeconds, _players, _arena);
         RewardKills();
 
@@ -171,6 +181,33 @@ public sealed class GameplayScene
         return false;
     }
 
+    // When a weapon's unlock wave begins, the weapon joins the crate pool and one crate
+    // holding it appears in the middle of the arena.
+    private void UnlockWeaponsForStartedWaves()
+    {
+        var wave = _waves?.HighestStartedWave ?? 0;
+        if (wave <= _unlocksAppliedUpToWave)
+        {
+            return;
+        }
+
+        _unlocksAppliedUpToWave = wave;
+
+        var placed = 0;
+        var weapons = _data.Weapons;
+        for (var i = 0; i < weapons.Count; i++)
+        {
+            if (weapons[i].UnlockWave > wave || !_unlocks.Unlock(weapons[i]))
+            {
+                continue;
+            }
+
+            var position = _arena.Center + new Vector2(placed * WeaponCrateSpacing, 0f);
+            _drops.SpawnWeaponCrate(weapons[i], _arena.ClampInside(position, Crate.HalfSize));
+            placed++;
+        }
+    }
+
     private void RewardKills()
     {
         var deaths = _enemies.Deaths;
@@ -179,6 +216,26 @@ public sealed class GameplayScene
             _xp.Award(deaths[i].Config.Xp, deaths[i].KilledBy, _players);
             _drops.OnEnemyKilled(deaths[i], _players);
         }
+    }
+
+    /// <summary>Debug helper: unlocks every weapon and gives it to every player.</summary>
+    public void DebugGrantAllWeapons()
+    {
+        var weapons = _data.Weapons;
+        for (var i = 0; i < weapons.Count; i++)
+        {
+            _unlocks.Unlock(weapons[i]);
+            for (var p = 0; p < _players.Count; p++)
+            {
+                _unlocks.Grant(_players[p], weapons[i]);
+            }
+        }
+    }
+
+    /// <summary>Debug helper: switches one-shot kills on or off.</summary>
+    public void DebugToggleOneShotKills()
+    {
+        _shots.OneShotKills = !_shots.OneShotKills;
     }
 
     /// <summary>Debug helper: drops one crate of each type in a row beside the first player.</summary>
@@ -232,6 +289,7 @@ public sealed class GameplayScene
         for (var i = 0; i < _players.Count; i++)
         {
             DrawDoorIndicators(renderer, _cameras[i]);
+            DrawWeaponCrateIndicators(renderer, _cameras[i]);
             _playerHuds[i].Draw(renderer, _players[i], _cameras[i].ViewRect);
         }
 
@@ -261,6 +319,33 @@ public sealed class GameplayScene
         }
 
         renderer.End();
+    }
+
+    // Points toward weapon crates that are outside a view, so a new weapon is found quickly.
+    private void DrawWeaponCrateIndicators(IRenderer renderer, Camera2D camera)
+    {
+        var view = camera.ViewRect;
+        for (var i = 0; i < _drops.Count; i++)
+        {
+            var crate = _drops[i];
+            if (crate.Type != CrateType.Weapon)
+            {
+                continue;
+            }
+
+            var screen = camera.WorldToScreen(crate.Position);
+            if (screen.X >= view.Left && screen.X <= view.Right && screen.Y >= view.Top && screen.Y <= view.Bottom)
+            {
+                continue;
+            }
+
+            var marker = new Vector2(
+                Math.Clamp(screen.X, view.Left + EdgeIndicatorInset, view.Right - EdgeIndicatorInset),
+                Math.Clamp(screen.Y, view.Top + EdgeIndicatorInset, view.Bottom - EdgeIndicatorInset));
+            var half = new Vector2(EdgeIndicatorRadius * 0.8f);
+            renderer.FillRect(marker - half - new Vector2(3f), half * 2f + new Vector2(6f), EdgeIndicatorCoreColor);
+            renderer.FillRect(marker - half, half * 2f, WeaponCrateIndicatorColor);
+        }
     }
 
     // Points toward glowing doors that are outside a view, so a spawn warning is never
