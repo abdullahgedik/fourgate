@@ -26,6 +26,9 @@ public interface IPlayerInput
 
     bool ReloadPressed { get; }
 
+    /// <summary>Accept/continue in menus and on the game over screen.</summary>
+    bool ConfirmPressed { get; }
+
     /// <summary>True when any control of this device was used this frame.</summary>
     bool HasActivity { get; }
 

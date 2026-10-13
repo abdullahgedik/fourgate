@@ -31,6 +31,7 @@ public sealed class FourgateGame : Game
     private VirtualScreen? _screen;
     private ShapeRenderer? _renderer;
     private GameplayScene? _scene;
+    private IPlayerInput? _playerOneInput;
 
     public FourgateGame()
     {
@@ -54,8 +55,8 @@ public sealed class FourgateGame : Game
         _renderer = new ShapeRenderer(GraphicsDevice, _spriteBatch, File.ReadAllBytes(FontPath));
 
         // Single-player: keyboard+mouse or the first gamepad, whichever was used last.
-        var playerOneInput = new SwitchingInput(new KeyboardMouseInput(_screen), new GamepadInput(PlayerIndex.One));
-        _scene = new GameplayScene(_data, playerOneInput, _audio);
+        _playerOneInput = new SwitchingInput(new KeyboardMouseInput(_screen), new GamepadInput(PlayerIndex.One));
+        _scene = new GameplayScene(_data, _playerOneInput, _audio);
     }
 
     protected override void UnloadContent()
@@ -87,6 +88,10 @@ public sealed class FourgateGame : Game
             }
 
             _scene?.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
+            if (_scene is { RestartRequested: true } && _playerOneInput is not null)
+            {
+                _scene = new GameplayScene(_data, _playerOneInput, _audio);
+            }
         }
 
         base.Update(gameTime);

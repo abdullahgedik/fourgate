@@ -32,6 +32,8 @@ public sealed class KeyboardMouseInput : IPlayerInput
 
     public bool ReloadPressed { get; private set; }
 
+    public bool ConfirmPressed { get; private set; }
+
     public bool HasActivity { get; private set; }
 
     public void Update(Vector2 playerPosition, Camera2D camera)
@@ -78,11 +80,13 @@ public sealed class KeyboardMouseInput : IPlayerInput
         FirePressed = FireHeld && _previousMouse.LeftButton == ButtonState.Released;
         DashPressed = keyboard.IsKeyDown(Keys.Space) && _previousKeyboard.IsKeyUp(Keys.Space);
         ReloadPressed = keyboard.IsKeyDown(Keys.R) && _previousKeyboard.IsKeyUp(Keys.R);
+        ConfirmPressed = keyboard.IsKeyDown(Keys.Enter) && _previousKeyboard.IsKeyUp(Keys.Enter);
 
         HasActivity = move != Vector2.Zero
             || FireHeld
             || DashPressed
             || ReloadPressed
+            || ConfirmPressed
             || mouse.X != _previousMouse.X
             || mouse.Y != _previousMouse.Y;
 

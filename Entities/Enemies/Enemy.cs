@@ -11,10 +11,11 @@ public sealed class Enemy : IHittable
     private const float FlashSeconds = 0.12f;
 
     private static readonly Color BodyColor = new(90, 190, 100);
-    private static readonly Color HitColor = new(255, 255, 255);
+    private static readonly Color HitColor = new(255, 50, 50);
 
     private float _flashLeft;
     private bool _wasHit;
+    private float _attackCooldownLeft;
 
     /// <summary>Unique per spawn; gives overlapping enemies a stable order.</summary>
     public int Id { get; private set; }
@@ -28,6 +29,9 @@ public sealed class Enemy : IHittable
     public float Radius => Config.Radius;
 
     public bool IsAlive => Hp > 0f;
+
+    /// <summary>True when the enemy's contact attack is off cooldown.</summary>
+    public bool CanAttack => _attackCooldownLeft <= 0f;
 
     /// <summary>Index of the player whose shot landed last.</summary>
     public int LastHitBy { get; private set; }
@@ -44,6 +48,13 @@ public sealed class Enemy : IHittable
         LastHitBy = 0;
         _flashLeft = 0f;
         _wasHit = false;
+        _attackCooldownLeft = 0f;
+    }
+
+    /// <summary>Starts the wait before the next contact attack.</summary>
+    public void StartAttackCooldown()
+    {
+        _attackCooldownLeft = Config.ContactCooldown;
     }
 
     public void Hit(float damage, int ownerIndex)
@@ -63,6 +74,7 @@ public sealed class Enemy : IHittable
     public void Tick(float deltaSeconds)
     {
         _flashLeft = Math.Max(0f, _flashLeft - deltaSeconds);
+        _attackCooldownLeft = Math.Max(0f, _attackCooldownLeft - deltaSeconds);
     }
 
     /// <summary>Returns true once after each frame in which the enemy was hit.</summary>

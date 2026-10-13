@@ -48,15 +48,20 @@ public sealed class GameplayScene
     private readonly EnemySystem _enemies;
     private readonly WaveSystem? _waves;
     private readonly WaveHud _waveHud = new();
+    private readonly GameOverOverlay _gameOverOverlay = new();
+    private readonly IAudioManager _audio;
+    private float _elapsedSeconds;
     private readonly List<PracticeTarget> _practiceTargets = new();
 
     // _cameras[i] is the view of _players[i].
     private readonly List<Player> _players = new();
     private readonly List<Camera2D> _cameras = new();
+    private readonly List<PlayerHud> _playerHuds = new();
 
     public GameplayScene(GameData data, IPlayerInput playerOneInput, IAudioManager audio)
     {
         _data = data;
+        _audio = audio;
         var config = data.Game;
         _random = new GameRandom(config.Debug.Seed ?? Environment.TickCount);
         _arena = new Arena(config.Arena);
@@ -77,8 +82,22 @@ public sealed class GameplayScene
         }
     }
 
+    /// <summary>True once every player is dead; the simulation is frozen from then on.</summary>
+    public bool IsGameOver { get; private set; }
+
+    /// <summary>True when a player asked to start over from the game over screen.</summary>
+    public bool RestartRequested { get; private set; }
+
     public void Update(float deltaSeconds)
     {
+        if (IsGameOver)
+        {
+            UpdateGameOver();
+            return;
+        }
+
+        _elapsedSeconds += deltaSeconds;
+
         for (var i = 0; i < _practiceTargets.Count; i++)
         {
             _practiceTargets[i].Update(deltaSeconds);
@@ -98,6 +117,39 @@ public sealed class GameplayScene
         }
 
         _shots.Update(deltaSeconds);
+
+        if (!AnyPlayerAlive())
+        {
+            IsGameOver = true;
+            _gameOverOverlay.SetStats(_waves?.Wave ?? 0, _enemies.KillCount, _elapsedSeconds);
+            _audio.PlaySfx(SfxIds.GameOver);
+        }
+    }
+
+    private void UpdateGameOver()
+    {
+        for (var i = 0; i < _players.Count; i++)
+        {
+            var input = _players[i].Input;
+            input.Update(_players[i].Position, _cameras[i]);
+            if (input.ConfirmPressed)
+            {
+                RestartRequested = true;
+            }
+        }
+    }
+
+    private bool AnyPlayerAlive()
+    {
+        for (var i = 0; i < _players.Count; i++)
+        {
+            if (_players[i].IsAlive)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Debug helper: spawns enemies of the given type at random doors.</summary>
@@ -132,9 +184,10 @@ public sealed class GameplayScene
         for (var i = 0; i < _players.Count; i++)
         {
             DrawDoorIndicators(renderer, _cameras[i]);
+            _playerHuds[i].Draw(renderer, _players[i], _cameras[i].ViewRect);
 
             var input = _players[i].Input;
-            if (input.HasPointer)
+            if (input.HasPointer && !IsGameOver)
             {
                 DrawCrosshair(renderer, input.AimScreen);
             }
@@ -143,6 +196,11 @@ public sealed class GameplayScene
         if (_waves is not null)
         {
             _waveHud.Draw(renderer, _waves, _data.Game.VirtualWidth);
+        }
+
+        if (IsGameOver)
+        {
+            _gameOverOverlay.Draw(renderer, _data.Game.VirtualWidth, _data.Game.VirtualHeight);
         }
 
         renderer.End();
@@ -206,6 +264,7 @@ public sealed class GameplayScene
 
         _players.Add(player);
         _cameras.Add(camera);
+        _playerHuds.Add(new PlayerHud());
     }
 
     private void DrawPlayers(IRenderer renderer)
@@ -213,6 +272,11 @@ public sealed class GameplayScene
         for (var i = 0; i < _players.Count; i++)
         {
             var player = _players[i];
+            if (!player.IsAlive)
+            {
+                continue;
+            }
+
             renderer.DrawVisual(player.Visual, player.Position, 0f);
 
             var muzzle = player.Position + player.AimDirection * player.Radius;

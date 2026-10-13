@@ -58,6 +58,7 @@ public sealed class GameConfig
 
         DataLoadException.Require(Player is not null, file, "player", "is required");
         var player = Player!;
+        DataLoadException.Require(player.MaxHp > 0, file, "player.maxHp", "must be greater than 0");
         DataLoadException.Require(player.MoveSpeed > 0, file, "player.moveSpeed", "must be greater than 0");
         DataLoadException.Require(
             player.Radius > 0 && player.Radius * 2 < arena.Size,

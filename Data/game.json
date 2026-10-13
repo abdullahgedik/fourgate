@@ -9,7 +9,7 @@
   "reloadsEnabled": true,
   "globalReloadTimeMultiplier": 1.0,
   "player": {
-    "moveSpeed": 300, "radius": 20, "startingWeapon": "pistol",
+    "maxHp": 100, "moveSpeed": 300, "radius": 20, "startingWeapon": "pistol",
     "dash": { "cooldown": 2.0, "duration": 0.18, "distance": 200, "iFrames": true }
   }
 }

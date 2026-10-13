@@ -3,6 +3,8 @@ namespace Fourgate.Core.Data;
 /// <summary>Base player stats.</summary>
 public sealed class PlayerConfig
 {
+    public required float MaxHp { get; init; }
+
     /// <summary>World units per second.</summary>
     public required float MoveSpeed { get; init; }
 

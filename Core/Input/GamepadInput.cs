@@ -36,6 +36,8 @@ public sealed class GamepadInput : IPlayerInput
 
     public bool ReloadPressed { get; private set; }
 
+    public bool ConfirmPressed { get; private set; }
+
     public bool HasActivity { get; private set; }
 
     public void Update(Vector2 playerPosition, Camera2D camera)
@@ -68,8 +70,10 @@ public sealed class GamepadInput : IPlayerInput
         FirePressed = FireHeld && !wasFiring;
         DashPressed = state.IsButtonDown(Buttons.A) && _previous.IsButtonUp(Buttons.A);
         ReloadPressed = state.IsButtonDown(Buttons.X) && _previous.IsButtonUp(Buttons.X);
+        ConfirmPressed = (state.IsButtonDown(Buttons.A) && _previous.IsButtonUp(Buttons.A))
+            || (state.IsButtonDown(Buttons.Start) && _previous.IsButtonUp(Buttons.Start));
 
-        HasActivity = move != Vector2.Zero || aim != Vector2.Zero || FireHeld || DashPressed || ReloadPressed;
+        HasActivity = move != Vector2.Zero || aim != Vector2.Zero || FireHeld || DashPressed || ReloadPressed || ConfirmPressed;
 
         _previous = state;
     }

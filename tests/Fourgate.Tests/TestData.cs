@@ -28,6 +28,7 @@ public static class TestData
             },
             Player = new PlayerConfig
             {
+                MaxHp = 100,
                 MoveSpeed = 300,
                 Radius = 20,
                 StartingWeapon = "pistol",

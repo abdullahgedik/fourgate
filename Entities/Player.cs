@@ -14,6 +14,9 @@ public sealed class Player
 {
     private static readonly Color[] BodyColors = { new(90, 170, 255), new(255, 170, 70) };
     private static readonly Color DashColor = new(235, 245, 255);
+    private static readonly Color HurtColor = new(255, 60, 60);
+
+    private const float HurtFlashSeconds = 0.18f;
 
     private readonly PlayerConfig _config;
     private readonly IAudioManager _audio;
@@ -21,6 +24,7 @@ public sealed class Player
     private Vector2 _dashDirection;
     private float _dashTimeLeft;
     private float _dashCooldownLeft;
+    private float _hurtFlashLeft;
 
     public Player(int index, IPlayerInput input, PlayerConfig config, IAudioManager audio, Vector2 position)
     {
@@ -29,6 +33,7 @@ public sealed class Player
         _config = config;
         _audio = audio;
         Position = position;
+        Hp = config.MaxHp;
     }
 
     /// <summary>Zero-based player number.</summary>
@@ -43,6 +48,12 @@ public sealed class Player
 
     public float Radius => _config.Radius;
 
+    public float Hp { get; private set; }
+
+    public float MaxHp => _config.MaxHp;
+
+    public bool IsAlive => Hp > 0f;
+
     /// <summary>Weapons carried right now, in pickup order.</summary>
     public IReadOnlyList<Weapon> Weapons => _weapons;
 
@@ -55,6 +66,10 @@ public sealed class Player
 
     /// <summary>Seconds until the next dash is available.</summary>
     public float DashCooldownLeft => _dashCooldownLeft;
+
+    /// <summary>1 when the dash is ready, rising from 0 while it recharges.</summary>
+    public float DashReadiness =>
+        _config.Dash.Cooldown > 0f ? 1f - _dashCooldownLeft / _config.Dash.Cooldown : 1f;
 
     public VisualDescriptor Visual
     {
@@ -71,6 +86,7 @@ public sealed class Player
                 body = Color.Lerp(body, Color.Black, 0.35f);
             }
 
+            body = Color.Lerp(body, HurtColor, _hurtFlashLeft / HurtFlashSeconds);
             return new VisualDescriptor(ShapeKind.Circle, Radius, body);
         }
     }
@@ -82,9 +98,31 @@ public sealed class Player
         CurrentWeapon ??= weapon;
     }
 
+    /// <summary>
+    /// Deals damage unless the player is dead or invulnerable. Returns true when it landed.
+    /// </summary>
+    public bool TakeDamage(float amount)
+    {
+        if (!IsAlive || IsInvulnerable || amount <= 0f)
+        {
+            return false;
+        }
+
+        Hp = Math.Max(0f, Hp - amount);
+        _hurtFlashLeft = HurtFlashSeconds;
+        _audio.PlaySfx(IsAlive ? SfxIds.PlayerHurt : SfxIds.PlayerDeath);
+        return true;
+    }
+
     /// <summary>Advances the player by one simulation step. The input must already be polled.</summary>
     public void Update(float deltaSeconds, Arena arena, IShotHandler shots)
     {
+        _hurtFlashLeft = Math.Max(0f, _hurtFlashLeft - deltaSeconds);
+        if (!IsAlive)
+        {
+            return;
+        }
+
         UpdateMovement(deltaSeconds, arena);
 
         var muzzle = Position + AimDirection * Radius;

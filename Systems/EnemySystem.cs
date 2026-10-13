@@ -17,6 +17,9 @@ public sealed class EnemySystem : IHittableSource
     private const int InitialEnemies = 128;
     private const float CellSize = 96f;
 
+    // How close to touching counts as contact; absorbs float error in the stop distance.
+    private const float TouchSlack = 1.5f;
+
     private readonly IAudioManager _audio;
     private readonly Pool<Enemy> _enemies = new(InitialEnemies);
     private readonly SpatialHash<Enemy> _hash = new(CellSize);
@@ -66,6 +69,7 @@ public sealed class EnemySystem : IHittableSource
             Separate(enemy);
             PushOutOfPlayers(enemy, players);
             enemy.Position = arena.ClampInside(enemy.Position, enemy.Radius);
+            AttackTouchingPlayers(enemy, players);
         }
 
         // Second rebuild so shots fired this frame are tested against final positions.
@@ -123,6 +127,11 @@ public sealed class EnemySystem : IHittableSource
         var bestDistanceSquared = float.MaxValue;
         for (var i = 0; i < players.Count; i++)
         {
+            if (!players[i].IsAlive)
+            {
+                continue;
+            }
+
             var distanceSquared = Vector2.DistanceSquared(enemy.Position, players[i].Position);
             if (distanceSquared < bestDistanceSquared)
             {
@@ -182,11 +191,43 @@ public sealed class EnemySystem : IHittableSource
         enemy.Position += push;
     }
 
+    // One contact attack per cooldown. The attempt uses up the cooldown even when the
+    // player dodges it with dash i-frames.
+    private static void AttackTouchingPlayers(Enemy enemy, IReadOnlyList<Player> players)
+    {
+        if (!enemy.IsAlive || !enemy.CanAttack || enemy.Config.ContactDamage <= 0f)
+        {
+            return;
+        }
+
+        for (var i = 0; i < players.Count; i++)
+        {
+            var player = players[i];
+            if (!player.IsAlive)
+            {
+                continue;
+            }
+
+            var reach = enemy.Radius + player.Radius + TouchSlack;
+            if (Vector2.DistanceSquared(enemy.Position, player.Position) <= reach * reach)
+            {
+                player.TakeDamage(enemy.Config.ContactDamage);
+                enemy.StartAttackCooldown();
+                return;
+            }
+        }
+    }
+
     private static void PushOutOfPlayers(Enemy enemy, IReadOnlyList<Player> players)
     {
         for (var i = 0; i < players.Count; i++)
         {
             var player = players[i];
+            if (!player.IsAlive)
+            {
+                continue;
+            }
+
             var away = enemy.Position - player.Position;
             var distance = away.Length();
             var overlap = enemy.Radius + player.Radius - distance;

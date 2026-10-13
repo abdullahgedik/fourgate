@@ -18,7 +18,7 @@ public class DataLoaderTests
           "reloadsEnabled": true,
           "globalReloadTimeMultiplier": 1.0,
           "player": {
-            "moveSpeed": 300, "radius": 20, "startingWeapon": "pistol",
+            "maxHp": 100, "moveSpeed": 300, "radius": 20, "startingWeapon": "pistol",
             "dash": { "cooldown": 2.0, "duration": 0.18, "distance": 200, "iFrames": true }
           }
         }
@@ -75,6 +75,7 @@ public class DataLoaderTests
     [InlineData("\"zoom\": 1.15", "\"zoom\": 0", "camera.zoom")]
     [InlineData("\"leadFraction\": 0.35", "\"leadFraction\": 1.5", "camera.leadFraction")]
     [InlineData("\"moveSpeed\": 300", "\"moveSpeed\": -1", "player.moveSpeed")]
+    [InlineData("\"maxHp\": 100", "\"maxHp\": 0", "player.maxHp")]
     [InlineData("\"duration\": 0.18", "\"duration\": 0", "player.dash.duration")]
     [InlineData("\"globalReloadTimeMultiplier\": 1.0", "\"globalReloadTimeMultiplier\": -1", "globalReloadTimeMultiplier")]
     public void OutOfRangeGameValue_NamesTheField(string original, string replacement, string expectedField)

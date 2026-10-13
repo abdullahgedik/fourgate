@@ -23,6 +23,8 @@ public sealed class FakeInput : IPlayerInput
 
     public bool ReloadPressed { get; set; }
 
+    public bool ConfirmPressed { get; set; }
+
     public bool HasActivity { get; set; }
 
     public void Update(Vector2 playerPosition, Camera2D camera)
