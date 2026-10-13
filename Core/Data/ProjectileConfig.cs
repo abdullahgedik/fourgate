@@ -1,0 +1,14 @@
+namespace Fourgate.Core.Data;
+
+/// <summary>Flight values of a weapon's bullets.</summary>
+public sealed class ProjectileConfig
+{
+    /// <summary>World units per second.</summary>
+    public required float Speed { get; init; }
+
+    /// <summary>Collision radius; widens the line a bullet sweeps.</summary>
+    public required float Radius { get; init; }
+
+    /// <summary>World units a bullet travels before it disappears.</summary>
+    public required float Range { get; init; }
+}

@@ -4,6 +4,8 @@ using Fourgate.Core.Data;
 using Fourgate.Core.Input;
 using Fourgate.Core.Rendering;
 using Fourgate.Entities;
+using Fourgate.Systems;
+using Fourgate.Weapons;
 using Microsoft.Xna.Framework;
 
 namespace Fourgate.Scenes;
@@ -17,6 +19,9 @@ public sealed class GameplayScene
     private const float FacingLineThickness = 6f;
     private const float CrosshairArm = 14f;
     private const float CrosshairThickness = 2f;
+    private const float ReloadBarExtraWidth = 12f;
+    private const float ReloadBarHeight = 6f;
+    private const float ReloadBarGap = 10f;
 
     private static readonly Color WallColor = new(70, 74, 92);
     private static readonly Color FloorColor = new(34, 36, 46);
@@ -24,32 +29,53 @@ public sealed class GameplayScene
     private static readonly Color GateColor = new(150, 60, 50);
     private static readonly Color FacingColor = new(225, 230, 240);
     private static readonly Color CrosshairColor = new(240, 240, 240);
+    private static readonly Color ReloadBarBackColor = new(12, 13, 18);
+    private static readonly Color ReloadBarFillColor = new(255, 225, 120);
 
     private readonly Arena _arena;
+    private readonly ShotSystem _shots;
+    private readonly List<PracticeTarget> _practiceTargets = new();
 
     // _cameras[i] is the view of _players[i].
     private readonly List<Player> _players = new();
     private readonly List<Camera2D> _cameras = new();
 
-    public GameplayScene(GameConfig config, IPlayerInput playerOneInput, IAudioManager audio)
+    public GameplayScene(GameData data, IPlayerInput playerOneInput, IAudioManager audio)
     {
+        var config = data.Game;
         _arena = new Arena(config.Arena);
+        _shots = new ShotSystem(_arena);
+
+        var player = new Player(0, playerOneInput, config.Player, audio, _arena.Center);
+        player.GiveWeapon(new Weapon(data.GetWeapon(config.Player.StartingWeapon), config, audio));
 
         var fullScreen = new Rectangle(0, 0, config.VirtualWidth, config.VirtualHeight);
-        AddPlayer(new Player(0, playerOneInput, config.Player, audio, _arena.Center), fullScreen, config.Camera);
+        AddPlayer(player, fullScreen, config.Camera);
+
+        if (config.Debug.PracticeTargets)
+        {
+            AddPracticeTargets(config.Player.Radius);
+        }
     }
 
     public void Update(float deltaSeconds)
     {
+        for (var i = 0; i < _practiceTargets.Count; i++)
+        {
+            _practiceTargets[i].Update(deltaSeconds);
+        }
+
         for (var i = 0; i < _players.Count; i++)
         {
             var player = _players[i];
             var camera = _cameras[i];
 
             player.Input.Update(player.Position, camera);
-            player.Update(deltaSeconds, _arena);
+            player.Update(deltaSeconds, _arena, _shots);
             camera.Follow(player.Position, player.Input.AimScreen, deltaSeconds);
         }
+
+        _shots.Update(deltaSeconds);
     }
 
     public void Draw(IRenderer renderer)
@@ -58,6 +84,12 @@ public sealed class GameplayScene
         {
             renderer.BeginWorld(_cameras[i]);
             DrawArena(renderer);
+            for (var t = 0; t < _practiceTargets.Count; t++)
+            {
+                renderer.DrawVisual(_practiceTargets[t].Visual, _practiceTargets[t].Position, 0f);
+            }
+
+            _shots.Draw(renderer);
             DrawPlayers(renderer);
             renderer.End();
         }
@@ -73,6 +105,19 @@ public sealed class GameplayScene
         }
 
         renderer.End();
+    }
+
+    // Debug dummies near the spawn point: one still, one patrolling left and right.
+    private void AddPracticeTargets(float radius)
+    {
+        var still = new PracticeTarget(_arena.Center + new Vector2(350f, -200f), radius);
+        var moving = new PracticeTarget(
+            _arena.Center + new Vector2(100f, 250f), _arena.Center + new Vector2(600f, 250f), 180f, radius);
+
+        _practiceTargets.Add(still);
+        _practiceTargets.Add(moving);
+        _shots.AddTarget(still);
+        _shots.AddTarget(moving);
     }
 
     private void AddPlayer(Player player, Rectangle viewRect, CameraConfig cameraConfig)
@@ -98,7 +143,22 @@ public sealed class GameplayScene
             var muzzle = player.Position + player.AimDirection * player.Radius;
             renderer.DrawLine(
                 muzzle, muzzle + player.AimDirection * FacingLineLength, FacingLineThickness, FacingColor);
+
+            var weapon = player.CurrentWeapon;
+            if (weapon is { IsReloading: true })
+            {
+                DrawReloadBar(renderer, player, weapon.ReloadProgress);
+            }
         }
+    }
+
+    private static void DrawReloadBar(IRenderer renderer, Player player, float progress)
+    {
+        var size = new Vector2(player.Radius * 2f + ReloadBarExtraWidth, ReloadBarHeight);
+        var topLeft = player.Position + new Vector2(-size.X / 2f, player.Radius + ReloadBarGap);
+
+        renderer.FillRect(topLeft, size, ReloadBarBackColor);
+        renderer.FillRect(topLeft, new Vector2(size.X * progress, size.Y), ReloadBarFillColor);
     }
 
     private void DrawArena(IRenderer renderer)

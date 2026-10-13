@@ -1,6 +1,6 @@
 using Fourgate.Core.Audio;
-using Fourgate.Core.Data;
 using Fourgate.Entities;
+using Fourgate.Weapons;
 using Microsoft.Xna.Framework;
 
 namespace Fourgate.Tests;
@@ -9,10 +9,8 @@ public class PlayerTests
 {
     private const float Step = 1f / 60f;
 
-    private static readonly Arena TestArena = new(new ArenaConfig
-    {
-        X = 0, Y = 0, Size = 3000, DoorWidth = 420, WallThickness = 24,
-    });
+    private static readonly Arena TestArena = new(TestData.Arena());
+    private static readonly FakeShotHandler Spawner = new();
 
     private static readonly Vector2 Start = new(1500, 1500);
 
@@ -56,7 +54,7 @@ public class PlayerTests
         var input = new FakeInput { AimDirection = Vector2.UnitY };
         var player = CreatePlayer(input);
 
-        player.Update(Step, TestArena);
+        player.Update(Step, TestArena, Spawner);
 
         Assert.Equal(Vector2.UnitY, player.AimDirection);
     }
@@ -67,7 +65,7 @@ public class PlayerTests
         var input = new FakeInput { Move = Vector2.UnitY, DashPressed = true };
         var player = CreatePlayer(input);
 
-        player.Update(Step, TestArena);
+        player.Update(Step, TestArena, Spawner);
         input.DashPressed = false;
         input.Move = Vector2.Zero;
         Run(player, 30);
@@ -82,7 +80,7 @@ public class PlayerTests
         var input = new FakeInput { AimDirection = -Vector2.UnitX, DashPressed = true };
         var player = CreatePlayer(input);
 
-        player.Update(Step, TestArena);
+        player.Update(Step, TestArena, Spawner);
         input.DashPressed = false;
         Run(player, 30);
 
@@ -96,7 +94,7 @@ public class PlayerTests
         var player = CreatePlayer(input);
         Assert.False(player.IsInvulnerable);
 
-        player.Update(Step, TestArena);
+        player.Update(Step, TestArena, Spawner);
         Assert.True(player.IsInvulnerable);
 
         input.DashPressed = false;
@@ -110,7 +108,7 @@ public class PlayerTests
         var input = new FakeInput { Move = Vector2.UnitX, DashPressed = true };
         var player = CreatePlayer(input, iFrames: false);
 
-        player.Update(Step, TestArena);
+        player.Update(Step, TestArena, Spawner);
 
         Assert.True(player.IsDashing);
         Assert.False(player.IsInvulnerable);
@@ -135,34 +133,61 @@ public class PlayerTests
         var input = new FakeInput { DashPressed = true };
         var player = CreatePlayer(input);
 
-        player.Update(Step, TestArena);
+        player.Update(Step, TestArena, Spawner);
         input.DashPressed = false;
         Run(player, 125);
         Assert.Equal(0f, player.DashCooldownLeft);
 
         input.DashPressed = true;
-        player.Update(Step, TestArena);
+        player.Update(Step, TestArena, Spawner);
 
         Assert.True(player.IsDashing);
     }
 
     private static Player CreatePlayer(FakeInput input, bool iFrames = true)
     {
-        var config = new PlayerConfig
-        {
-            MoveSpeed = 300,
-            Radius = 20,
-            Dash = new DashConfig { Cooldown = 2f, Duration = 0.18f, Distance = 200, IFrames = iFrames },
-        };
-
+        var config = TestData.Game(dashIFrames: iFrames).Player;
         return new Player(0, input, config, new NullAudioManager(), Start);
+    }
+
+    [Fact]
+    public void Fires_FromTheEdgeOfThePlayerAlongTheAim()
+    {
+        var spawner = new FakeShotHandler();
+        var input = new FakeInput { AimDirection = Vector2.UnitY, FirePressed = true, FireHeld = true };
+        var player = CreatePlayer(input);
+        player.GiveWeapon(new Weapon(TestData.Pistol(), TestData.Game(), new NullAudioManager()));
+
+        player.Update(Step, TestArena, spawner);
+
+        Assert.Equal(1, spawner.Count);
+        Assert.Equal(new Vector2(1500, 1520), spawner.LastOrigin);
+        Assert.Equal(Vector2.UnitY, spawner.LastDirection);
+    }
+
+    [Fact]
+    public void Dash_DoesNotCancelReload()
+    {
+        var input = new FakeInput { FirePressed = true, FireHeld = true };
+        var player = CreatePlayer(input);
+        var weapon = new Weapon(TestData.Pistol(magSize: 1), TestData.Game(), new NullAudioManager());
+        player.GiveWeapon(weapon);
+
+        player.Update(Step, TestArena, Spawner);
+        input.FirePressed = false;
+        input.FireHeld = false;
+        input.DashPressed = true;
+        player.Update(Step, TestArena, Spawner);
+
+        Assert.True(player.IsDashing);
+        Assert.True(weapon.IsReloading);
     }
 
     private static void Run(Player player, int steps)
     {
         for (var i = 0; i < steps; i++)
         {
-            player.Update(Step, TestArena);
+            player.Update(Step, TestArena, Spawner);
         }
     }
 }

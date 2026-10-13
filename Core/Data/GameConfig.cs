@@ -13,6 +13,14 @@ public sealed class GameConfig
 
     public required PlayerConfig Player { get; init; }
 
+    public DebugConfig Debug { get; init; } = new();
+
+    /// <summary>When false, weapons have no magazine and fire straight from their ammo pool.</summary>
+    public required bool ReloadsEnabled { get; init; }
+
+    /// <summary>Scales every weapon's reload time.</summary>
+    public required float GlobalReloadTimeMultiplier { get; init; }
+
     /// <summary>Checks value ranges; throws <see cref="DataLoadException"/> naming the bad field.</summary>
     public void Validate(string file)
     {
@@ -43,6 +51,11 @@ public sealed class GameConfig
         DataLoadException.Require(
             player.Radius > 0 && player.Radius * 2 < arena.Size,
             file, "player.radius", "must be greater than 0 and fit inside the arena");
+
+        DataLoadException.Require(
+            !string.IsNullOrWhiteSpace(player.StartingWeapon), file, "player.startingWeapon", "must not be empty");
+        DataLoadException.Require(
+            GlobalReloadTimeMultiplier >= 0, file, "globalReloadTimeMultiplier", "must not be negative");
 
         DataLoadException.Require(player.Dash is not null, file, "player.dash", "is required");
         var dash = player.Dash!;

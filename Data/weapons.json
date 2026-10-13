@@ -1,0 +1,16 @@
+{
+  "weapons": [
+    {
+      "id": "pistol",
+      "displayName": "Pistol",
+      "slot": 1,
+      "unlockWave": 1,
+      "type": "projectile",
+      "damage": 15,
+      "fireRate": 3,
+      "automatic": false,
+      "ammo": { "magSize": 12, "reserveMax": 0, "reloadTime": 0.8, "infiniteReserve": true },
+      "projectile": { "speed": 6000, "radius": 4, "range": 1100 }
+    }
+  ]
+}

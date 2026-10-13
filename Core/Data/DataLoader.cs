@@ -1,27 +1,34 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Fourgate.Core.Data;
 
 /// <summary>Reads and validates the JSON files under <c>Data/</c>.</summary>
 public static class DataLoader
 {
-    private const string GameFile = "game.json";
+    public const string GameFileName = "game.json";
+    public const string WeaponsFileName = "weapons.json";
 
     private static readonly JsonSerializerOptions Options = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false) },
     };
 
     /// <summary>The <c>Data</c> folder next to the executable.</summary>
     public static string DefaultDirectory => Path.Combine(AppContext.BaseDirectory, "Data");
 
-    public static GameConfig LoadGameConfig(string dataDirectory)
+    /// <summary>Loads every data file and checks the references between them.</summary>
+    public static GameData LoadAll(string dataDirectory)
     {
-        return ParseGameConfig(ReadFile(dataDirectory, GameFile), GameFile);
+        var game = ParseGameConfig(ReadFile(dataDirectory, GameFileName), GameFileName);
+        var weapons = ParseWeapons(ReadFile(dataDirectory, WeaponsFileName), WeaponsFileName);
+        return new GameData(game, weapons);
     }
 
     /// <summary>Parses and validates <c>game.json</c> content; <paramref name="file"/> is only used in error messages.</summary>
@@ -30,6 +37,24 @@ public static class DataLoader
         var config = Parse<GameConfig>(json, file);
         config.Validate(file);
         return config;
+    }
+
+    /// <summary>Parses and validates <c>weapons.json</c> content; <paramref name="file"/> is only used in error messages.</summary>
+    public static IReadOnlyList<WeaponConfig> ParseWeapons(string json, string file)
+    {
+        var weapons = Parse<WeaponsFile>(json, file).Weapons;
+        DataLoadException.Require(weapons is { Count: > 0 }, file, "weapons", "must contain at least one weapon");
+
+        var ids = new HashSet<string>();
+        for (var i = 0; i < weapons!.Count; i++)
+        {
+            var path = $"weapons[{i}]";
+            DataLoadException.Require(weapons[i] is not null, file, path, "must not be null");
+            weapons[i].Validate(file, path);
+            DataLoadException.Require(ids.Add(weapons[i].Id), file, $"{path}.id", $"'{weapons[i].Id}' is used more than once");
+        }
+
+        return weapons;
     }
 
     private static string ReadFile(string dataDirectory, string file)

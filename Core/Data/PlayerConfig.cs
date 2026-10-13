@@ -8,5 +8,8 @@ public sealed class PlayerConfig
 
     public required float Radius { get; init; }
 
+    /// <summary>Id of the weapon every player starts with.</summary>
+    public required string StartingWeapon { get; init; }
+
     public required DashConfig Dash { get; init; }
 }

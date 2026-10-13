@@ -46,6 +46,35 @@ public sealed class Arena
 
     public IReadOnlyList<Door> Doors => _doors;
 
+    /// <summary>
+    /// Distance from a point on the floor to the wall along a unit direction.
+    /// Returns 0 when the point is already at or beyond the wall it faces.
+    /// </summary>
+    public float DistanceToWall(Vector2 origin, Vector2 direction)
+    {
+        var distance = float.PositiveInfinity;
+
+        if (direction.X > 0f)
+        {
+            distance = Math.Min(distance, (Right - origin.X) / direction.X);
+        }
+        else if (direction.X < 0f)
+        {
+            distance = Math.Min(distance, (Left - origin.X) / direction.X);
+        }
+
+        if (direction.Y > 0f)
+        {
+            distance = Math.Min(distance, (Bottom - origin.Y) / direction.Y);
+        }
+        else if (direction.Y < 0f)
+        {
+            distance = Math.Min(distance, (Top - origin.Y) / direction.Y);
+        }
+
+        return Math.Max(0f, distance);
+    }
+
     /// <summary>Pushes a circle back onto the floor; walls and sealed doors are solid.</summary>
     public Vector2 ClampInside(Vector2 position, float radius)
     {

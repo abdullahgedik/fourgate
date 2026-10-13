@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using Fourgate.Core.Audio;
 using Fourgate.Core.Data;
 using Fourgate.Core.Input;
 using Fourgate.Core.Rendering;
+using Fourgate.Weapons;
 using Microsoft.Xna.Framework;
 
 namespace Fourgate.Entities;
@@ -15,6 +17,7 @@ public sealed class Player
 
     private readonly PlayerConfig _config;
     private readonly IAudioManager _audio;
+    private readonly List<Weapon> _weapons = new();
     private Vector2 _dashDirection;
     private float _dashTimeLeft;
     private float _dashCooldownLeft;
@@ -39,6 +42,11 @@ public sealed class Player
     public Vector2 AimDirection { get; private set; } = Vector2.UnitX;
 
     public float Radius => _config.Radius;
+
+    /// <summary>Weapons carried right now, in pickup order.</summary>
+    public IReadOnlyList<Weapon> Weapons => _weapons;
+
+    public Weapon? CurrentWeapon { get; private set; }
 
     public bool IsDashing => _dashTimeLeft > 0f;
 
@@ -67,8 +75,23 @@ public sealed class Player
         }
     }
 
+    /// <summary>Adds a weapon to the inventory and selects it if nothing is selected yet.</summary>
+    public void GiveWeapon(Weapon weapon)
+    {
+        _weapons.Add(weapon);
+        CurrentWeapon ??= weapon;
+    }
+
     /// <summary>Advances the player by one simulation step. The input must already be polled.</summary>
-    public void Update(float deltaSeconds, Arena arena)
+    public void Update(float deltaSeconds, Arena arena, IShotHandler shots)
+    {
+        UpdateMovement(deltaSeconds, arena);
+
+        var muzzle = Position + AimDirection * Radius;
+        CurrentWeapon?.Update(deltaSeconds, Input, muzzle, AimDirection, Index, shots);
+    }
+
+    private void UpdateMovement(float deltaSeconds, Arena arena)
     {
         AimDirection = Input.AimDirection;
 

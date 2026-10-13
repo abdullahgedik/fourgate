@@ -19,7 +19,7 @@ public sealed class FourgateGame : Game
     private readonly DisplayManager _display;
     private readonly WindowHotkeys _hotkeys = new();
     private readonly IAudioManager _audio = new NullAudioManager();
-    private readonly GameConfig _config;
+    private readonly GameData _data;
 
     private SpriteBatch? _spriteBatch;
     private VirtualScreen? _screen;
@@ -28,7 +28,7 @@ public sealed class FourgateGame : Game
 
     public FourgateGame()
     {
-        _config = DataLoader.LoadGameConfig(DataLoader.DefaultDirectory);
+        _data = DataLoader.LoadAll(DataLoader.DefaultDirectory);
         _display = new DisplayManager(new GraphicsDeviceManager(this));
 
         Content.RootDirectory = "Content";
@@ -44,12 +44,12 @@ public sealed class FourgateGame : Game
     protected override void LoadContent()
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
-        _screen = new VirtualScreen(GraphicsDevice, _config.VirtualWidth, _config.VirtualHeight);
+        _screen = new VirtualScreen(GraphicsDevice, _data.Game.VirtualWidth, _data.Game.VirtualHeight);
         _renderer = new ShapeRenderer(GraphicsDevice, _spriteBatch);
 
         // Single-player: keyboard+mouse or the first gamepad, whichever was used last.
         var playerOneInput = new SwitchingInput(new KeyboardMouseInput(_screen), new GamepadInput(PlayerIndex.One));
-        _scene = new GameplayScene(_config, playerOneInput, _audio);
+        _scene = new GameplayScene(_data, playerOneInput, _audio);
     }
 
     protected override void UnloadContent()
