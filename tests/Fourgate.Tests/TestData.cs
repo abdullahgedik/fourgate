@@ -39,6 +39,7 @@ public static class TestData
             Debug = new DebugConfig { StartWave = startWave },
             Xp = Xp(),
             Crates = Crates(),
+            FriendlyFire = new FriendlyFireConfig { Enabled = true, DamageToOther = 0.25f, SelfExplosiveDamage = 0.5f },
             ReloadsEnabled = reloadsEnabled,
             GlobalReloadTimeMultiplier = reloadMultiplier,
         };

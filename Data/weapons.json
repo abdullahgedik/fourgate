@@ -85,6 +85,34 @@
         "magSizeBonus": 4,
         "abilities": [ { "id": "fullAuto" } ]
       }
+    },
+    {
+      "id": "grenade",
+      "displayName": "Grenade",
+      "slot": 4,
+      "unlockWave": 5,
+      "type": "thrown",
+      "damage": 60,
+      "fireRate": 1.25,
+      "automatic": false,
+      "ammo": { "usesMagazine": false, "reserveMax": 10, "infiniteReserve": false },
+      "thrown": { "speed": 900, "maxRange": 650, "radius": 10 },
+      "explosion": { "radius": 110 },
+      "levels": [
+        { "level": 2, "damageMult": 1.08, "fireRateMult": 1.10 },
+        { "level": 3, "damageMult": 1.08, "reserveMaxBonus": 1 },
+        { "level": 4, "damageMult": 1.08, "blastRadiusMult": 1.08 },
+        { "level": 5, "damageMult": 1.08, "rangeMult": 1.10 },
+        { "level": 6, "damageMult": 1.08, "fireRateMult": 1.10 },
+        { "level": 7, "damageMult": 1.08, "reserveMaxBonus": 1 },
+        { "level": 8, "damageMult": 1.08, "blastRadiusMult": 1.08 },
+        { "level": 9, "damageMult": 1.08, "rangeMult": 1.10 }
+      ],
+      "levelTen": {
+        "description": [ "Cluster grenade:", "splits into 4 mini-bombs", "+8% damage" ],
+        "damageMult": 1.08,
+        "abilities": [ { "id": "cluster", "count": 4, "radius": 150, "damageMult": 0.4, "radiusMult": 0.55 } ]
+      }
     }
   ]
 }

@@ -26,6 +26,8 @@ public sealed class KeyboardMouseInput : IPlayerInput
 
     public Vector2 AimDirection { get; private set; } = Vector2.UnitX;
 
+    public float AimDistance { get; private set; } = float.PositiveInfinity;
+
     public Vector2 AimScreen { get; private set; }
 
     public bool HasPointer => true;
@@ -85,6 +87,7 @@ public sealed class KeyboardMouseInput : IPlayerInput
 
         AimScreen = _screen.Viewport.WindowToVirtual(new Vector2(mouse.X, mouse.Y));
         var toAim = camera.ScreenToWorld(AimScreen) - playerPosition;
+        AimDistance = toAim.Length();
         if (toAim.LengthSquared() > 0.0001f)
         {
             AimDirection = Vector2.Normalize(toAim);

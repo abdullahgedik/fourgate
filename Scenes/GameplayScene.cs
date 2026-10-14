@@ -50,6 +50,8 @@ public sealed class GameplayScene
     private readonly GameRandom _random;
     private readonly Arena _arena;
     private readonly ShotSystem _shots;
+    private readonly ExplosiveSystem _explosives;
+    private readonly ShotRouter _shotRouter;
     private readonly EnemySystem _enemies;
     private readonly WaveSystem? _waves;
     private readonly XpSystem _xp;
@@ -81,6 +83,10 @@ public sealed class GameplayScene
         _shots.AddSource(_enemies);
         _xp = new XpSystem(config.Xp, audio);
         _shots.OneShotKills = config.Debug.OneShotKills;
+        _explosives = new ExplosiveSystem(_arena, config.FriendlyFire, _random, audio);
+        _explosives.AddSource(_enemies);
+        _explosives.OneShotKills = config.Debug.OneShotKills;
+        _shotRouter = new ShotRouter(_shots, _explosives);
         _unlocks = new WeaponUnlocks(config, audio, _random);
         _drops = new DropSystem(config.Crates, _random, audio, _unlocks);
         _upgrades = new UpgradeSystem(data.Upgrades, _unlocks, _random, audio);
@@ -142,11 +148,12 @@ public sealed class GameplayScene
             var camera = _cameras[i];
 
             player.Input.Update(player.Position, camera);
-            player.Update(deltaSeconds, _arena, _shots);
+            player.Update(deltaSeconds, _arena, _shotRouter);
             camera.Follow(player.Position, player.Input.AimScreen, deltaSeconds);
         }
 
         _shots.Update(deltaSeconds);
+        _explosives.Update(deltaSeconds, _players);
         _drops.Update(deltaSeconds, _players);
 
         if (!AnyPlayerAlive())
@@ -251,6 +258,7 @@ public sealed class GameplayScene
     public void DebugToggleOneShotKills()
     {
         _shots.OneShotKills = !_shots.OneShotKills;
+        _explosives.OneShotKills = _shots.OneShotKills;
     }
 
     /// <summary>Debug helper: drops one crate of each type in a row beside the first player.</summary>
@@ -296,6 +304,7 @@ public sealed class GameplayScene
             _drops.Draw(renderer);
             _enemies.Draw(renderer);
             _shots.Draw(renderer);
+            _explosives.Draw(renderer);
             DrawPlayers(renderer);
             renderer.End();
         }
@@ -408,6 +417,8 @@ public sealed class GameplayScene
         _practiceTargets.Add(moving);
         _shots.AddTarget(still);
         _shots.AddTarget(moving);
+        _explosives.AddTarget(still);
+        _explosives.AddTarget(moving);
     }
 
     private void AddPlayer(Player player, Rectangle viewRect, CameraConfig cameraConfig)

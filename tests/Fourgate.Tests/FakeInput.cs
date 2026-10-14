@@ -11,6 +11,8 @@ public sealed class FakeInput : IPlayerInput
 
     public Vector2 AimDirection { get; set; } = Vector2.UnitX;
 
+    public float AimDistance { get; set; } = float.PositiveInfinity;
+
     public Vector2 AimScreen { get; set; }
 
     public bool HasPointer { get; set; }

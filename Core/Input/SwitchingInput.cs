@@ -24,6 +24,8 @@ public sealed class SwitchingInput : IPlayerInput
 
     public Vector2 AimDirection => _current.AimDirection;
 
+    public float AimDistance => _current.AimDistance;
+
     public Vector2 AimScreen => _current.AimScreen;
 
     public bool HasPointer => _current.HasPointer;

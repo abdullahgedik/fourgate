@@ -13,6 +13,10 @@ public sealed class Weapon
     // Absorbs float error so a cooldown that should end exactly on a frame does.
     private const float TimeEpsilon = 0.0001f;
 
+    // How long a quick click (pressed and already released) is remembered while the weapon
+    // is not ready yet. Input feel, not balance.
+    private const float ClickBufferSeconds = 0.2f;
+
     // Half the gap between the two muzzles of a dual-wielded weapon.
     private const float DualWieldOffset = 7f;
 
@@ -22,6 +26,7 @@ public sealed class Weapon
     private float _cooldown;
     private float _reloadLeft;
     private bool _fireQueued;
+    private float _clickBufferLeft;
 
     /// <param name="config">The weapon's data.</param>
     /// <param name="rules">Global reload rules.</param>
@@ -36,7 +41,7 @@ public sealed class Weapon
 
         Level = 1;
         Stats = WeaponStats.Compute(config, Level);
-        Magazine = Stats.MagSize;
+        Magazine = config.Ammo.UsesMagazine ? Stats.MagSize : 0;
         Reserve = config.Ammo.InfiniteReserve ? 0 : config.Ammo.ReserveMax;
     }
 
@@ -60,7 +65,11 @@ public sealed class Weapon
     public float ReserveCapacityMultiplier { get; set; } = 1f;
 
     /// <summary>Largest reserve this weapon can hold right now.</summary>
-    public int ReserveMax => (int)MathF.Round(Config.Ammo.ReserveMax * ReserveCapacityMultiplier);
+    public int ReserveMax =>
+        (int)MathF.Round((Config.Ammo.ReserveMax + Stats.ReserveMaxBonus) * ReserveCapacityMultiplier);
+
+    /// <summary>False for count-based weapons, which use their reserve directly and never reload.</summary>
+    public bool UsesMagazine => Config.Ammo.UsesMagazine;
 
     public bool IsReloading => _reloadLeft > 0f;
 
@@ -110,6 +119,7 @@ public sealed class Weapon
         // Goes negative only on the frame the cooldown runs out; that overshoot is carried
         // into the next shot so the fire rate stays exact. An idle weapon rests at zero.
         _cooldown = _cooldown <= 0f ? 0f : _cooldown - deltaSeconds;
+        _clickBufferLeft = Math.Max(0f, _clickBufferLeft - deltaSeconds);
 
         if (IsReloading)
         {
@@ -136,6 +146,7 @@ public sealed class Weapon
         }
 
         _fireQueued = false;
+        _clickBufferLeft = 0f;
         if (!TakeRound())
         {
             // A dry trigger pull also waits out the fire interval, so holding fire on an
@@ -145,7 +156,7 @@ public sealed class Weapon
         }
 
         _cooldown += 1f / Stats.FireRate;
-        Fire(muzzle, direction, ownerIndex, shots);
+        Fire(muzzle, direction, input.AimDistance, ownerIndex, shots);
         _audio.PlaySfx(SfxIds.WeaponFire);
 
         if (_rules.ReloadsEnabled && Magazine == 0)
@@ -172,6 +183,7 @@ public sealed class Weapon
     {
         _reloadLeft = 0f;
         _fireQueued = false;
+        _clickBufferLeft = 0f;
     }
 
     /// <summary>Called when the owner switches to this weapon; an empty magazine starts reloading at once.</summary>
@@ -183,8 +195,14 @@ public sealed class Weapon
         }
     }
 
-    private void Fire(Vector2 muzzle, Vector2 direction, int ownerIndex, IShotHandler shots)
+    private void Fire(Vector2 muzzle, Vector2 direction, float aimDistance, int ownerIndex, IShotHandler shots)
     {
+        if (Config.Type == WeaponType.Thrown)
+        {
+            Throw(muzzle, direction, aimDistance, ownerIndex, shots);
+            return;
+        }
+
         if (!Stats.DualWield)
         {
             FireVolley(muzzle, direction, ownerIndex, shots);
@@ -195,6 +213,26 @@ public sealed class Weapon
         var side = new Vector2(-direction.Y, direction.X) * DualWieldOffset;
         FireVolley(muzzle + side, direction, ownerIndex, shots);
         FireVolley(muzzle - side, direction, ownerIndex, shots);
+    }
+
+    // Lands on the aim point, or at the weapon's reach when aiming farther (or with a stick).
+    private void Throw(Vector2 muzzle, Vector2 direction, float aimDistance, int ownerIndex, IShotHandler shots)
+    {
+        var thrown = Config.Thrown!;
+        var distance = Math.Min(aimDistance, Stats.Range);
+        shots.ThrowExplosive(new ExplosiveShot(
+            muzzle,
+            muzzle + direction * distance,
+            thrown.Speed,
+            thrown.Radius,
+            Stats.Damage,
+            Stats.BlastRadius,
+            ownerIndex,
+            Stats.ClusterCount,
+            Stats.ClusterDistance,
+            Stats.ClusterDamageMult,
+            Stats.ClusterRadiusMult));
+        _audio.PlaySfx(SfxIds.WeaponThrow);
     }
 
     private void FireVolley(Vector2 muzzle, Vector2 direction, int ownerIndex, IShotHandler shots)
@@ -210,7 +248,7 @@ public sealed class Weapon
         shots.FireProjectile(
             muzzle,
             direction,
-            Config.Projectile,
+            Config.Projectile!,
             Stats.Damage,
             ownerIndex,
             Stats.Range,
@@ -250,23 +288,24 @@ public sealed class Weapon
             return input.FireHeld;
         }
 
-        // A press made just before the weapon is ready still counts, so fast clicking
-        // does not drop shots.
+        // A press made before the weapon is ready still counts: while the button is held, or
+        // for a moment after a quick click, so fast clicking does not drop shots.
         if (input.FirePressed)
         {
             _fireQueued = true;
+            _clickBufferLeft = ClickBufferSeconds;
         }
         else if (!input.FireHeld)
         {
             _fireQueued = false;
         }
 
-        return _fireQueued;
+        return _fireQueued || _clickBufferLeft > 0f;
     }
 
     private bool TakeRound()
     {
-        if (!_rules.ReloadsEnabled)
+        if (!_rules.ReloadsEnabled || !UsesMagazine)
         {
             if (!ReserveHasAmmo)
             {
@@ -298,12 +337,13 @@ public sealed class Weapon
 
     private bool TryStartReload()
     {
-        if (IsReloading || Magazine >= Stats.MagSize || !ReserveHasAmmo)
+        if (!UsesMagazine || IsReloading || Magazine >= Stats.MagSize || !ReserveHasAmmo)
         {
             return false;
         }
 
         _fireQueued = false;
+        _clickBufferLeft = 0f;
         _reloadLeft = ReloadSeconds;
         _audio.PlaySfx(SfxIds.WeaponReloadStart);
         if (_reloadLeft <= TimeEpsilon)

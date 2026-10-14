@@ -3,7 +3,7 @@
     {
       "id": "normal",
       "displayName": "Zombie",
-      "hp": 60,
+      "hp": 80,
       "speed": 110,
       "radius": 20,
       "contactDamage": 10,

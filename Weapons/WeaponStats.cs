@@ -18,7 +18,13 @@ public readonly record struct WeaponStats(
     int Ricochets,
     float RicochetRadius,
     float RicochetDamageMult,
-    bool DualWield)
+    bool DualWield,
+    float BlastRadius,
+    int ReserveMaxBonus,
+    int ClusterCount,
+    float ClusterDistance,
+    float ClusterDamageMult,
+    float ClusterRadiusMult)
 {
     /// <summary>
     /// Applies every level bonus up to <paramref name="level"/> to the weapon's base stats;
@@ -32,7 +38,9 @@ public readonly record struct WeaponStats(
         var fireRate = config.FireRate;
         var magSize = config.Ammo.MagSize;
         var reloadTime = config.Ammo.ReloadTime;
-        var range = config.Projectile.Range;
+        var range = config.Projectile?.Range ?? config.Thrown?.MaxRange ?? 0f;
+        var blastRadius = config.Explosion?.Radius ?? 0f;
+        var reserveMaxBonus = 0;
         var spread = config.SpreadDegrees;
 
         var levels = config.Levels;
@@ -50,6 +58,8 @@ public readonly record struct WeaponStats(
             reloadTime *= bonus.ReloadTimeMult;
             range *= bonus.RangeMult;
             spread *= bonus.SpreadMult;
+            blastRadius *= bonus.BlastRadiusMult;
+            reserveMaxBonus += bonus.ReserveMaxBonus;
         }
 
         var pierce = 0;
@@ -58,6 +68,10 @@ public readonly record struct WeaponStats(
         var ricochetDamageMult = 1f;
         var dualWield = false;
         var automatic = config.Automatic;
+        var clusterCount = 0;
+        var clusterDistance = 0f;
+        var clusterDamageMult = 1f;
+        var clusterRadiusMult = 1f;
         if (level >= WeaponConfig.MaxLevel && config.LevelTen is not null)
         {
             damage *= config.LevelTen.DamageMult;
@@ -86,13 +100,21 @@ public readonly record struct WeaponStats(
                     case WeaponAbility.FullAuto:
                         automatic = true;
                         break;
+
+                    case WeaponAbility.Cluster:
+                        clusterCount += abilities[i].Count;
+                        clusterDistance = abilities[i].Radius;
+                        clusterDamageMult = abilities[i].DamageMult;
+                        clusterRadiusMult = abilities[i].RadiusMult;
+                        break;
                 }
             }
         }
 
         return new WeaponStats(
             damage, fireRate, magSize, reloadTime, range, spread, config.Pellets, automatic,
-            pierce, ricochets, ricochetRadius, ricochetDamageMult, dualWield);
+            pierce, ricochets, ricochetRadius, ricochetDamageMult, dualWield,
+            blastRadius, reserveMaxBonus, clusterCount, clusterDistance, clusterDamageMult, clusterRadiusMult);
     }
 
     /// <summary>
@@ -128,6 +150,11 @@ public readonly record struct WeaponStats(
             AddPercent(lines, bonus.ReloadTimeMult, "reload time");
             AddPercent(lines, bonus.RangeMult, "range");
             AddPercent(lines, bonus.SpreadMult, "spread");
+            AddPercent(lines, bonus.BlastRadiusMult, "blast radius");
+            if (bonus.ReserveMaxBonus > 0)
+            {
+                lines.Add($"+{bonus.ReserveMaxBonus} carried");
+            }
         }
     }
 

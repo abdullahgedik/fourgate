@@ -28,4 +28,7 @@ public interface IShotHandler
         int ricochets = 0,
         float ricochetRadius = 0f,
         float ricochetDamageMult = 1f);
+
+    /// <summary>Throws an explosive that flies to its target and explodes where it lands.</summary>
+    void ThrowExplosive(in ExplosiveShot shot);
 }

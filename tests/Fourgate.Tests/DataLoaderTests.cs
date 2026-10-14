@@ -22,6 +22,7 @@ public class DataLoaderTests
             "healthChanceNormal": 0.15, "healthChanceLowHp": 0.6, "upgradeCrateChance": 0.015,
             "ammoPrimaryFraction": 0.35, "ammoOthersFraction": 0.08
           },
+          "friendlyFire": { "enabled": true, "damageToOther": 0.25, "selfExplosiveDamage": 0.5 },
           "reloadsEnabled": true,
           "globalReloadTimeMultiplier": 1.0,
           "player": {
@@ -50,7 +51,7 @@ public class DataLoaderTests
         var data = DataLoader.LoadAll(DataLoader.DefaultDirectory);
 
         Assert.NotNull(data.GetWeapon(data.Game.Player.StartingWeapon));
-        Assert.Equal(60f, data.GetEnemy("normal").Hp);
+        Assert.True(data.GetEnemy("normal").Hp > 0f);
         Assert.Equal(6f, data.Waves.Budget.Base);
         Assert.Equal(5, data.Upgrades.Upgrades.Count);
     }

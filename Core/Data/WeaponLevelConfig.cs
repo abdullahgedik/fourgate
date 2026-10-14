@@ -21,6 +21,11 @@ public sealed class WeaponLevelConfig
     /// <summary>Below 1 tightens the spread.</summary>
     public float SpreadMult { get; init; } = 1f;
 
+    public float BlastRadiusMult { get; init; } = 1f;
+
+    /// <summary>Extra reserve capacity (carry cap for count-based weapons).</summary>
+    public int ReserveMaxBonus { get; init; }
+
     /// <summary>Checks value ranges; <paramref name="path"/> locates this entry inside the file.</summary>
     public void Validate(string file, string path)
     {
@@ -33,5 +38,7 @@ public sealed class WeaponLevelConfig
         DataLoadException.Require(ReloadTimeMult > 0, file, $"{path}.reloadTimeMult", "must be greater than 0");
         DataLoadException.Require(RangeMult > 0, file, $"{path}.rangeMult", "must be greater than 0");
         DataLoadException.Require(SpreadMult >= 0, file, $"{path}.spreadMult", "must not be negative");
+        DataLoadException.Require(BlastRadiusMult > 0, file, $"{path}.blastRadiusMult", "must be greater than 0");
+        DataLoadException.Require(ReserveMaxBonus >= 0, file, $"{path}.reserveMaxBonus", "must not be negative");
     }
 }

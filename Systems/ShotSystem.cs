@@ -11,7 +11,7 @@ using Microsoft.Xna.Framework;
 namespace Fourgate.Systems;
 
 /// <summary>Owns and moves player bullets and resolves what they hit.</summary>
-public sealed class ShotSystem : IShotHandler
+public sealed class ShotSystem
 {
     private const int InitialBullets = 128;
     private const float StreakLength = 90f;

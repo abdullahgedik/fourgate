@@ -23,6 +23,9 @@ public sealed class FakeShotHandler : IShotHandler
 
     public float LastRicochetRadius { get; private set; }
 
+    /// <summary>Every explosive thrown, in order.</summary>
+    public List<ExplosiveShot> Throws { get; } = new();
+
     /// <summary>Direction of every shot fired, in order.</summary>
     public List<Vector2> Directions { get; } = new();
 
@@ -47,5 +50,10 @@ public sealed class FakeShotHandler : IShotHandler
         LastPierce = pierce;
         LastRicochets = ricochets;
         LastRicochetRadius = ricochetRadius;
+    }
+
+    public void ThrowExplosive(in ExplosiveShot shot)
+    {
+        Throws.Add(shot);
     }
 }

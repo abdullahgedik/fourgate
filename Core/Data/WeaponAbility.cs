@@ -17,4 +17,10 @@ public enum WeaponAbility
 
     /// <summary>Holding fire keeps shooting.</summary>
     FullAuto,
+
+    /// <summary>
+    /// An explosive scatters this many mini-bombs around its blast; they land at the ability's
+    /// radius and hit with its damage and radius multipliers.
+    /// </summary>
+    Cluster,
 }

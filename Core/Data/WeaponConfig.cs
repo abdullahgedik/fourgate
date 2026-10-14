@@ -35,7 +35,14 @@ public sealed class WeaponConfig
 
     public required WeaponAmmoConfig Ammo { get; init; }
 
-    public required ProjectileConfig Projectile { get; init; }
+    /// <summary>Bullet values; required for <see cref="WeaponType.Projectile"/> weapons.</summary>
+    public ProjectileConfig? Projectile { get; init; }
+
+    /// <summary>Flight values; required for <see cref="WeaponType.Thrown"/> weapons.</summary>
+    public ThrownConfig? Thrown { get; init; }
+
+    /// <summary>Blast values; required for <see cref="WeaponType.Thrown"/> weapons.</summary>
+    public ExplosionConfig? Explosion { get; init; }
 
     /// <summary>Bonuses of levels 2 to 9. A level without an entry changes nothing.</summary>
     public List<WeaponLevelConfig> Levels { get; init; } = new();
@@ -59,7 +66,8 @@ public sealed class WeaponConfig
 
         DataLoadException.Require(Ammo is not null, file, $"{path}.ammo", "is required");
         var ammo = Ammo!;
-        DataLoadException.Require(ammo.MagSize >= 1, file, $"{path}.ammo.magSize", "must be 1 or greater");
+        DataLoadException.Require(
+            !ammo.UsesMagazine || ammo.MagSize >= 1, file, $"{path}.ammo.magSize", "must be 1 or greater");
         DataLoadException.Require(ammo.ReserveMax >= 0, file, $"{path}.ammo.reserveMax", "must not be negative");
         DataLoadException.Require(ammo.ReloadTime >= 0, file, $"{path}.ammo.reloadTime", "must not be negative");
 
@@ -76,10 +84,35 @@ public sealed class WeaponConfig
 
         LevelTen?.Validate(file, $"{path}.levelTen");
 
-        DataLoadException.Require(Projectile is not null, file, $"{path}.projectile", "is required");
+        if (Type == WeaponType.Projectile)
+        {
+            ValidateProjectile(file, path);
+        }
+        else
+        {
+            ValidateThrown(file, path);
+        }
+    }
+
+    private void ValidateProjectile(string file, string path)
+    {
+        DataLoadException.Require(Projectile is not null, file, $"{path}.projectile", "is required for this weapon type");
         var projectile = Projectile!;
         DataLoadException.Require(projectile.Speed > 0, file, $"{path}.projectile.speed", "must be greater than 0");
         DataLoadException.Require(projectile.Radius > 0, file, $"{path}.projectile.radius", "must be greater than 0");
         DataLoadException.Require(projectile.Range > 0, file, $"{path}.projectile.range", "must be greater than 0");
+    }
+
+    private void ValidateThrown(string file, string path)
+    {
+        DataLoadException.Require(Thrown is not null, file, $"{path}.thrown", "is required for this weapon type");
+        var thrown = Thrown!;
+        DataLoadException.Require(thrown.Speed > 0, file, $"{path}.thrown.speed", "must be greater than 0");
+        DataLoadException.Require(thrown.MaxRange > 0, file, $"{path}.thrown.maxRange", "must be greater than 0");
+        DataLoadException.Require(thrown.Radius > 0, file, $"{path}.thrown.radius", "must be greater than 0");
+
+        DataLoadException.Require(Explosion is not null, file, $"{path}.explosion", "is required for this weapon type");
+        DataLoadException.Require(
+            Explosion!.Radius > 0, file, $"{path}.explosion.radius", "must be greater than 0");
     }
 }

@@ -151,7 +151,9 @@ public sealed class PlayerHud
 
             _weaponName = $"{weapon.Config.DisplayName.ToUpperInvariant()}   LV {weapon.Level}";
             var reserve = weapon.HasInfiniteReserve ? "INF" : weapon.Reserve.ToString();
-            _ammoText = weapon.IsReloading ? "RELOADING" : $"{weapon.Magazine} / {reserve}";
+            _ammoText = weapon.IsReloading
+                ? "RELOADING"
+                : weapon.UsesMagazine ? $"{weapon.Magazine} / {reserve}" : reserve;
         }
 
         var right = view.Right - Margin;

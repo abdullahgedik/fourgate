@@ -36,6 +36,8 @@ public sealed class WeaponLevelTenConfig
                 Abilities[i].Radius >= 0, file, $"{path}.abilities[{i}].radius", "must not be negative");
             DataLoadException.Require(
                 Abilities[i].DamageMult > 0, file, $"{path}.abilities[{i}].damageMult", "must be greater than 0");
+            DataLoadException.Require(
+                Abilities[i].RadiusMult > 0, file, $"{path}.abilities[{i}].radiusMult", "must be greater than 0");
         }
     }
 }

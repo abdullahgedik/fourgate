@@ -17,6 +17,8 @@ public sealed class GameConfig
 
     public required CratesConfig Crates { get; init; }
 
+    public required FriendlyFireConfig FriendlyFire { get; init; }
+
     public DebugConfig Debug { get; init; } = new();
 
     /// <summary>Most enemies allowed in the arena at once; further spawns wait at the doors.</summary>
@@ -45,6 +47,9 @@ public sealed class GameConfig
         DataLoadException.Require(Xp is not null, file, "xp", "is required");
         DataLoadException.Require(Xp!.Base > 0, file, "xp.base", "must be greater than 0");
         DataLoadException.Require(Xp.Exponent >= 0, file, "xp.exponent", "must not be negative");
+
+        DataLoadException.Require(FriendlyFire is not null, file, "friendlyFire", "is required");
+        FriendlyFire!.Validate(file);
 
         DataLoadException.Require(Crates is not null, file, "crates", "is required");
         Crates!.Validate(file);

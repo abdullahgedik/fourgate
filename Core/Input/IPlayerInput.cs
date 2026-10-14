@@ -12,6 +12,9 @@ public interface IPlayerInput
     /// <summary>Unit-length aim direction in world space. Keeps its last value when there is no aim input.</summary>
     Vector2 AimDirection { get; }
 
+    /// <summary>World distance from the player to the aim point; infinite when the device has no pointer.</summary>
+    float AimDistance { get; }
+
     /// <summary>Point on the virtual screen the player is aiming toward; drives the camera lead.</summary>
     Vector2 AimScreen { get; }
 

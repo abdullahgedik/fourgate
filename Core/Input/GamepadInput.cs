@@ -25,6 +25,9 @@ public sealed class GamepadInput : IPlayerInput
 
     public Vector2 AimDirection { get; private set; } = Vector2.UnitX;
 
+    // A stick gives a direction only; throws go as far as the weapon allows.
+    public float AimDistance => float.PositiveInfinity;
+
     public Vector2 AimScreen { get; private set; }
 
     public bool HasPointer => false;

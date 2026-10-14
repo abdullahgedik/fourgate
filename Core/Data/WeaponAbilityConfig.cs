@@ -13,4 +13,7 @@ public sealed class WeaponAbilityConfig
 
     /// <summary>Damage multiplier applied by the ability (ricochet: to the bullet after each enemy bounce).</summary>
     public float DamageMult { get; init; } = 1f;
+
+    /// <summary>Size multiplier applied by the ability (cluster: mini-bomb blast radius).</summary>
+    public float RadiusMult { get; init; } = 1f;
 }
