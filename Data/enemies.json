@@ -51,6 +51,23 @@
       "dropChance": 0.2,
       "shape": "diamond",
       "color": [ 240, 140, 50 ]
+    },
+    {
+      "id": "tank",
+      "displayName": "Tank Zombie",
+      "hp": 400,
+      "speed": 60,
+      "radius": 34,
+      "contactDamage": 30,
+      "contactCooldown": 1.2,
+      "xp": 40,
+      "scoreValue": 40,
+      "cost": 6,
+      "unlockWave": 8,
+      "dropChance": 0.3,
+      "knockbackResist": 0.75,
+      "shape": "square",
+      "color": [ 140, 30, 35 ]
     }
   ]
 }
