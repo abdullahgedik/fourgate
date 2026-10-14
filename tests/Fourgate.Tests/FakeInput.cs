@@ -29,6 +29,12 @@ public sealed class FakeInput : IPlayerInput
 
     public int WeaponSlotPressed { get; set; }
 
+    public bool EquipmentPressed { get; set; }
+
+    public bool EquipmentHeld { get; set; }
+
+    public int EquipmentCycle { get; set; }
+
     public bool ConfirmPressed { get; set; }
 
     public bool MenuLeftPressed { get; set; }

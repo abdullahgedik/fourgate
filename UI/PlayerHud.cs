@@ -25,6 +25,7 @@ public sealed class PlayerHud
     private const float WeaponListSize = 22f;
     private const float WeaponListLineHeight = 24f;
     private const float WeaponListGap = 14f;
+    private const float EquipmentSize = 28f;
 
     private static readonly Color PanelColor = new(8, 9, 12, 200);
     private static readonly Color HpColor = new(215, 60, 60);
@@ -57,6 +58,9 @@ public sealed class PlayerHud
     private string _weaponName = string.Empty;
     private string _ammoText = string.Empty;
     private readonly List<WeaponListEntry> _listEntries = new();
+    private Weapon? _equipmentShown;
+    private int _equipmentCountShown = -1;
+    private string _equipmentText = string.Empty;
 
     public PlayerHud(XpConfig xpConfig)
     {
@@ -164,54 +168,84 @@ public sealed class PlayerHud
         renderer.DrawText(
             _weaponName, new Vector2(right, ammoTop - WeaponNameSize), WeaponNameSize, DimTextColor, TextAlign.Right);
 
-        DrawWeaponList(renderer, player, right, ammoTop - WeaponNameSize - WeaponListGap);
+        var listTop = DrawGunList(renderer, player, right, ammoTop - WeaponNameSize - WeaponListGap);
+        DrawEquipment(renderer, player, right, listTop - WeaponListGap);
     }
 
-    // Carried weapons by slot number, lowest at the top, with the one in hand highlighted.
-    private void DrawWeaponList(IRenderer renderer, Player player, float right, float bottom)
+    // The active equipment, with the button that uses it and how many are left.
+    private void DrawEquipment(IRenderer renderer, Player player, float right, float bottom)
     {
-        var weapons = player.Weapons;
-        if (weapons.Count < 2)
+        var equipment = player.ActiveEquipment;
+        if (equipment is null)
         {
             return;
         }
 
-        while (_listEntries.Count < weapons.Count)
+        if (!ReferenceEquals(equipment, _equipmentShown) || equipment.Reserve != _equipmentCountShown)
+        {
+            _equipmentShown = equipment;
+            _equipmentCountShown = equipment.Reserve;
+            _equipmentText = $"G  {equipment.Config.DisplayName.ToUpperInvariant()}  {equipment.Reserve}";
+        }
+
+        var color = equipment.Reserve == 0 ? EmptyTextColor : TextColor;
+        renderer.DrawText(
+            _equipmentText, new Vector2(right, bottom - EquipmentSize), EquipmentSize, color, TextAlign.Right);
+    }
+
+    // Carried guns by slot number, lowest at the top, with the one in hand highlighted.
+    // Returns the top of the list (or the given bottom when nothing is drawn).
+    private float DrawGunList(IRenderer renderer, Player player, float right, float bottom)
+    {
+        var weapons = player.Weapons;
+        var guns = 0;
+        for (var i = 0; i < weapons.Count; i++)
+        {
+            if (weapons[i].Config.Category == WeaponCategory.Gun)
+            {
+                guns++;
+            }
+        }
+
+        if (guns < 2)
+        {
+            return bottom;
+        }
+
+        while (_listEntries.Count < guns)
         {
             _listEntries.Add(new WeaponListEntry());
         }
 
-        var top = bottom - weapons.Count * WeaponListLineHeight;
+        var top = bottom - guns * WeaponListLineHeight;
+        var line = 0;
         for (var i = 0; i < weapons.Count; i++)
         {
             var weapon = weapons[i];
-            var entry = _listEntries[i];
+            if (weapon.Config.Category != WeaponCategory.Gun)
+            {
+                continue;
+            }
+
+            var entry = _listEntries[line];
             var ammo = weapon.HasInfiniteReserve ? -1 : weapon.Magazine + weapon.Reserve;
             if (!ReferenceEquals(entry.Weapon, weapon) || entry.Ammo != ammo)
             {
                 entry.Weapon = weapon;
                 entry.Ammo = ammo;
                 entry.Text = ammo < 0
-                    ? $"{SlotLabel(weapon.Config.Slot)}  {weapon.Config.DisplayName.ToUpperInvariant()}"
-                    : $"{SlotLabel(weapon.Config.Slot)}  {weapon.Config.DisplayName.ToUpperInvariant()}  {ammo}";
+                    ? $"{weapon.Config.Slot}  {weapon.Config.DisplayName.ToUpperInvariant()}"
+                    : $"{weapon.Config.Slot}  {weapon.Config.DisplayName.ToUpperInvariant()}  {ammo}";
             }
 
             var isCurrent = ReferenceEquals(weapon, player.CurrentWeapon);
             var color = isCurrent ? HighlightTextColor : (ammo == 0 ? EmptyTextColor : DimTextColor);
             renderer.DrawText(
-                entry.Text, new Vector2(right, top + i * WeaponListLineHeight), WeaponListSize, color, TextAlign.Right);
+                entry.Text, new Vector2(right, top + line * WeaponListLineHeight), WeaponListSize, color, TextAlign.Right);
+            line++;
         }
-    }
 
-    // The key that selects the slot: 1-9, then 0 and minus.
-    private static string SlotLabel(int slot)
-    {
-        return slot switch
-        {
-            10 => "0",
-            11 => "-",
-            _ => slot.ToString(),
-        };
+        return top;
     }
 
     private sealed class WeaponListEntry

@@ -44,6 +44,12 @@ public sealed class GamepadInput : IPlayerInput
 
     public int WeaponSlotPressed => 0;
 
+    public bool EquipmentPressed { get; private set; }
+
+    public bool EquipmentHeld { get; private set; }
+
+    public int EquipmentCycle { get; private set; }
+
     public bool ConfirmPressed { get; private set; }
 
     public bool MenuLeftPressed { get; private set; }
@@ -85,6 +91,20 @@ public sealed class GamepadInput : IPlayerInput
         ConfirmPressed = (state.IsButtonDown(Buttons.A) && _previous.IsButtonUp(Buttons.A))
             || (state.IsButtonDown(Buttons.Start) && _previous.IsButtonUp(Buttons.Start));
 
+        var wasUsingEquipment = _previous.Triggers.Left > TriggerThreshold;
+        EquipmentHeld = state.Triggers.Left > TriggerThreshold;
+        EquipmentPressed = EquipmentHeld && !wasUsingEquipment;
+
+        EquipmentCycle = 0;
+        if (state.IsButtonDown(Buttons.DPadRight) && _previous.IsButtonUp(Buttons.DPadRight))
+        {
+            EquipmentCycle = 1;
+        }
+        else if (state.IsButtonDown(Buttons.DPadLeft) && _previous.IsButtonUp(Buttons.DPadLeft))
+        {
+            EquipmentCycle = -1;
+        }
+
         WeaponCycle = 0;
         if (state.IsButtonDown(Buttons.RightShoulder) && _previous.IsButtonUp(Buttons.RightShoulder))
         {
@@ -104,7 +124,8 @@ public sealed class GamepadInput : IPlayerInput
             || (stickX > MenuStickThreshold && previousStickX <= MenuStickThreshold);
 
         HasActivity = move != Vector2.Zero || aim != Vector2.Zero || FireHeld || DashPressed || ReloadPressed
-            || ConfirmPressed || MenuLeftPressed || MenuRightPressed || WeaponCycle != 0;
+            || ConfirmPressed || MenuLeftPressed || MenuRightPressed || WeaponCycle != 0
+            || EquipmentHeld || EquipmentCycle != 0;
 
         _previous = state;
     }

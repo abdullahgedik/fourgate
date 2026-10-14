@@ -18,6 +18,7 @@ public static class SfxIds
     public const string PickupUpgrade = "pickup_upgrade";
     public const string PickupWeapon = "pickup_weapon";
     public const string WeaponSwitch = "weapon_switch";
+    public const string EquipmentSwitch = "equipment_switch";
     public const string WeaponLevelUp = "weapon_level_up";
     public const string EnemyHit = "enemy_hit";
     public const string EnemyDeath = "enemy_death";

@@ -8,11 +8,20 @@ public sealed class WeaponConfig
     /// <summary>Highest weapon level; reaching it grants the weapon's special abilities.</summary>
     public const int MaxLevel = 10;
 
+    /// <summary>Guns are selected with the number keys 1 to 9.</summary>
+    public const int MaxGunSlot = 9;
+
     public required string Id { get; init; }
 
     public required string DisplayName { get; init; }
 
-    /// <summary>Weapon slot number; slot order equals unlock order.</summary>
+    /// <summary>Gun or equipment; guns are the default.</summary>
+    public WeaponCategory Category { get; init; } = WeaponCategory.Gun;
+
+    /// <summary>
+    /// For a gun, the number key that selects it (1–9). For equipment, its place in the
+    /// equipment cycle.
+    /// </summary>
     public required int Slot { get; init; }
 
     public required int UnlockWave { get; init; }
@@ -56,7 +65,9 @@ public sealed class WeaponConfig
         DataLoadException.Require(!string.IsNullOrWhiteSpace(Id), file, $"{path}.id", "must not be empty");
         DataLoadException.Require(
             !string.IsNullOrWhiteSpace(DisplayName), file, $"{path}.displayName", "must not be empty");
-        DataLoadException.Require(Slot >= 1, file, $"{path}.slot", "must be 1 or greater");
+        DataLoadException.Require(
+            Slot >= 1 && (Category != WeaponCategory.Gun || Slot <= MaxGunSlot),
+            file, $"{path}.slot", $"must be 1 or greater, and at most {MaxGunSlot} for a gun");
         DataLoadException.Require(UnlockWave >= 1, file, $"{path}.unlockWave", "must be 1 or greater");
         DataLoadException.Require(Damage > 0, file, $"{path}.damage", "must be greater than 0");
         DataLoadException.Require(Pellets >= 1, file, $"{path}.pellets", "must be 1 or greater");

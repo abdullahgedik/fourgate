@@ -7,10 +7,13 @@ namespace Fourgate.Core.Input;
 /// <summary>Player 1 controls: WASD to move, mouse to aim and fire.</summary>
 public sealed class KeyboardMouseInput : IPlayerInput
 {
-    // Index + 1 is the weapon slot: 1-9, then 0 for slot 10 and minus for slot 11.
+    private const Keys EquipmentKey = Keys.G;
+    private const Keys EquipmentCycleKey = Keys.T;
+
+    // Index + 1 is the gun slot.
     private static readonly Keys[] SlotKeys =
     {
-        Keys.D1, Keys.D2, Keys.D3, Keys.D4, Keys.D5, Keys.D6, Keys.D7, Keys.D8, Keys.D9, Keys.D0, Keys.OemMinus,
+        Keys.D1, Keys.D2, Keys.D3, Keys.D4, Keys.D5, Keys.D6, Keys.D7, Keys.D8, Keys.D9,
     };
 
     private readonly VirtualScreen _screen;
@@ -43,6 +46,12 @@ public sealed class KeyboardMouseInput : IPlayerInput
     public int WeaponCycle { get; private set; }
 
     public int WeaponSlotPressed { get; private set; }
+
+    public bool EquipmentPressed { get; private set; }
+
+    public bool EquipmentHeld { get; private set; }
+
+    public int EquipmentCycle { get; private set; }
 
     public bool ConfirmPressed { get; private set; }
 
@@ -110,6 +119,10 @@ public sealed class KeyboardMouseInput : IPlayerInput
             WeaponCycle = -1;
         }
 
+        EquipmentHeld = keyboard.IsKeyDown(EquipmentKey);
+        EquipmentPressed = WasPressed(keyboard, EquipmentKey);
+        EquipmentCycle = WasPressed(keyboard, EquipmentCycleKey) ? 1 : 0;
+
         WeaponSlotPressed = 0;
         for (var i = 0; i < SlotKeys.Length; i++)
         {
@@ -129,6 +142,8 @@ public sealed class KeyboardMouseInput : IPlayerInput
             || ConfirmPressed
             || WeaponCycle != 0
             || WeaponSlotPressed != 0
+            || EquipmentHeld
+            || EquipmentCycle != 0
             || MenuLeftPressed
             || MenuRightPressed
             || mouse.X != _previousMouse.X

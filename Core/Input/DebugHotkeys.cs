@@ -33,7 +33,7 @@ public sealed class DebugHotkeys
     /// <summary>Turn one-shot kills on or off.</summary>
     public bool OneShotKillsPressed { get; private set; }
 
-    /// <summary>Raise the level of every player's weapon in hand by one.</summary>
+    /// <summary>Raise the level of every player's gun in hand and active equipment by one.</summary>
     public bool LevelUpWeaponPressed { get; private set; }
 
     public void Update()

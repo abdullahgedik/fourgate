@@ -86,7 +86,7 @@ public class RifleTests
         var nine = WeaponStats.Compute(rifle, 9);
         var ten = WeaponStats.Compute(rifle, 10);
 
-        Assert.Equal(5, rifle.Slot);
+        Assert.Equal(4, rifle.Slot);
         Assert.Equal(6, rifle.UnlockWave);
         Assert.False(ten.Automatic);
         Assert.Equal(0, nine.Pierce);

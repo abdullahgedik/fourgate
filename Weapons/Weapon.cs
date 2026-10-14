@@ -102,16 +102,28 @@ public sealed class Weapon
         Stats = WeaponStats.Compute(Config, Level);
     }
 
-    /// <summary>Advances timers and fires or reloads according to the input.</summary>
+    /// <summary>Advances the weapon as a gun, driven by the owner's fire and reload buttons.</summary>
+    public void Update(
+        float deltaSeconds,
+        IPlayerInput input,
+        Vector2 muzzle,
+        Vector2 direction,
+        int ownerIndex,
+        IShotHandler shots)
+    {
+        Update(deltaSeconds, WeaponTrigger.ForGun(input), muzzle, direction, ownerIndex, shots);
+    }
+
+    /// <summary>Advances timers and fires or reloads according to the trigger.</summary>
     /// <param name="deltaSeconds">Frame time.</param>
-    /// <param name="input">The owner's controls.</param>
+    /// <param name="trigger">The buttons driving this weapon.</param>
     /// <param name="muzzle">World position shots start from.</param>
     /// <param name="direction">Unit-length aim direction.</param>
     /// <param name="ownerIndex">Index of the owning player.</param>
     /// <param name="shots">Resolves the fired shots.</param>
     public void Update(
         float deltaSeconds,
-        IPlayerInput input,
+        in WeaponTrigger trigger,
         Vector2 muzzle,
         Vector2 direction,
         int ownerIndex,
@@ -136,12 +148,12 @@ public sealed class Weapon
             // Reloads may be switched off mid-reload; nothing should stay pending.
             _reloadLeft = 0f;
         }
-        else if (input.ReloadPressed)
+        else if (trigger.ReloadPressed)
         {
             TryStartReload();
         }
 
-        if (!WantsToFire(input) || IsReloading || _cooldown > TimeEpsilon)
+        if (!WantsToFire(trigger) || IsReloading || _cooldown > TimeEpsilon)
         {
             return;
         }
@@ -157,7 +169,7 @@ public sealed class Weapon
         }
 
         _cooldown += 1f / Stats.FireRate;
-        Fire(muzzle, direction, input.AimDistance, ownerIndex, shots);
+        Fire(muzzle, direction, trigger.AimDistance, ownerIndex, shots);
         _audio.PlaySfx(SfxIds.WeaponFire);
 
         if (_rules.ReloadsEnabled && Magazine == 0)
@@ -292,21 +304,21 @@ public sealed class Weapon
         return new Vector2(direction.X * cos - direction.Y * sin, direction.X * sin + direction.Y * cos);
     }
 
-    private bool WantsToFire(IPlayerInput input)
+    private bool WantsToFire(in WeaponTrigger trigger)
     {
         if (Stats.Automatic)
         {
-            return input.FireHeld;
+            return trigger.Held;
         }
 
         // A press made before the weapon is ready still counts: while the button is held, or
         // for a moment after a quick click, so fast clicking does not drop shots.
-        if (input.FirePressed)
+        if (trigger.Pressed)
         {
             _fireQueued = true;
             _clickBufferLeft = ClickBufferSeconds;
         }
-        else if (!input.FireHeld)
+        else if (!trigger.Held)
         {
             _fireQueued = false;
         }

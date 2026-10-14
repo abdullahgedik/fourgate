@@ -89,7 +89,8 @@
     {
       "id": "grenade",
       "displayName": "Grenade",
-      "slot": 4,
+      "category": "equipment",
+      "slot": 1,
       "unlockWave": 5,
       "type": "thrown",
       "damage": 60,
@@ -117,7 +118,7 @@
     {
       "id": "marksman",
       "displayName": "Marksman Rifle",
-      "slot": 5,
+      "slot": 4,
       "unlockWave": 6,
       "type": "projectile",
       "damage": 40,

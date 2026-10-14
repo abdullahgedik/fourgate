@@ -148,6 +148,7 @@ public static class TestData
         int slot = 1,
         float spreadDegrees = 0,
         int pellets = 1,
+        WeaponCategory category = WeaponCategory.Gun,
         List<WeaponLevelConfig>? levels = null,
         WeaponLevelTenConfig? levelTen = null)
     {
@@ -158,6 +159,7 @@ public static class TestData
             Slot = slot,
             SpreadDegrees = spreadDegrees,
             Pellets = pellets,
+            Category = category,
             Levels = levels ?? new List<WeaponLevelConfig>(),
             LevelTen = levelTen,
             UnlockWave = 1,

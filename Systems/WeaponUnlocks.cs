@@ -22,7 +22,7 @@ public sealed class WeaponUnlocks
         _random = random;
     }
 
-    /// <summary>Weapons available in this run, in slot order.</summary>
+    /// <summary>Weapons available in this run, in unlock order (guns before equipment within a wave).</summary>
     public IReadOnlyList<WeaponConfig> Unlocked => _unlocked;
 
     public bool IsUnlocked(WeaponConfig weapon)
@@ -39,7 +39,7 @@ public sealed class WeaponUnlocks
         }
 
         var index = 0;
-        while (index < _unlocked.Count && _unlocked[index].Slot < weapon.Slot)
+        while (index < _unlocked.Count && ComesBefore(_unlocked[index], weapon))
         {
             index++;
         }
@@ -48,7 +48,7 @@ public sealed class WeaponUnlocks
         return true;
     }
 
-    /// <summary>The lowest-slot unlocked weapon the player does not carry, or null when they have them all.</summary>
+    /// <summary>The earliest-unlocked weapon the player does not carry, or null when they have them all.</summary>
     public WeaponConfig? FirstMissingFor(Player player)
     {
         for (var i = 0; i < _unlocked.Count; i++)
@@ -60,6 +60,21 @@ public sealed class WeaponUnlocks
         }
 
         return null;
+    }
+
+    private static bool ComesBefore(WeaponConfig a, WeaponConfig b)
+    {
+        if (a.UnlockWave != b.UnlockWave)
+        {
+            return a.UnlockWave < b.UnlockWave;
+        }
+
+        if (a.Category != b.Category)
+        {
+            return a.Category < b.Category;
+        }
+
+        return a.Slot <= b.Slot;
     }
 
     /// <summary>Gives the player a fresh copy of a weapon. Returns false when they already carry it.</summary>

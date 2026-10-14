@@ -71,10 +71,14 @@ public sealed class Player
 
     public bool IsAlive => Hp > 0f;
 
-    /// <summary>Weapons carried right now, in pickup order.</summary>
+    /// <summary>Everything carried right now: guns in slot order, then equipment in cycle order.</summary>
     public IReadOnlyList<Weapon> Weapons => _weapons;
 
+    /// <summary>The gun in hand.</summary>
     public Weapon? CurrentWeapon { get; private set; }
+
+    /// <summary>The equipment the equipment button uses.</summary>
+    public Weapon? ActiveEquipment { get; private set; }
 
     public bool IsDashing => _dashTimeLeft > 0f;
 
@@ -108,21 +112,28 @@ public sealed class Player
         }
     }
 
-    /// <summary>Adds a weapon to the inventory and selects it if nothing is selected yet.</summary>
+    /// <summary>Adds a weapon to the inventory and selects it if nothing of its kind is selected yet.</summary>
     public void GiveWeapon(Weapon weapon)
     {
         weapon.ReserveCapacityMultiplier = _ammoCapacityMultiplier;
         weapon.SetLevel(GetWeaponLevel(weapon.Config.Id));
 
-        // Keep the inventory in slot order so cycling follows the slot numbers.
+        // Guns first, then equipment, each in slot order, so cycling follows the slot numbers.
         var index = 0;
-        while (index < _weapons.Count && _weapons[index].Config.Slot < weapon.Config.Slot)
+        while (index < _weapons.Count && ComesBefore(_weapons[index].Config, weapon.Config))
         {
             index++;
         }
 
         _weapons.Insert(index, weapon);
-        CurrentWeapon ??= weapon;
+        if (weapon.Config.Category == WeaponCategory.Gun)
+        {
+            CurrentWeapon ??= weapon;
+        }
+        else
+        {
+            ActiveEquipment ??= weapon;
+        }
     }
 
     public bool OwnsWeapon(string weaponId)
@@ -164,10 +175,12 @@ public sealed class Player
         _audio.PlaySfx(SfxIds.WeaponLevelUp);
     }
 
-    /// <summary>Switches to a carried weapon. An unfinished reload of the old weapon is lost.</summary>
+    /// <summary>Switches to a carried gun. An unfinished reload of the old gun is lost.</summary>
     public void SelectWeapon(Weapon weapon)
     {
-        if (ReferenceEquals(weapon, CurrentWeapon) || !_weapons.Contains(weapon))
+        if (ReferenceEquals(weapon, CurrentWeapon)
+            || weapon.Config.Category != WeaponCategory.Gun
+            || !_weapons.Contains(weapon))
         {
             return;
         }
@@ -269,9 +282,13 @@ public sealed class Player
 
         UpdateMovement(deltaSeconds, arena);
         HandleWeaponSwitch();
+        HandleEquipmentCycle();
 
         var muzzle = Position + AimDirection * Radius;
-        CurrentWeapon?.Update(deltaSeconds, Input, muzzle, AimDirection, Index, shots);
+        CurrentWeapon?.Update(deltaSeconds, WeaponTrigger.ForGun(Input), muzzle, AimDirection, Index, shots);
+
+        // Equipment works alongside the gun, on its own button and its own cooldown.
+        ActiveEquipment?.Update(deltaSeconds, WeaponTrigger.ForEquipment(Input), muzzle, AimDirection, Index, shots);
     }
 
     private void HandleWeaponSwitch()
@@ -281,7 +298,8 @@ public sealed class Player
         {
             for (var i = 0; i < _weapons.Count; i++)
             {
-                if (_weapons[i].Config.Slot == slot)
+                var config = _weapons[i].Config;
+                if (config.Category == WeaponCategory.Gun && config.Slot == slot)
                 {
                     SelectWeapon(_weapons[i]);
                     return;
@@ -291,15 +309,51 @@ public sealed class Player
             return;
         }
 
-        var cycle = Input.WeaponCycle;
-        if (cycle == 0 || _weapons.Count < 2 || CurrentWeapon is null)
+        var next = NextOfCategory(CurrentWeapon, Input.WeaponCycle);
+        if (next is not null)
+        {
+            SelectWeapon(next);
+        }
+    }
+
+    private void HandleEquipmentCycle()
+    {
+        var next = NextOfCategory(ActiveEquipment, Input.EquipmentCycle);
+        if (next is null)
         {
             return;
         }
 
-        var current = _weapons.IndexOf(CurrentWeapon);
-        var next = ((current + Math.Sign(cycle)) % _weapons.Count + _weapons.Count) % _weapons.Count;
-        SelectWeapon(_weapons[next]);
+        ActiveEquipment = next;
+        _audio.PlaySfx(SfxIds.EquipmentSwitch);
+    }
+
+    // The next carried weapon of the same category in the given direction, wrapping
+    // around; null when there is no other one or no direction.
+    private Weapon? NextOfCategory(Weapon? from, int direction)
+    {
+        if (from is null || direction == 0)
+        {
+            return null;
+        }
+
+        var count = _weapons.Count;
+        var start = _weapons.IndexOf(from);
+        for (var step = 1; step < count; step++)
+        {
+            var index = ((start + Math.Sign(direction) * step) % count + count) % count;
+            if (_weapons[index].Config.Category == from.Config.Category)
+            {
+                return _weapons[index];
+            }
+        }
+
+        return null;
+    }
+
+    private static bool ComesBefore(WeaponConfig a, WeaponConfig b)
+    {
+        return a.Category != b.Category ? a.Category < b.Category : a.Slot < b.Slot;
     }
 
     private void UpdateMovement(float deltaSeconds, Arena arena)

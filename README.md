@@ -13,8 +13,9 @@ local co-op and menus are still to come.
 - A 3000×3000 arena with a camera that follows the player and leans toward the aim point
 - Waves that grow with a spawn budget; doors glow before a group emerges, and an
   edge-of-screen marker points to a glowing door outside the view
-- Five weapons: pistol, SMG, shotgun, marksman rifle and hand grenade, each with levels 1–10
-  and a special ability at level 10
+- Four guns (pistol, SMG, shotgun, marksman rifle) and the hand grenade, each with levels
+  1–10 and a special ability at level 10
+- An equipment button: grenades are thrown with their own key while the gun stays in hand
 - Explosions that hurt the thrower too (at half strength)
 - Fast bullets with swept collision, so nothing is skipped at high speed
 - Player health, contact damage, and a dash with invincibility frames
@@ -27,8 +28,7 @@ local co-op and menus are still to come.
 ## Planned
 
 - More guns: assault rifle, sniper rifle, flamethrower, rocket launcher and railgun
-- An equipment slot for grenades, molotovs, mines and explosive barrels, used with its own
-  button so the gun stays in hand
+- More equipment: molotov, mine and explosive barrel
 - More enemy types with telegraphed ranged attacks
 - A boss every tenth wave
 - Local two-player split-screen co-op
@@ -64,8 +64,10 @@ dotnet test tests/Fourgate.Tests
 | Fire | Left mouse button | Right trigger |
 | Dash | Space | A |
 | Reload | R | X |
-| Next / previous weapon | Mouse wheel, E / Q | RB / LB |
-| Select weapon directly | 1–9, 0, - | |
+| Next / previous gun | Mouse wheel, E / Q | RB / LB |
+| Select gun directly | 1–9 | |
+| Use equipment (grenade) | G | Left trigger |
+| Next equipment | T | D-pad left / right |
 | Choose an upgrade card | Click, or A / D then Enter | Left / right, then A |
 | Restart after game over | Enter | A or Start |
 | Borderless fullscreen | F11 | |

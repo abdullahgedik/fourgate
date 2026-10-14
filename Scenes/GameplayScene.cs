@@ -241,15 +241,20 @@ public sealed class GameplayScene
         }
     }
 
-    /// <summary>Debug helper: raises the level of every player's weapon in hand by one.</summary>
+    /// <summary>Debug helper: raises the level of every player's gun in hand and active equipment by one.</summary>
     public void DebugLevelUpCurrentWeapons()
     {
         for (var i = 0; i < _players.Count; i++)
         {
-            var weapon = _players[i].CurrentWeapon;
-            if (weapon is not null)
+            var player = _players[i];
+            if (player.CurrentWeapon is not null)
             {
-                _players[i].LevelUpWeapon(weapon.Config.Id);
+                player.LevelUpWeapon(player.CurrentWeapon.Config.Id);
+            }
+
+            if (player.ActiveEquipment is not null)
+            {
+                player.LevelUpWeapon(player.ActiveEquipment.Config.Id);
             }
         }
     }
