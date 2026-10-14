@@ -8,4 +8,7 @@ public enum WeaponType
 
     /// <summary>Throws an object that flies to the aim point and explodes where it lands.</summary>
     Thrown,
+
+    /// <summary>Put down at the player's feet; explodes when an enemy comes close.</summary>
+    Placed,
 }

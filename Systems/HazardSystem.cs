@@ -14,7 +14,7 @@ public sealed class HazardSystem
 {
     private const int InitialPools = 16;
 
-    private readonly FriendlyFireConfig _friendlyFire;
+    private readonly FriendlyFireRules _friendlyFire;
     private readonly Pool<FirePool> _pools = new(InitialPools);
     private readonly List<IHittable> _targets = new();
     private readonly List<IHittableSource> _sources = new();
@@ -22,7 +22,7 @@ public sealed class HazardSystem
 
     public HazardSystem(FriendlyFireConfig friendlyFire)
     {
-        _friendlyFire = friendlyFire;
+        _friendlyFire = new FriendlyFireRules(friendlyFire);
     }
 
     public int FirePoolCount => _pools.Count;
@@ -112,22 +112,13 @@ public sealed class HazardSystem
             }
         }
 
-        // Players burn by the same shares as in explosions: their own fire at the self share,
-        // the other player's at the friendly-fire share.
+        // Players burn by the capped friendly-fire rules (see FriendlyFireRules).
         for (var i = 0; i < players.Count; i++)
         {
             var player = players[i];
-            if (Vector2.Distance(player.Position, pool.Position) > pool.Radius + player.Radius)
+            if (Vector2.Distance(player.Position, pool.Position) <= pool.Radius + player.Radius)
             {
-                continue;
-            }
-
-            var share = player.Index == pool.OwnerIndex
-                ? _friendlyFire.SelfExplosiveDamage
-                : (_friendlyFire.Enabled ? _friendlyFire.DamageToOther : 0f);
-            if (share > 0f)
-            {
-                player.TakeDamage(damage * share, silent: true);
+                _friendlyFire.ApplyFire(player, pool.OwnerIndex, pool.DamagePerSecond, seconds);
             }
         }
     }

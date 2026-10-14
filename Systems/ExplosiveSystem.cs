@@ -25,7 +25,7 @@ public sealed class ExplosiveSystem
     private static readonly Color ShadowColor = new(0, 0, 0, 90);
 
     private readonly Arena _arena;
-    private readonly FriendlyFireConfig _friendlyFire;
+    private readonly FriendlyFireRules _friendlyFire;
     private readonly GameRandom _random;
     private readonly IAudioManager _audio;
     private readonly Pool<ThrownExplosive> _thrown = new(InitialThrown);
@@ -47,7 +47,7 @@ public sealed class ExplosiveSystem
     {
         _hazards = hazards;
         _arena = arena;
-        _friendlyFire = friendlyFire;
+        _friendlyFire = new FriendlyFireRules(friendlyFire);
         _random = random;
         _audio = audio;
     }
@@ -125,6 +125,13 @@ public sealed class ExplosiveSystem
         }
     }
 
+    /// <summary>An explosion right here and now (a mine going off), with the usual damage rules.</summary>
+    public void Detonate(
+        Vector2 center, float damage, float blastRadius, int ownerIndex, IReadOnlyList<Player> players)
+    {
+        Explode(new ExplosiveShot(center, center, 0f, 0f, damage, blastRadius, ownerIndex), players);
+    }
+
     private void Land(in ExplosiveShot shot, IReadOnlyList<Player> players)
     {
         if (shot.BlastRadius > 0f)
@@ -176,31 +183,16 @@ public sealed class ExplosiveSystem
         }
     }
 
-    // The thrower is hurt by a share of their own blast, the other player by the friendly-fire
-    // share. Dash i-frames protect as usual because the damage goes through TakeDamage.
+    // Players are hurt by a capped share of their own and each other's blasts (see
+    // FriendlyFireRules). Dash i-frames protect as usual because the damage goes through TakeDamage.
     private void DamagePlayers(in ExplosiveShot shot, IReadOnlyList<Player> players)
     {
         for (var i = 0; i < players.Count; i++)
         {
             var player = players[i];
-            if (Vector2.Distance(player.Position, shot.Target) > shot.BlastRadius + player.Radius)
+            if (Vector2.Distance(player.Position, shot.Target) <= shot.BlastRadius + player.Radius)
             {
-                continue;
-            }
-
-            float share;
-            if (player.Index == shot.OwnerIndex)
-            {
-                share = _friendlyFire.SelfExplosiveDamage;
-            }
-            else
-            {
-                share = _friendlyFire.Enabled ? _friendlyFire.DamageToOther : 0f;
-            }
-
-            if (share > 0f)
-            {
-                player.TakeDamage(shot.Damage * share);
+                _friendlyFire.ApplyExplosion(player, shot.OwnerIndex, shot.Damage);
             }
         }
     }

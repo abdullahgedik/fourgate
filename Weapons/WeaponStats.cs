@@ -32,7 +32,14 @@ public readonly record struct WeaponStats(
     bool Overkill,
     float FireRadius,
     float FireSeconds,
-    float IgniteSeconds)
+    float IgniteSeconds,
+    float TriggerRadius,
+    float ArmSeconds,
+    int MaxPlaced,
+    bool ChainDetonation,
+    int BlastCount,
+    float BlastInterval,
+    float BlastSpread)
 {
     /// <summary>
     /// Applies every level bonus up to <paramref name="level"/> to the weapon's base stats;
@@ -90,12 +97,19 @@ public readonly record struct WeaponStats(
         var overdriveSeconds = 0f;
         var overkill = false;
         var igniteSeconds = 0f;
+        var armSeconds = config.Placed?.ArmSeconds ?? 0f;
+        var maxPlaced = config.Placed?.MaxPlaced ?? 0;
+        var chainDetonation = false;
+        var blastCount = 1;
+        var blastInterval = 0f;
+        var blastSpread = 0f;
         if (level >= WeaponConfig.MaxLevel && config.LevelTen is not null)
         {
             damage *= config.LevelTen.DamageMult;
             fireRate *= config.LevelTen.FireRateMult;
             magSize += config.LevelTen.MagSizeBonus;
             fireSeconds *= config.LevelTen.DurationMult;
+            maxPlaced += config.LevelTen.MaxPlacedBonus;
 
             var abilities = config.LevelTen.Abilities;
             for (var i = 0; i < abilities.Count; i++)
@@ -123,6 +137,20 @@ public readonly record struct WeaponStats(
                     case WeaponAbility.EmpoweredShot:
                         empoweredEvery = abilities[i].Count;
                         empoweredDamageMult = abilities[i].DamageMult;
+                        break;
+
+                    case WeaponAbility.InstantArm:
+                        armSeconds = 0f;
+                        break;
+
+                    case WeaponAbility.ChainDetonation:
+                        chainDetonation = true;
+                        break;
+
+                    case WeaponAbility.MultiBlast:
+                        blastCount = abilities[i].Count;
+                        blastInterval = abilities[i].Seconds;
+                        blastSpread = abilities[i].Radius;
                         break;
 
                     case WeaponAbility.SpreadFire:
@@ -153,7 +181,9 @@ public readonly record struct WeaponStats(
             pierce, ricochets, ricochetRadius, ricochetDamageMult, dualWield,
             blastRadius, reserveMaxBonus, clusterCount, clusterDistance, clusterDamageMult, clusterRadiusMult,
             empoweredEvery, empoweredDamageMult, overdriveFireRateMult, overdriveSeconds, overkill,
-            fireRadius, fireSeconds, igniteSeconds);
+            fireRadius, fireSeconds, igniteSeconds,
+            config.Placed?.TriggerRadius ?? 0f, armSeconds, maxPlaced, chainDetonation,
+            blastCount, blastInterval, blastSpread);
     }
 
     /// <summary>

@@ -33,4 +33,7 @@ public interface IShotHandler
 
     /// <summary>Throws an explosive that flies to its target and explodes where it lands.</summary>
     void ThrowExplosive(in ExplosiveShot shot);
+
+    /// <summary>Puts a mine down.</summary>
+    void PlaceMine(in MineShot shot);
 }

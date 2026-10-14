@@ -56,6 +56,9 @@ public sealed class WeaponConfig
     /// <summary>Fire pool of a thrown weapon that burns; its damage is then per second.</summary>
     public FireConfig? Fire { get; init; }
 
+    /// <summary>Trigger values; required for <see cref="WeaponType.Placed"/> weapons.</summary>
+    public PlacedConfig? Placed { get; init; }
+
     /// <summary>Bonuses of levels 2 to 9. A level without an entry changes nothing.</summary>
     public List<WeaponLevelConfig> Levels { get; init; } = new();
 
@@ -98,14 +101,35 @@ public sealed class WeaponConfig
 
         LevelTen?.Validate(file, $"{path}.levelTen");
 
-        if (Type == WeaponType.Projectile)
+        switch (Type)
         {
-            ValidateProjectile(file, path);
+            case WeaponType.Projectile:
+                ValidateProjectile(file, path);
+                break;
+
+            case WeaponType.Thrown:
+                ValidateThrown(file, path);
+                break;
+
+            case WeaponType.Placed:
+                ValidatePlaced(file, path);
+                break;
         }
-        else
-        {
-            ValidateThrown(file, path);
-        }
+    }
+
+    private void ValidatePlaced(string file, string path)
+    {
+        DataLoadException.Require(Placed is not null, file, $"{path}.placed", "is required for this weapon type");
+        var placed = Placed!;
+        DataLoadException.Require(
+            placed.TriggerRadius > 0, file, $"{path}.placed.triggerRadius", "must be greater than 0");
+        DataLoadException.Require(placed.ArmSeconds >= 0, file, $"{path}.placed.armSeconds", "must not be negative");
+        DataLoadException.Require(
+            placed.MaxPlaced >= 0, file, $"{path}.placed.maxPlaced", "must not be negative (0 means no limit)");
+
+        DataLoadException.Require(Explosion is not null, file, $"{path}.explosion", "is required for this weapon type");
+        DataLoadException.Require(
+            Explosion!.Radius > 0, file, $"{path}.explosion.radius", "must be greater than 0");
     }
 
     private void ValidateProjectile(string file, string path)

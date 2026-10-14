@@ -12,6 +12,15 @@ public sealed class FriendlyFireConfig
     /// <summary>Share of their own explosives' damage a player takes (0–1).</summary>
     public required float SelfExplosiveDamage { get; init; }
 
+    /// <summary>Most a player loses to one explosion from themselves or the other player; 0 for no cap.</summary>
+    public float MaxDamagePerExplosion { get; init; }
+
+    /// <summary>Most a player loses per second to fire from themselves or the other player; 0 for no cap.</summary>
+    public float MaxDamagePerSecond { get; init; }
+
+    /// <summary>When false, damage from a player's own or the other player's weapons never goes below 1 HP.</summary>
+    public bool CanKill { get; init; } = true;
+
     /// <summary>Checks value ranges; throws <see cref="DataLoadException"/> naming the bad field.</summary>
     public void Validate(string file)
     {
@@ -20,5 +29,9 @@ public sealed class FriendlyFireConfig
         DataLoadException.Require(
             SelfExplosiveDamage >= 0 && SelfExplosiveDamage <= 1,
             file, "friendlyFire.selfExplosiveDamage", "must be between 0 and 1");
+        DataLoadException.Require(
+            MaxDamagePerExplosion >= 0, file, "friendlyFire.maxDamagePerExplosion", "must not be negative (0 means no cap)");
+        DataLoadException.Require(
+            MaxDamagePerSecond >= 0, file, "friendlyFire.maxDamagePerSecond", "must not be negative (0 means no cap)");
     }
 }

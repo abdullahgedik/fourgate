@@ -226,6 +226,35 @@
         "durationMult": 2.0,
         "abilities": [ { "id": "spreadFire", "seconds": 3 } ]
       }
+    },
+    {
+      "id": "mine",
+      "displayName": "Mine",
+      "category": "equipment",
+      "slot": 3,
+      "unlockWave": 10,
+      "type": "placed",
+      "damage": 150,
+      "fireRate": 2,
+      "automatic": false,
+      "ammo": { "usesMagazine": false, "reserveMax": 8, "infiniteReserve": false },
+      "placed": { "triggerRadius": 45, "armSeconds": 0.75 },
+      "explosion": { "radius": 120 },
+      "levels": [
+        { "level": 2, "damageMult": 1.08, "blastRadiusMult": 1.06 },
+        { "level": 3, "damageMult": 1.08, "reserveMaxBonus": 1 },
+        { "level": 4, "damageMult": 1.08, "fireRateMult": 1.15 },
+        { "level": 5, "damageMult": 1.08, "blastRadiusMult": 1.06 },
+        { "level": 6, "damageMult": 1.08, "reserveMaxBonus": 1 },
+        { "level": 7, "damageMult": 1.08, "fireRateMult": 1.15 },
+        { "level": 8, "damageMult": 1.08, "blastRadiusMult": 1.06 },
+        { "level": 9, "damageMult": 1.08, "reserveMaxBonus": 1 }
+      ],
+      "levelTen": {
+        "description": [ "Arms instantly", "Explodes three times", "+8% damage" ],
+        "damageMult": 1.08,
+        "abilities": [ { "id": "instantArm" }, { "id": "multiBlast", "count": 3, "seconds": 0.15, "radius": 30 } ]
+      }
     }
   ]
 }

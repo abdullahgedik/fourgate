@@ -52,6 +52,7 @@ public sealed class GameplayScene
     private readonly ShotSystem _shots;
     private readonly ExplosiveSystem _explosives;
     private readonly HazardSystem _hazards;
+    private readonly MineSystem _mines;
     private readonly ShotRouter _shotRouter;
     private readonly EnemySystem _enemies;
     private readonly WaveSystem? _waves;
@@ -89,7 +90,9 @@ public sealed class GameplayScene
         _explosives = new ExplosiveSystem(_arena, config.FriendlyFire, _random, audio, _hazards);
         _explosives.AddSource(_enemies);
         _explosives.OneShotKills = config.Debug.OneShotKills;
-        _shotRouter = new ShotRouter(_shots, _explosives);
+        _mines = new MineSystem(_explosives, _random, audio);
+        _mines.AddSource(_enemies);
+        _shotRouter = new ShotRouter(_shots, _explosives, _mines);
         _unlocks = new WeaponUnlocks(config, audio, _random);
         _drops = new DropSystem(config.Crates, _random, audio, _unlocks);
         _upgrades = new UpgradeSystem(data.Upgrades, _unlocks, _random, audio);
@@ -158,6 +161,7 @@ public sealed class GameplayScene
         _shots.Update(deltaSeconds);
         _explosives.Update(deltaSeconds, _players);
         _hazards.Update(deltaSeconds, _players);
+        _mines.Update(deltaSeconds, _players);
         _drops.Update(deltaSeconds, _players);
 
         if (!AnyPlayerAlive())
@@ -306,6 +310,7 @@ public sealed class GameplayScene
             renderer.BeginWorld(_cameras[i]);
             DrawArena(renderer);
             _hazards.Draw(renderer);
+            _mines.Draw(renderer);
             for (var t = 0; t < _practiceTargets.Count; t++)
             {
                 renderer.DrawVisual(_practiceTargets[t].Visual, _practiceTargets[t].Position, 0f);
@@ -430,6 +435,8 @@ public sealed class GameplayScene
         _explosives.AddTarget(still);
         _hazards.AddTarget(still);
         _hazards.AddTarget(moving);
+        _mines.AddTarget(still);
+        _mines.AddTarget(moving);
         _explosives.AddTarget(moving);
     }
 

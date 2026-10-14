@@ -260,8 +260,14 @@ public sealed class Player
     /// </summary>
     /// <param name="amount">Damage dealt.</param>
     /// <param name="silent">True for damage over time (fire), which would otherwise play the hurt sound every frame.</param>
-    public bool TakeDamage(float amount, bool silent = false)
+    /// <param name="nonLethal">True when this damage may not kill: it stops at 1 HP.</param>
+    public bool TakeDamage(float amount, bool silent = false, bool nonLethal = false)
     {
+        if (nonLethal)
+        {
+            amount = Math.Min(amount, Hp - 1f);
+        }
+
         if (!IsAlive || IsInvulnerable || amount <= 0f)
         {
             return false;

@@ -228,6 +228,24 @@ public sealed class Weapon
             return;
         }
 
+        if (Config.Type == WeaponType.Placed)
+        {
+            shots.PlaceMine(new MineShot(
+                muzzle,
+                Stats.Damage,
+                Stats.BlastRadius,
+                Stats.TriggerRadius,
+                Stats.ArmSeconds,
+                Stats.MaxPlaced,
+                Stats.ChainDetonation,
+                ownerIndex,
+                Config.Id,
+                Stats.BlastCount,
+                Stats.BlastInterval,
+                Stats.BlastSpread));
+            return;
+        }
+
         var damage = NextShotDamage();
         if (!Stats.DualWield)
         {

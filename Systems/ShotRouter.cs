@@ -9,11 +9,13 @@ public sealed class ShotRouter : IShotHandler
 {
     private readonly ShotSystem _bullets;
     private readonly ExplosiveSystem _explosives;
+    private readonly MineSystem _mines;
 
-    public ShotRouter(ShotSystem bullets, ExplosiveSystem explosives)
+    public ShotRouter(ShotSystem bullets, ExplosiveSystem explosives, MineSystem mines)
     {
         _bullets = bullets;
         _explosives = explosives;
+        _mines = mines;
     }
 
     public void FireProjectile(
@@ -37,5 +39,10 @@ public sealed class ShotRouter : IShotHandler
     public void ThrowExplosive(in ExplosiveShot shot)
     {
         _explosives.Throw(shot);
+    }
+
+    public void PlaceMine(in MineShot shot)
+    {
+        _mines.Place(shot);
     }
 }

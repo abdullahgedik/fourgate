@@ -14,7 +14,7 @@ local co-op and menus are still to come.
 - Waves that grow with a spawn budget; doors glow before a group emerges, and an
   edge-of-screen marker points to a glowing door outside the view
 - Six guns (pistol, SMG, shotgun, marksman rifle, assault rifle, sniper rifle) and the hand
-  grenade and molotov, each with levels
+  grenade, molotov and mine, each with levels
   1–10 and a special ability at level 10
 - An equipment button: grenades are thrown with their own key while the gun stays in hand
 - Explosions that hurt the thrower too (at half strength)
@@ -29,7 +29,7 @@ local co-op and menus are still to come.
 ## Planned
 
 - More guns: flamethrower, rocket launcher and railgun
-- More equipment: mine and explosive barrel
+- More equipment: explosive barrel
 - More enemy types with telegraphed ranged attacks
 - A boss every tenth wave
 - Local two-player split-screen co-op

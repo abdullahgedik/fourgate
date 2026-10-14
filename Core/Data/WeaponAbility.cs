@@ -41,4 +41,16 @@ public enum WeaponAbility
     /// leaving it, and set the enemies touching them alight once.
     /// </summary>
     SpreadFire,
+
+    /// <summary>A placed weapon can be set off the moment it is down.</summary>
+    InstantArm,
+
+    /// <summary>A placed weapon that explodes sets off the others in its blast.</summary>
+    ChainDetonation,
+
+    /// <summary>
+    /// A triggered placed weapon explodes <c>count</c> times, <c>seconds</c> apart; every blast
+    /// after the first is shifted by up to <c>radius</c> in a random direction.
+    /// </summary>
+    MultiBlast,
 }
