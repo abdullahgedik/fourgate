@@ -21,7 +21,7 @@
     "ammoPrimaryFraction": 0.35, "ammoOthersFraction": 0.08
   },
   "knockback": { "explosion": 70, "damping": 14 },
-  "coop": { "reviveHpFraction": 0.5 },
+  "coop": { "reviveHpFraction": 0.5, "enemyBudgetMultiplier": 1.6 },
   "friendlyFire": {
     "enabled": true, "damageToOther": 0.5, "selfExplosiveDamage": 0.5,
     "maxDamagePerExplosion": 30, "maxDamagePerSecond": 8, "canKill": true

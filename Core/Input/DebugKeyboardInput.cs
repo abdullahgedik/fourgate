@@ -50,6 +50,8 @@ public sealed class DebugKeyboardInput : IPlayerInput
 
     public bool HasActivity { get; private set; }
 
+    public bool IsConnected => true;
+
     public void Update(Vector2 playerPosition, Camera2D camera)
     {
         var keyboard = Keyboard.GetState();

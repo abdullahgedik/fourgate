@@ -43,6 +43,8 @@ public sealed class FakeInput : IPlayerInput
 
     public bool HasActivity { get; set; }
 
+    public bool IsConnected { get; set; } = true;
+
     public void Update(Vector2 playerPosition, Camera2D camera)
     {
     }

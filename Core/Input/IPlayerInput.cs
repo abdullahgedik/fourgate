@@ -56,6 +56,9 @@ public interface IPlayerInput
     /// <summary>True when any control of this device was used this frame.</summary>
     bool HasActivity { get; }
 
+    /// <summary>False while the device is unplugged (a gamepad); keyboards are always connected.</summary>
+    bool IsConnected { get; }
+
     /// <summary>Polls the device. Call once per simulation step, before reading the properties.</summary>
     /// <param name="playerPosition">The player's world position, used to turn a pointer into an aim direction.</param>
     /// <param name="camera">The player's camera.</param>

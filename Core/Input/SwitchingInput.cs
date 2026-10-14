@@ -56,6 +56,9 @@ public sealed class SwitchingInput : IPlayerInput
 
     public bool HasActivity => _current.HasActivity;
 
+    // Either device will do.
+    public bool IsConnected => _first.IsConnected || _second.IsConnected;
+
     public void Update(Vector2 playerPosition, Camera2D camera)
     {
         _first.Update(playerPosition, camera);

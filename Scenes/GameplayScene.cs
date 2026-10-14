@@ -38,6 +38,8 @@ public sealed class GameplayScene : IScene
     private const float PlayerSpawnSpacing = 90f;
     private const float SplitLineThickness = 4f;
     private const float DownedNoticeY = 200f;
+    private const float PauseTitleSize = 60f;
+    private const float PauseTextSize = 32f;
     private const float DownedNoticeSize = 30f;
     private const float DebugNoticeY = 140f;
     private const float DebugNoticeSize = 28f;
@@ -56,6 +58,9 @@ public sealed class GameplayScene : IScene
     private static readonly Color DebugNoticeColor = new(255, 225, 120);
     private static readonly Color SplitLineColor = new(10, 10, 14);
     private static readonly Color DownedNoticeColor = new(255, 120, 100);
+    private static readonly Color PauseDimColor = new(0, 0, 0, 185);
+    private static readonly Color PauseTitleColor = new(240, 240, 245);
+    private static readonly Color PauseTextColor = new(170, 175, 190);
 
     private readonly GameData _data;
     private readonly float _floorCellSize;
@@ -79,6 +84,7 @@ public sealed class GameplayScene : IScene
     private readonly EnemyShotSystem _fireballs = new();
     private string _debugNotice = string.Empty;
     private float _debugNoticeLeft;
+    private string _disconnectedNotice = string.Empty;
     private readonly GameOverOverlay _gameOverOverlay = new();
     private readonly IAudioManager _audio;
     private float _elapsedSeconds;
@@ -159,6 +165,10 @@ public sealed class GameplayScene : IScene
         }
 
         _lastWavePhase = _waves?.Phase;
+        if (_waves is not null && inputs.Count > 1)
+        {
+            _waves.BudgetMultiplier = config.Coop.EnemyBudgetMultiplier;
+        }
 
         if (config.Debug.PracticeTargets)
         {
@@ -178,6 +188,12 @@ public sealed class GameplayScene : IScene
         if (IsGameOver)
         {
             UpdateGameOver();
+            return;
+        }
+
+        // An unplugged controller stops everything until it is back.
+        if (UpdateDisconnected())
+        {
             return;
         }
 
@@ -236,6 +252,34 @@ public sealed class GameplayScene : IScene
             _gameOverOverlay.SetStats(_waves?.Wave ?? 0, _enemies.KillCount, _elapsedSeconds);
             _audio.PlaySfx(SfxIds.GameOver);
         }
+    }
+
+    /// <summary>Index of a player whose controller is unplugged, or -1; the game is paused while there is one.</summary>
+    public int DisconnectedPlayer { get; private set; } = -1;
+
+    // Polls the inputs while paused so a controller plugged back in is noticed.
+    private bool UpdateDisconnected()
+    {
+        if (DisconnectedPlayer >= 0)
+        {
+            var input = _players[DisconnectedPlayer].Input;
+            input.Update(_players[DisconnectedPlayer].Position, _cameras[DisconnectedPlayer]);
+            if (input.IsConnected)
+            {
+                DisconnectedPlayer = -1;
+            }
+        }
+
+        for (var i = 0; i < _players.Count && DisconnectedPlayer < 0; i++)
+        {
+            if (!_players[i].Input.IsConnected)
+            {
+                DisconnectedPlayer = i;
+                _disconnectedNotice = $"PLAYER {i + 1}: CONTROLLER DISCONNECTED";
+            }
+        }
+
+        return DisconnectedPlayer >= 0;
     }
 
     private void UpdateGameOver()
@@ -545,6 +589,10 @@ public sealed class GameplayScene : IScene
         {
             _gameOverOverlay.Draw(renderer, _data.Game.VirtualWidth, _data.Game.VirtualHeight);
         }
+        else if (DisconnectedPlayer >= 0)
+        {
+            DrawDisconnected(renderer);
+        }
 
         renderer.End();
     }
@@ -746,6 +794,18 @@ public sealed class GameplayScene : IScene
 
             renderer.FillRect(doors[i].TopLeft, doors[i].Size, Color.Lerp(GateColor, GateGlowColor, glow));
         }
+    }
+
+    private void DrawDisconnected(IRenderer renderer)
+    {
+        var width = _data.Game.VirtualWidth;
+        var height = _data.Game.VirtualHeight;
+        renderer.FillRect(Vector2.Zero, new Vector2(width, height), PauseDimColor);
+        renderer.DrawText(
+            _disconnectedNotice, new Vector2(width / 2f, height * 0.42f), PauseTitleSize, PauseTitleColor, TextAlign.Center);
+        renderer.DrawText(
+            "Connect a gamepad to continue", new Vector2(width / 2f, height * 0.42f + 80f), PauseTextSize, PauseTextColor,
+            TextAlign.Center);
     }
 
     // Light spilling from a glowing door onto the floor in front of it.

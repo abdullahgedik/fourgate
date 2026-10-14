@@ -31,6 +31,9 @@ public sealed class WaveSystem
 
     public SpawnSystem Spawner { get; }
 
+    /// <summary>Multiplies every wave's enemy budget (co-op scaling); 1 for one player.</summary>
+    public float BudgetMultiplier { get; set; } = 1f;
+
     /// <summary>The wave being fought, or the one about to start during a rest.</summary>
     public int Wave { get; private set; }
 
@@ -71,7 +74,7 @@ public sealed class WaveSystem
 
         _composition.Clear();
         WaveMath.Compose(
-            Wave, WaveMath.Budget(Wave, waves), _data.Enemies, waves.NewerTypeBias, _random, _composition);
+            Wave, WaveMath.Budget(Wave, waves) * BudgetMultiplier, _data.Enemies, waves.NewerTypeBias, _random, _composition);
         Spawner.Begin(_composition, WaveMath.SpawnInterval(Wave, waves), WaveMath.GroupSize(Wave, waves));
 
         Phase = WavePhase.Active;

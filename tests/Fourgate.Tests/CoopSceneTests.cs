@@ -82,4 +82,52 @@ public class CoopSceneTests
         Assert.False(player.OwnsWeapon("smg"));
         Assert.Equal(2, player.GetWeaponLevel("smg"));
     }
+
+    [Fact]
+    public void UnpluggedController_PausesTheGame_UntilItIsBack()
+    {
+        var data = DataLoader.LoadAll(DataLoader.DefaultDirectory);
+        var one = new FakeInput { Move = Vector2.UnitX };
+        var two = new FakeInput { IsConnected = false };
+        var scene = new GameplayScene(data, new IPlayerInput[] { one, two }, new NullAudioManager());
+        var start = scene.Players[0].Position;
+
+        scene.Update(Step);
+        Assert.Equal(1, scene.DisconnectedPlayer);
+        Assert.Equal(start, scene.Players[0].Position);
+
+        two.IsConnected = true;
+        scene.Update(Step);
+        scene.Update(Step);
+        Assert.Equal(-1, scene.DisconnectedPlayer);
+        Assert.True(scene.Players[0].Position.X > start.X);
+    }
+
+    [Fact]
+    public void CoopWaves_HaveABiggerEnemyBudget()
+    {
+        var data = DataLoader.LoadAll(DataLoader.DefaultDirectory);
+
+        var single = StartFirstWave(data, 1f);
+        var coop = StartFirstWave(data, data.Game.Coop.EnemyBudgetMultiplier);
+
+        Assert.True(coop > single * 1.4f);
+    }
+
+    private static int StartFirstWave(GameData data, float budgetMultiplier)
+    {
+        var arena = new Fourgate.Entities.Arena(data.Game.Arena);
+        var enemies = new Fourgate.Systems.EnemySystem(new NullAudioManager());
+        var waves = new Fourgate.Systems.WaveSystem(data, enemies, arena, new Fourgate.Core.Rng.GameRandom(1), new NullAudioManager())
+        {
+            BudgetMultiplier = budgetMultiplier,
+        };
+
+        while (waves.Phase != Fourgate.Systems.WavePhase.Active)
+        {
+            waves.Update(Step);
+        }
+
+        return waves.EnemiesRemaining;
+    }
 }
