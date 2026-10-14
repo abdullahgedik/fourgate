@@ -62,6 +62,9 @@ public sealed class WeaponConfig
     /// <summary>Flame values; required for <see cref="WeaponType.Stream"/> weapons.</summary>
     public StreamConfig? Stream { get; init; }
 
+    /// <summary>Beam values; required for <see cref="WeaponType.Beam"/> weapons.</summary>
+    public BeamConfig? Beam { get; init; }
+
     /// <summary>Bonuses of levels 2 to 9. A level without an entry changes nothing.</summary>
     public List<WeaponLevelConfig> Levels { get; init; } = new();
 
@@ -121,7 +124,20 @@ public sealed class WeaponConfig
             case WeaponType.Stream:
                 ValidateStream(file, path);
                 break;
+
+            case WeaponType.Beam:
+                ValidateBeam(file, path);
+                break;
         }
+    }
+
+    private void ValidateBeam(string file, string path)
+    {
+        DataLoadException.Require(Beam is not null, file, $"{path}.beam", "is required for this weapon type");
+        var beam = Beam!;
+        DataLoadException.Require(beam.Range > 0, file, $"{path}.beam.range", "must be greater than 0");
+        DataLoadException.Require(beam.Width > 0, file, $"{path}.beam.width", "must be greater than 0");
+        DataLoadException.Require(beam.Knockback >= 0, file, $"{path}.beam.knockback", "must not be negative");
     }
 
     private void ValidateStream(string file, string path)

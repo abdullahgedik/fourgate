@@ -22,12 +22,20 @@ public sealed class ShotSystem
     private static readonly Color BulletColor = new(255, 225, 120);
     private static readonly Color RocketColor = new(200, 205, 215);
     private static readonly Color RocketFlameColor = new(255, 150, 50);
+    private static readonly Color BeamGlowColor = new(90, 180, 255);
+    private static readonly Color BeamCoreColor = new(225, 245, 255);
+
+    // How long a beam stays on screen after firing, and how wide its glow is drawn.
+    private const float BeamFadeSeconds = 0.3f;
+    private const float BeamGlowScale = 3f;
 
     private readonly Arena _arena;
     private readonly Pool<Bullet> _bullets = new(InitialBullets);
     private readonly List<IHittable> _targets = new();
     private readonly List<IHittableSource> _sources = new();
     private readonly List<IHittable> _candidates = new();
+    private readonly HashSet<IHittable> _beamHits = new();
+    private readonly List<BeamFlash> _beams = new();
 
     public ShotSystem(Arena arena)
     {
@@ -35,6 +43,9 @@ public sealed class ShotSystem
     }
 
     public int BulletCount => _bullets.Count;
+
+    /// <summary>Beams still fading on screen.</summary>
+    public int BeamCount => _beams.Count;
 
     /// <summary>Where rockets explode. Without it, rockets hit like ordinary bullets.</summary>
     public ExplosiveSystem? Explosives { get; set; }
@@ -85,8 +96,62 @@ public sealed class ShotSystem
             projectile.Knockback);
     }
 
+    /// <summary>
+    /// Fires an instant beam: everything along it is hit at once, up to the first wall or
+    /// pillar. The whole beam shows at once, so nothing reacts before it is visibly struck.
+    /// </summary>
+    public void FireBeam(in BeamShot shot)
+    {
+        var length = Math.Min(shot.Range, _arena.Raycast(shot.Origin, shot.Direction, out _));
+        var end = shot.Origin + shot.Direction * length;
+
+        _candidates.Clear();
+        _candidates.AddRange(_targets);
+        var middle = shot.Origin + shot.Direction * (length * 0.5f);
+        for (var i = 0; i < _sources.Count; i++)
+        {
+            _sources[i].Collect(middle, length * 0.5f + shot.Width, _candidates);
+        }
+
+        var damage = OneShotKills ? float.MaxValue : shot.Damage;
+        _beamHits.Clear();
+        for (var i = 0; i < _candidates.Count; i++)
+        {
+            var target = _candidates[i];
+            if (!_beamHits.Add(target) || !TouchesLine(shot.Origin, shot.Direction, length, shot.Width, target))
+            {
+                continue;
+            }
+
+            target.Hit(damage, shot.OwnerIndex);
+            target.Knock(shot.Direction * shot.Knockback);
+        }
+
+        if (shot.EndBlastRadius > 0f && Explosives is not null)
+        {
+            Explosives.QueueRocketBlast(end, shot.EndBlastDamage, new RocketPayload(shot.EndBlastRadius), shot.OwnerIndex);
+        }
+
+        _beams.Add(new BeamFlash(shot.Origin, end, shot.Width, 0f));
+    }
+
     public void Update(float deltaSeconds)
     {
+        for (var i = _beams.Count - 1; i >= 0; i--)
+        {
+            var beam = _beams[i];
+            var age = beam.Age + deltaSeconds;
+            if (age >= BeamFadeSeconds)
+            {
+                _beams[i] = _beams[^1];
+                _beams.RemoveAt(_beams.Count - 1);
+            }
+            else
+            {
+                _beams[i] = beam with { Age = age };
+            }
+        }
+
         for (var i = _bullets.Count - 1; i >= 0; i--)
         {
             var bullet = _bullets[i];
@@ -103,6 +168,14 @@ public sealed class ShotSystem
 
     public void Draw(IRenderer renderer)
     {
+        for (var i = 0; i < _beams.Count; i++)
+        {
+            var beam = _beams[i];
+            var fade = 1f - beam.Age / BeamFadeSeconds;
+            renderer.DrawLine(beam.From, beam.To, beam.Width * BeamGlowScale * fade, BeamGlowColor * (0.6f * fade));
+            renderer.DrawLine(beam.From, beam.To, beam.Width * fade, BeamCoreColor * fade);
+        }
+
         for (var i = 0; i < _bullets.Count; i++)
         {
             var bullet = _bullets[i];
@@ -313,6 +386,15 @@ public sealed class ShotSystem
         return direction;
     }
 
+    // True when a circle overlaps the beam's line between its start and end.
+    private static bool TouchesLine(Vector2 origin, Vector2 direction, float length, float width, IHittable target)
+    {
+        var toTarget = target.Position - origin;
+        var along = Math.Clamp(Vector2.Dot(toTarget, direction), 0f, length);
+        var reach = target.Radius + width;
+        return Vector2.DistanceSquared(origin + direction * along, target.Position) <= reach * reach;
+    }
+
     /// <summary>Distance along a ray to where it enters a circle; 0 when the ray starts inside it.</summary>
     private static bool TryIntersect(
         Vector2 origin, Vector2 direction, Vector2 center, float radius, out float distance)
@@ -341,4 +423,7 @@ public sealed class ShotSystem
         distance = along - MathF.Sqrt(radiusSquared - offsetSquared);
         return true;
     }
+
+    // A fired beam fading out on screen.
+    private readonly record struct BeamFlash(Vector2 From, Vector2 To, float Width, float Age);
 }

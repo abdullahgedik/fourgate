@@ -361,6 +361,15 @@ public sealed class Weapon
 
     private void FireVolley(Vector2 muzzle, Vector2 direction, float damage, int ownerIndex, IShotHandler shots)
     {
+        if (Config.Type == WeaponType.Beam)
+        {
+            var beam = Config.Beam!;
+            shots.FireBeam(new BeamShot(
+                muzzle, direction, damage, Stats.Range, beam.Width, beam.Knockback, ownerIndex,
+                Stats.EndBlastRadius, damage * Stats.EndBlastDamageMult));
+            return;
+        }
+
         for (var pellet = 0; pellet < Stats.Pellets; pellet++)
         {
             FireBullet(muzzle, Scatter(direction, pellet, Stats.Pellets), damage, ownerIndex, shots);

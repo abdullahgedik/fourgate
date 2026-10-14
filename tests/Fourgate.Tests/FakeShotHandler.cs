@@ -27,6 +27,9 @@ public sealed class FakeShotHandler : IShotHandler
 
     public RocketPayload? LastRocket { get; private set; }
 
+    /// <summary>Every beam fired, in order.</summary>
+    public List<BeamShot> Beams { get; } = new();
+
     /// <summary>Every flame sprayed, in order.</summary>
     public List<FlameShot> Flames { get; } = new();
 
@@ -75,6 +78,12 @@ public sealed class FakeShotHandler : IShotHandler
     {
         Mines.Add(shot);
         return true;
+    }
+
+    public void FireBeam(in BeamShot shot)
+    {
+        Count++;
+        Beams.Add(shot);
     }
 
     public void EmitFlame(in FlameShot shot)

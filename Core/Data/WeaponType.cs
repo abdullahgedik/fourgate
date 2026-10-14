@@ -14,4 +14,7 @@ public enum WeaponType
 
     /// <summary>Sprays short-lived flames while fire is held (flamethrower).</summary>
     Stream,
+
+    /// <summary>Fires an instant line that hits everything along it (railgun).</summary>
+    Beam,
 }

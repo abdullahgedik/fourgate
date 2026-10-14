@@ -54,4 +54,9 @@ public sealed class ShotRouter : IShotHandler
     {
         _flames.Emit(shot);
     }
+
+    public void FireBeam(in BeamShot shot)
+    {
+        _bullets.FireBeam(shot);
+    }
 }

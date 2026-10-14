@@ -77,4 +77,6 @@ public enum WeaponAbility
     /// false the fire spares players.
     /// </summary>
     LeaveFire,
+
+    EndBlast,
 }

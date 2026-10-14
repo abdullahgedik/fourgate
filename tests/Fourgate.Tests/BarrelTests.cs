@@ -315,6 +315,10 @@ public class BarrelTests
         public void EmitFlame(in FlameShot shot)
         {
         }
+
+        public void FireBeam(in BeamShot shot)
+        {
+        }
     }
 
     private sealed class World

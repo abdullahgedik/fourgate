@@ -60,7 +60,9 @@ public readonly record struct WeaponStats(
     bool Solid,
     float GridSize,
     float PlaceDistance,
-    int EnemyHitsToDetonate)
+    int EnemyHitsToDetonate,
+    float EndBlastRadius,
+    float EndBlastDamageMult)
 {
     /// <summary>
     /// Applies every level bonus up to <paramref name="level"/> to the weapon's base stats;
@@ -74,7 +76,7 @@ public readonly record struct WeaponStats(
         var fireRate = config.FireRate;
         var magSize = config.Ammo.MagSize;
         var reloadTime = config.Ammo.ReloadTime;
-        var range = config.Projectile?.Range ?? config.Thrown?.MaxRange ?? config.Stream?.Range ?? 0f;
+        var range = config.Projectile?.Range ?? config.Thrown?.MaxRange ?? config.Stream?.Range ?? config.Beam?.Range ?? 0f;
         var blastRadius = config.Explosion?.Radius ?? 0f;
         var fireRadius = config.Fire?.Radius ?? 0f;
         var fireSeconds = config.Fire?.Seconds ?? 0f;
@@ -140,6 +142,8 @@ public readonly record struct WeaponStats(
         var leaveFireSeconds = 0f;
         var leaveFireDamageMult = 0f;
         var leaveFireHurtsPlayers = true;
+        var endBlastRadius = 0f;
+        var endBlastDamageMult = 0f;
         if (level >= WeaponConfig.MaxLevel && config.LevelTen is not null)
         {
             damage *= config.LevelTen.DamageMult;
@@ -191,6 +195,11 @@ public readonly record struct WeaponStats(
                         leaveFireSeconds = abilities[i].Seconds;
                         leaveFireDamageMult = abilities[i].DamageMult;
                         leaveFireHurtsPlayers = abilities[i].HurtsPlayers;
+                        break;
+
+                    case WeaponAbility.EndBlast:
+                        endBlastRadius = abilities[i].Radius;
+                        endBlastDamageMult = abilities[i].DamageMult;
                         break;
 
                     case WeaponAbility.RingBlast:
@@ -255,7 +264,8 @@ public readonly record struct WeaponStats(
             ringCount, ringDistance, ringDamageMult, ringRadiusMult, ringDelay, ringInterval,
             config.Placed?.Shootable ?? false, leaveFireRadius, leaveFireSeconds, leaveFireDamageMult,
             leaveFireHurtsPlayers, config.Placed?.Solid ?? false, config.Placed?.GridSize ?? 0f,
-            config.Placed?.PlaceDistance ?? 0f, config.Placed?.EnemyHitsToDetonate ?? 0);
+            config.Placed?.PlaceDistance ?? 0f, config.Placed?.EnemyHitsToDetonate ?? 0,
+            endBlastRadius, endBlastDamageMult);
     }
 
     /// <summary>

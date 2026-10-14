@@ -41,4 +41,6 @@ public interface IShotHandler
 
     /// <summary>Sprays one flame.</summary>
     void EmitFlame(in FlameShot shot);
+
+    void FireBeam(in BeamShot shot);
 }
