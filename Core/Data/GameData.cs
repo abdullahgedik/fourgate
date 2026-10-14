@@ -14,8 +14,10 @@ public sealed class GameData
         IReadOnlyList<WeaponConfig> weapons,
         IReadOnlyList<EnemyConfig> enemies,
         WavesConfig waves,
-        UpgradesConfig upgrades)
+        UpgradesConfig upgrades,
+        IReadOnlyList<BossConfig>? bosses = null)
     {
+        Bosses = bosses ?? new List<BossConfig>();
         Waves = waves;
         Upgrades = upgrades;
         Game = game;
@@ -30,6 +32,28 @@ public sealed class GameData
         for (var i = 0; i < enemies.Count; i++)
         {
             _enemiesById[enemies[i].Id] = enemies[i];
+        }
+
+        // Boss bodies can be looked up like enemies (debug spawning), and summons must name real enemies.
+        for (var i = 0; i < Bosses.Count; i++)
+        {
+            var boss = Bosses[i];
+            DataLoadException.Require(
+                !_enemiesById.ContainsKey(boss.Id), DataLoader.BossesFileName, $"bosses[{i}].id",
+                $"'{boss.Id}' is also an enemy id in {DataLoader.EnemiesFileName}");
+            for (var p = 0; p < boss.Patterns.Count; p++)
+            {
+                var pattern = boss.Patterns[p];
+                DataLoadException.Require(
+                    pattern.Type != BossPatternType.Summon || _enemiesById.ContainsKey(pattern.EnemyId),
+                    DataLoader.BossesFileName, $"bosses[{i}].patterns[{p}].enemyId",
+                    $"'{pattern.EnemyId}' is not an enemy id in {DataLoader.EnemiesFileName}");
+            }
+        }
+
+        for (var i = 0; i < Bosses.Count; i++)
+        {
+            _enemiesById[Bosses[i].Id] = Bosses[i].AsEnemy;
         }
 
         DataLoadException.Require(
@@ -48,6 +72,22 @@ public sealed class GameData
     public WavesConfig Waves { get; }
 
     public UpgradesConfig Upgrades { get; }
+
+    public IReadOnlyList<BossConfig> Bosses { get; }
+
+    /// <summary>The boss leading a wave, or null for a normal wave.</summary>
+    public BossConfig? GetBossForWave(int wave)
+    {
+        for (var i = 0; i < Bosses.Count; i++)
+        {
+            if (Bosses[i].Wave == wave)
+            {
+                return Bosses[i];
+            }
+        }
+
+        return null;
+    }
 
     public WeaponConfig GetWeapon(string id)
     {

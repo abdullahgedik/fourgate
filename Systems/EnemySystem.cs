@@ -73,7 +73,8 @@ public sealed class EnemySystem : IHittableSource
                 _audio.PlaySfx(SfxIds.EnemyHit);
             }
 
-            if (!UpdateRangedAttack(enemy, players, arena, deltaSeconds))
+            // A boss is moved by the boss system.
+            if (!enemy.Config.IsBoss && !UpdateRangedAttack(enemy, players, arena, deltaSeconds))
             {
                 MoveTowardNearestPlayer(enemy, players, arena, deltaSeconds);
             }
@@ -96,6 +97,20 @@ public sealed class EnemySystem : IHittableSource
 
         // Second rebuild so shots fired this frame are tested against final positions.
         RebuildHash();
+    }
+
+    /// <summary>The living boss in the arena, or null.</summary>
+    public Enemy? FindBoss()
+    {
+        for (var i = 0; i < _enemies.Count; i++)
+        {
+            if (_enemies[i].Config.IsBoss && _enemies[i].IsAlive)
+            {
+                return _enemies[i];
+            }
+        }
+
+        return null;
     }
 
     /// <summary>Glow of enemies winding up a ranged attack; drawn under the enemies.</summary>

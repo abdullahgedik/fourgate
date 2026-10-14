@@ -135,11 +135,14 @@ public sealed class FourgateGame : Game
 
         if (_debugHotkeys.NextEnemyPressed)
         {
-            _debugEnemyIndex = (_debugEnemyIndex + 1) % _data.Enemies.Count;
-            CurrentRun?.ShowDebugNotice($"F1/F2 spawn: {_data.Enemies[_debugEnemyIndex].DisplayName}");
+            // Enemies first, then bosses.
+            _debugEnemyIndex = (_debugEnemyIndex + 1) % (_data.Enemies.Count + _data.Bosses.Count);
+            CurrentRun?.ShowDebugNotice($"F1/F2 spawn: {DebugSpawnName()}");
         }
 
-        var enemyId = _data.Enemies[_debugEnemyIndex].Id;
+        var enemyId = _debugEnemyIndex < _data.Enemies.Count
+            ? _data.Enemies[_debugEnemyIndex].Id
+            : _data.Bosses[_debugEnemyIndex - _data.Enemies.Count].Id;
         if (_debugHotkeys.SpawnOnePressed)
         {
             CurrentRun?.DebugSpawnEnemies(enemyId, 1);
@@ -174,6 +177,13 @@ public sealed class FourgateGame : Game
         {
             CurrentRun?.DebugLevelUpCurrentWeapons();
         }
+    }
+
+    private string DebugSpawnName()
+    {
+        return _debugEnemyIndex < _data.Enemies.Count
+            ? _data.Enemies[_debugEnemyIndex].DisplayName
+            : _data.Bosses[_debugEnemyIndex - _data.Enemies.Count].DisplayName;
     }
 
     protected override void Draw(GameTime gameTime)

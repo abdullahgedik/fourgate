@@ -22,7 +22,7 @@ public class DataLoaderTests
             "healthChanceNormal": 0.15, "healthChanceLowHp": 0.6, "upgradeCrateChance": 0.015,
             "ammoPrimaryFraction": 0.35, "ammoOthersFraction": 0.08
           },
-          "coop": { "reviveHpFraction": 0.5, "enemyBudgetMultiplier": 1.6 },
+          "coop": { "reviveHpFraction": 0.5, "enemyBudgetMultiplier": 1.6, "bossHpMultiplier": 1.5 },
           "friendlyFire": {
             "enabled": true, "damageToOther": 0.5, "selfExplosiveDamage": 0.5,
             "maxDamagePerExplosion": 30, "maxDamagePerSecond": 8, "canKill": true

@@ -36,12 +36,14 @@ public sealed class GameplayScene : IScene
     private const float WeaponCrateSpacing = 70f;
     private const float DebugNoticeSeconds = 2f;
     private const float PlayerSpawnSpacing = 90f;
+    private const float BossCrateSpacing = 70f;
+    private const float BossIndicatorRadius = 24f;
     private const float SplitLineThickness = 4f;
-    private const float DownedNoticeY = 200f;
+    private const float DownedNoticeY = 230f;
     private const float PauseTitleSize = 60f;
     private const float PauseTextSize = 32f;
     private const float DownedNoticeSize = 30f;
-    private const float DebugNoticeY = 140f;
+    private const float DebugNoticeY = 190f;
     private const float DebugNoticeSize = 28f;
 
     private static readonly Color WallColor = new(70, 74, 92);
@@ -58,6 +60,7 @@ public sealed class GameplayScene : IScene
     private static readonly Color DebugNoticeColor = new(255, 225, 120);
     private static readonly Color SplitLineColor = new(10, 10, 14);
     private static readonly Color DownedNoticeColor = new(255, 120, 100);
+    private static readonly Color BossIndicatorColor = new(230, 50, 45);
     private static readonly Color PauseDimColor = new(0, 0, 0, 185);
     private static readonly Color PauseTitleColor = new(240, 240, 245);
     private static readonly Color PauseTextColor = new(170, 175, 190);
@@ -82,6 +85,8 @@ public sealed class GameplayScene : IScene
     private readonly UpgradeScreen _upgradeScreen;
     private readonly WaveHud _waveHud = new();
     private readonly EnemyShotSystem _fireballs = new();
+    private readonly BossHud _bossHud = new();
+    private readonly BossSystem _bosses;
     private string _debugNotice = string.Empty;
     private float _debugNoticeLeft;
     private string _disconnectedNotice = string.Empty;
@@ -116,6 +121,7 @@ public sealed class GameplayScene : IScene
         _random = new GameRandom(config.Debug.Seed ?? Environment.TickCount);
         _arena = new Arena(config.Arena);
         _enemies = new EnemySystem(audio) { KnockbackDamping = config.Knockback.Damping, Fireballs = _fireballs };
+        _bosses = new BossSystem(_enemies, data, _random, audio) { MaxAliveEnemies = config.MaxAliveEnemies };
         _shots = new ShotSystem(_arena);
         _shots.AddSource(_enemies);
         _xp = new XpSystem(config.Xp, audio);
@@ -165,9 +171,13 @@ public sealed class GameplayScene : IScene
         }
 
         _lastWavePhase = _waves?.Phase;
-        if (_waves is not null && inputs.Count > 1)
+        if (inputs.Count > 1)
         {
-            _waves.BudgetMultiplier = config.Coop.EnemyBudgetMultiplier;
+            _bosses.HpMultiplier = config.Coop.BossHpMultiplier;
+            if (_waves is not null)
+            {
+                _waves.BudgetMultiplier = config.Coop.EnemyBudgetMultiplier;
+            }
         }
 
         if (config.Debug.PracticeTargets)
@@ -221,6 +231,7 @@ public sealed class GameplayScene : IScene
         _lastWavePhase = _waves?.Phase;
         UnlockWeaponsForStartedWaves();
         _enemies.Update(deltaSeconds, _players, _arena);
+        _bosses.Update(deltaSeconds, _players, _arena);
         _fireballs.Update(deltaSeconds, _players, _arena);
         RewardKills();
 
@@ -410,7 +421,19 @@ public sealed class GameplayScene : IScene
         {
             _xp.Award(deaths[i].Config.Xp, deaths[i].KilledBy, _players);
             _drops.OnEnemyKilled(deaths[i], _players);
+            if (deaths[i].Config.IsBoss)
+            {
+                DropBossReward(deaths[i].Position);
+            }
         }
+    }
+
+    // A boss always leaves one health, one ammo and one upgrade crate.
+    private void DropBossReward(Vector2 position)
+    {
+        _drops.Spawn(CrateType.Health, _arena.PlaceOnFloor(position + new Vector2(-BossCrateSpacing, 0f), Crate.HalfSize));
+        _drops.Spawn(CrateType.Ammo, _arena.PlaceOnFloor(position, Crate.HalfSize));
+        _drops.Spawn(CrateType.Upgrade, _arena.PlaceOnFloor(position + new Vector2(BossCrateSpacing, 0f), Crate.HalfSize));
     }
 
     /// <summary>Debug helper: unlocks every weapon and gives it to every player.</summary>
@@ -518,7 +541,9 @@ public sealed class GameplayScene : IScene
 
             _drops.Draw(renderer);
             _enemies.DrawTelegraphs(renderer);
+            _bosses.DrawMarkers(renderer);
             _enemies.Draw(renderer);
+            _bosses.DrawEffects(renderer);
             _fireballs.Draw(renderer);
             _shots.Draw(renderer);
             _flames.Draw(renderer);
@@ -554,6 +579,7 @@ public sealed class GameplayScene : IScene
             }
 
             DrawDoorIndicators(renderer, _cameras[i]);
+            DrawBossIndicator(renderer, _cameras[i]);
             DrawWeaponCrateIndicators(renderer, _cameras[i]);
             _playerHuds[i].Draw(renderer, _players[i], _cameras[i].ViewRect);
         }
@@ -561,6 +587,11 @@ public sealed class GameplayScene : IScene
         if (_waves is not null)
         {
             _waveHud.Draw(renderer, _waves, _data.Game.VirtualWidth);
+        }
+
+        if (_bosses is { Boss: { } boss, Config: { } bossConfig })
+        {
+            _bossHud.Draw(renderer, bossConfig.DisplayName, boss, _data.Game.VirtualWidth);
         }
 
         if (_debugNoticeLeft > 0f)
@@ -794,6 +825,28 @@ public sealed class GameplayScene : IScene
 
             renderer.FillRect(doors[i].TopLeft, doors[i].Size, Color.Lerp(GateColor, GateGlowColor, glow));
         }
+    }
+
+    // A red marker at the edge of a view points to a boss outside it.
+    private void DrawBossIndicator(IRenderer renderer, Camera2D camera)
+    {
+        if (_bosses.Boss is not { } boss)
+        {
+            return;
+        }
+
+        var view = camera.ViewRect;
+        var screen = camera.WorldToScreen(boss.Position);
+        if (screen.X >= view.Left && screen.X <= view.Right && screen.Y >= view.Top && screen.Y <= view.Bottom)
+        {
+            return;
+        }
+
+        var marker = new Vector2(
+            Math.Clamp(screen.X, view.Left + EdgeIndicatorInset, view.Right - EdgeIndicatorInset),
+            Math.Clamp(screen.Y, view.Top + EdgeIndicatorInset, view.Bottom - EdgeIndicatorInset));
+        renderer.FillCircle(marker, BossIndicatorRadius, BossIndicatorColor);
+        renderer.FillCircle(marker, BossIndicatorRadius * 0.45f, EdgeIndicatorCoreColor);
     }
 
     private void DrawDisconnected(IRenderer renderer)

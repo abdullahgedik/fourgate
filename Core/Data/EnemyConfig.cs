@@ -40,6 +40,9 @@ public sealed class EnemyConfig
     /// <summary>Placeholder body color as red, green, blue (0–255).</summary>
     public List<int> Color { get; init; } = new() { 90, 190, 100 };
 
+    /// <summary>True for a boss's body: the boss system moves it instead of the zombie AI.</summary>
+    public bool IsBoss { get; init; }
+
     /// <summary>Ranged attack; null for enemies that only hit by touch.</summary>
     public EnemyAttackConfig? Attack { get; init; }
 

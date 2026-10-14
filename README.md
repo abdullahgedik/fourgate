@@ -14,6 +14,9 @@ local co-op and menus are still to come.
   leans toward the aim point
 - Waves that grow with a spawn budget; doors glow before a group emerges, and an
   edge-of-screen marker points to a glowing door outside the view
+- Five zombie types (normal, fast, ranged with telegraphed fireballs, tank, elite with a
+  fireball volley) and a boss on wave 10, The Butcher (charge, ground slam, summons)
+- Knockback on hits
 - Nine guns (pistol, SMG, shotgun, marksman rifle, assault rifle, sniper rifle,
   flamethrower, rocket launcher, railgun) and four pieces of equipment (hand grenade, molotov, mine,
   explosive barrel), each with levels
@@ -89,6 +92,7 @@ game can be tuned without touching code:
 | `game.json` | Arena, camera, player, XP curve, crates and global rules |
 | `weapons.json` | Weapons, their per-level bonuses and level-10 abilities |
 | `enemies.json` | Enemy types |
+| `bosses.json` | Bosses, the wave each leads and their attack patterns |
 | `waves.json` | Spawn budget curve and wave pacing |
 | `upgrades.json` | Upgrade cards |
 
@@ -116,7 +120,7 @@ The `debug` section of `Data/game.json` has switches for testing:
 | F5 | Unlock and give every weapon |
 | F6 | Toggle one-shot kills |
 | F7 | Level up the weapon in hand |
-| F8 | Switch which enemy F1/F2 spawn |
+| F8 | Switch which enemy (or boss) F1/F2 spawn |
 
 ## Project layout
 

@@ -22,7 +22,7 @@ public static class TestData
             VirtualWidth = 1920,
             VirtualHeight = 1080,
             Arena = Arena(),
-            Coop = new CoopConfig { ReviveHpFraction = 0.5f, EnemyBudgetMultiplier = 1.6f },
+            Coop = new CoopConfig { ReviveHpFraction = 0.5f, EnemyBudgetMultiplier = 1.6f, BossHpMultiplier = 1.5f },
             Camera = new CameraConfig
             {
                 Zoom = 1f, LeadFraction = 0f, LeadMaxDistance = 0f, Smoothing = 0f, EdgeMargin = 0f,

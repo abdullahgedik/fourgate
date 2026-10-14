@@ -58,6 +58,9 @@ public sealed class Enemy : IHittable
 
     public float Hp { get; private set; }
 
+    /// <summary>HP it started with (after any scaling), for health bars.</summary>
+    public float MaxHp { get; private set; }
+
     public float Radius => Config.Radius;
 
     public bool IsAlive => Hp > 0f;
@@ -98,6 +101,7 @@ public sealed class Enemy : IHittable
         StrafeSide = id % 2 == 0 ? 1f : -1f;
         _bodyColor = new Color(config.Color[0], config.Color[1], config.Color[2]);
         Hp = config.Hp;
+        MaxHp = config.Hp;
         LastHitBy = 0;
         _flashLeft = 0f;
         _wasHit = false;
@@ -122,6 +126,13 @@ public sealed class Enemy : IHittable
         var step = _knockLeft * share;
         _knockLeft -= step;
         return step;
+    }
+
+    /// <summary>Multiplies current and starting HP (co-op scaling of a boss when it appears).</summary>
+    public void ScaleHp(float multiplier)
+    {
+        Hp *= multiplier;
+        MaxHp *= multiplier;
     }
 
     /// <summary>Starts the telegraphed wind-up of a ranged attack along a locked direction.</summary>

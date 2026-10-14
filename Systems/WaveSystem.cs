@@ -72,9 +72,17 @@ public sealed class WaveSystem
     {
         var waves = _data.Waves;
 
+        // A boss wave sends the boss first, with a smaller budget of other enemies alongside.
         _composition.Clear();
-        WaveMath.Compose(
-            Wave, WaveMath.Budget(Wave, waves) * BudgetMultiplier, _data.Enemies, waves.NewerTypeBias, _random, _composition);
+        var budget = WaveMath.Budget(Wave, waves) * BudgetMultiplier;
+        var boss = _data.GetBossForWave(Wave);
+        if (boss is not null)
+        {
+            _composition.Add(boss.AsEnemy);
+            budget *= boss.AddsBudgetFraction;
+        }
+
+        WaveMath.Compose(Wave, budget, _data.Enemies, waves.NewerTypeBias, _random, _composition);
         Spawner.Begin(_composition, WaveMath.SpawnInterval(Wave, waves), WaveMath.GroupSize(Wave, waves));
 
         Phase = WavePhase.Active;

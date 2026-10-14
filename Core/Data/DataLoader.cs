@@ -14,6 +14,7 @@ public static class DataLoader
     public const string EnemiesFileName = "enemies.json";
     public const string WavesFileName = "waves.json";
     public const string UpgradesFileName = "upgrades.json";
+    public const string BossesFileName = "bosses.json";
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -34,7 +35,8 @@ public static class DataLoader
         var enemies = ParseEnemies(ReadFile(dataDirectory, EnemiesFileName), EnemiesFileName);
         var waves = ParseWaves(ReadFile(dataDirectory, WavesFileName), WavesFileName);
         var upgrades = ParseUpgrades(ReadFile(dataDirectory, UpgradesFileName), UpgradesFileName);
-        return new GameData(game, weapons, enemies, waves, upgrades);
+        var bosses = ParseBosses(ReadFile(dataDirectory, BossesFileName), BossesFileName);
+        return new GameData(game, weapons, enemies, waves, upgrades, bosses);
     }
 
     /// <summary>Parses and validates <c>upgrades.json</c> content; <paramref name="file"/> is only used in error messages.</summary>
@@ -51,6 +53,25 @@ public static class DataLoader
         var config = Parse<WavesConfig>(json, file);
         config.Validate(file);
         return config;
+    }
+
+    /// <summary>Parses and validates <c>bosses.json</c> content; <paramref name="file"/> is only used in error messages.</summary>
+    public static IReadOnlyList<BossConfig> ParseBosses(string json, string file)
+    {
+        var bosses = Parse<BossesFile>(json, file).Bosses ?? new List<BossConfig>();
+        var ids = new HashSet<string>();
+        var waves = new HashSet<int>();
+        for (var i = 0; i < bosses.Count; i++)
+        {
+            var path = $"bosses[{i}]";
+            DataLoadException.Require(bosses[i] is not null, file, path, "must not be null");
+            bosses[i].Validate(file, path);
+            DataLoadException.Require(ids.Add(bosses[i].Id), file, $"{path}.id", $"'{bosses[i].Id}' is used more than once");
+            DataLoadException.Require(
+                waves.Add(bosses[i].Wave), file, $"{path}.wave", $"another boss already leads wave {bosses[i].Wave}");
+        }
+
+        return bosses;
     }
 
     /// <summary>Parses and validates <c>enemies.json</c> content; <paramref name="file"/> is only used in error messages.</summary>

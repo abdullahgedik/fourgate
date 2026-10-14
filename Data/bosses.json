@@ -1,0 +1,26 @@
+{
+  "bosses": [
+    {
+      "id": "butcher",
+      "displayName": "The Butcher",
+      "wave": 10,
+      "hp": 3000,
+      "speed": 90,
+      "radius": 52,
+      "contactDamage": 30,
+      "contactCooldown": 1.0,
+      "xp": 500,
+      "scoreValue": 1000,
+      "addsBudgetFraction": 0.3,
+      "idleSeconds": 1.6,
+      "knockbackResist": 0.95,
+      "shape": "hexagon",
+      "color": [ 165, 55, 45 ],
+      "patterns": [
+        { "type": "lineCharge", "telegraphSeconds": 0.9, "weight": 2, "damage": 40, "distance": 850, "speed": 1100 },
+        { "type": "groundSlamRing", "telegraphSeconds": 0.9, "weight": 2, "damage": 30, "radius": 380, "ringSpeed": 650, "ringWidth": 40 },
+        { "type": "summon", "telegraphSeconds": 0.8, "weight": 1, "enemyId": "normal", "count": 6, "spawnRadius": 140 }
+      ]
+    }
+  ]
+}
