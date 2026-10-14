@@ -35,6 +35,8 @@ public sealed class GameplayScene : IScene
     private const float EdgeIndicatorRadius = 18f;
     private const float WeaponCrateSpacing = 70f;
     private const float DebugNoticeSeconds = 2f;
+    private const float PlayerSpawnSpacing = 90f;
+    private const float SplitLineThickness = 4f;
     private const float DebugNoticeY = 140f;
     private const float DebugNoticeSize = 28f;
 
@@ -50,6 +52,7 @@ public sealed class GameplayScene : IScene
     private static readonly Color ReloadBarBackColor = new(12, 13, 18);
     private static readonly Color ReloadBarFillColor = new(255, 225, 120);
     private static readonly Color DebugNoticeColor = new(255, 225, 120);
+    private static readonly Color SplitLineColor = new(10, 10, 14);
 
     private readonly GameData _data;
     private readonly float _floorCellSize;
@@ -83,7 +86,10 @@ public sealed class GameplayScene : IScene
     private readonly List<Camera2D> _cameras = new();
     private readonly List<PlayerHud> _playerHuds = new();
 
-    public GameplayScene(GameData data, IPlayerInput playerOneInput, IAudioManager audio)
+    /// <param name="data">All game data.</param>
+    /// <param name="inputs">One input per player: one for single-player, two for co-op.</param>
+    /// <param name="audio">Audio events.</param>
+    public GameplayScene(GameData data, IReadOnlyList<IPlayerInput> inputs, IAudioManager audio)
     {
         _data = data;
         _floorCellSize = FloorCellSize(data);
@@ -127,11 +133,16 @@ public sealed class GameplayScene : IScene
         var startingWeapon = data.GetWeapon(config.Player.StartingWeapon);
         _unlocks.Unlock(startingWeapon);
 
-        var player = new Player(0, playerOneInput, config.Player, audio, _arena.Center);
-        _unlocks.Grant(player, startingWeapon);
-
-        var fullScreen = new Rectangle(0, 0, config.VirtualWidth, config.VirtualHeight);
-        AddPlayer(player, fullScreen, config.Camera);
+        // Side by side in the middle; with two players the screen is split down the middle,
+        // player 1 on the left.
+        var viewWidth = config.VirtualWidth / inputs.Count;
+        for (var i = 0; i < inputs.Count; i++)
+        {
+            var offset = (i - (inputs.Count - 1) / 2f) * PlayerSpawnSpacing;
+            var player = new Player(i, inputs[i], config.Player, audio, _arena.Center + new Vector2(offset, 0f));
+            _unlocks.Grant(player, startingWeapon);
+            AddPlayer(player, new Rectangle(i * viewWidth, 0, viewWidth, config.VirtualHeight), config.Camera);
+        }
 
         if (config.Debug.PracticeTargets)
         {
@@ -307,6 +318,9 @@ public sealed class GameplayScene : IScene
         _flames.OneShotKills = _shots.OneShotKills;
     }
 
+    /// <summary>The players of this run, in order (player 1 first).</summary>
+    public IReadOnlyList<Player> Players => _players;
+
     /// <summary>Debug helper: shows a short message under the wave title for a moment.</summary>
     public void ShowDebugNotice(string text)
     {
@@ -368,6 +382,14 @@ public sealed class GameplayScene : IScene
         }
 
         renderer.BeginScreen();
+        for (var i = 1; i < _cameras.Count; i++)
+        {
+            var view = _cameras[i].ViewRect;
+            renderer.FillRect(
+                new Vector2(view.X - SplitLineThickness / 2f, view.Y), new Vector2(SplitLineThickness, view.Height),
+                SplitLineColor);
+        }
+
         for (var i = 0; i < _players.Count; i++)
         {
             DrawDoorIndicators(renderer, _cameras[i]);

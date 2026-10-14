@@ -26,7 +26,7 @@ local co-op and menus are still to come.
 - Upgrade cards between waves: three random cards per pick, covering weapon levels and
   player stats
 - Health, ammo, upgrade and weapon crates
-- A start screen to choose 1 or 2 players (co-op is coming)
+- A start screen to choose 1 player or 2-player local co-op (vertical split-screen; player 2 on a gamepad)
 - A game over screen with wave reached, kills and time
 
 ## Planned
@@ -104,6 +104,7 @@ The `debug` section of `Data/game.json` has switches for testing:
 | `practiceTargets` | Adds a still and a moving dummy target |
 | `oneShotKills` | Every bullet kills what it hits |
 | `disableWaves` | Leaves the arena empty |
+| `keyboardPlayerTwo` | In co-op, player 2 can also use IJKL to move, U fire, O dash, P reload, Y equipment, H next equipment, N / M guns |
 | `startWave` | Starts the run at the given wave |
 | `seed` | Fixes the random seed so a run can be reproduced |
 

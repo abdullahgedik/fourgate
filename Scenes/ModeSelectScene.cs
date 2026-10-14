@@ -29,14 +29,10 @@ public sealed class ModeSelectScene : IScene
     private static readonly Color BorderColor = new(70, 76, 98);
     private static readonly Color BorderSelectedColor = new(255, 225, 120);
     private static readonly Color TextColor = new(200, 205, 220);
-    private static readonly Color DisabledColor = new(110, 114, 130);
+    private static readonly Color NoteColor = new(130, 134, 150);
     private static readonly Color HintColor = new(150, 155, 170);
 
-    private static readonly Option[] Options =
-    {
-        new(1, "1 PLAYER", "Keyboard + mouse or gamepad", null),
-        new(2, "2 PLAYERS", "Co-op: player 2 on a gamepad", "Coming soon"),
-    };
+    private readonly Option[] _options;
 
     private readonly IPlayerInput _input;
     private readonly Camera2D _camera;
@@ -49,6 +45,15 @@ public sealed class ModeSelectScene : IScene
     /// <param name="selectedPlayers">The choice to highlight first, e.g. the last one made.</param>
     public ModeSelectScene(IPlayerInput input, GameConfig config, int selectedPlayers = 1)
     {
+        _options = new Option[]
+        {
+            new(1, "1 PLAYER", "Keyboard + mouse or gamepad", null),
+            new(
+                2,
+                "2 PLAYERS",
+                "P1 keyboard + mouse, P2 gamepad",
+                config.Debug.KeyboardPlayerTwo ? "Debug: P2 also on IJKL keys" : null),
+        };
         _input = input;
         _screenWidth = config.VirtualWidth;
         _screenHeight = config.VirtualHeight;
@@ -69,7 +74,7 @@ public sealed class ModeSelectScene : IScene
 
         if (_input.MenuRightPressed)
         {
-            _selected = Options.Length - 1;
+            _selected = _options.Length - 1;
         }
 
         var clicked = false;
@@ -83,10 +88,9 @@ public sealed class ModeSelectScene : IScene
             }
         }
 
-        var option = Options[_selected];
-        if ((clicked || _input.ConfirmPressed) && option.UnavailableNote is null)
+        if (clicked || _input.ConfirmPressed)
         {
-            ChosenPlayers = option.Players;
+            ChosenPlayers = _options[_selected].Players;
         }
     }
 
@@ -100,7 +104,7 @@ public sealed class ModeSelectScene : IScene
         renderer.DrawText(
             "Choose players", new Vector2(center, _screenHeight * 0.18f + 140f), SubtitleSize, SubtitleColor, TextAlign.Center);
 
-        for (var i = 0; i < Options.Length; i++)
+        for (var i = 0; i < _options.Length; i++)
         {
             DrawOption(renderer, i);
         }
@@ -121,7 +125,7 @@ public sealed class ModeSelectScene : IScene
 
     private void DrawOption(IRenderer renderer, int index)
     {
-        var option = Options[index];
+        var option = _options[index];
         var selected = index == _selected;
         var topLeft = CardTopLeft(index);
         var size = new Vector2(CardWidth, CardHeight);
@@ -129,31 +133,26 @@ public sealed class ModeSelectScene : IScene
         renderer.FillRect(topLeft, size, selected ? BorderSelectedColor : BorderColor);
         renderer.FillRect(topLeft + new Vector2(Border), size - new Vector2(Border * 2f), selected ? CardSelectedColor : CardColor);
 
-        var available = option.UnavailableNote is null;
         var middle = topLeft.X + CardWidth / 2f;
+        renderer.DrawText(option.Title, new Vector2(middle, topLeft.Y + 70f), OptionTitleSize, TitleColor, TextAlign.Center);
         renderer.DrawText(
-            option.Title, new Vector2(middle, topLeft.Y + 70f), OptionTitleSize, available ? TitleColor : DisabledColor,
-            TextAlign.Center);
-        renderer.DrawText(
-            option.Description, new Vector2(middle, topLeft.Y + 140f), OptionTextSize, available ? TextColor : DisabledColor,
-            TextAlign.Center);
-        if (option.UnavailableNote is not null)
+            option.Description, new Vector2(middle, topLeft.Y + 140f), OptionTextSize, TextColor, TextAlign.Center);
+        if (option.Note is not null)
         {
-            renderer.DrawText(
-                option.UnavailableNote, new Vector2(middle, topLeft.Y + 190f), OptionTextSize, DisabledColor, TextAlign.Center);
+            renderer.DrawText(option.Note, new Vector2(middle, topLeft.Y + 190f), OptionTextSize, NoteColor, TextAlign.Center);
         }
     }
 
     private Vector2 CardTopLeft(int index)
     {
-        var totalWidth = Options.Length * CardWidth + (Options.Length - 1) * CardGap;
+        var totalWidth = _options.Length * CardWidth + (_options.Length - 1) * CardGap;
         var left = (_screenWidth - totalWidth) / 2f + index * (CardWidth + CardGap);
         return new Vector2(left, _screenHeight * 0.42f);
     }
 
     private int OptionAt(Vector2 screen)
     {
-        for (var i = 0; i < Options.Length; i++)
+        for (var i = 0; i < _options.Length; i++)
         {
             var topLeft = CardTopLeft(i);
             if (screen.X >= topLeft.X && screen.X <= topLeft.X + CardWidth
@@ -166,5 +165,5 @@ public sealed class ModeSelectScene : IScene
         return -1;
     }
 
-    private readonly record struct Option(int Players, string Title, string Description, string? UnavailableNote);
+    private readonly record struct Option(int Players, string Title, string Description, string? Note);
 }

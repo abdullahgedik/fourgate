@@ -15,6 +15,9 @@ public sealed class DebugConfig
     /// <summary>Turns the wave system off, leaving an empty arena for testing.</summary>
     public bool DisableWaves { get; init; }
 
+    /// <summary>In co-op, player 2 can also be played from the keyboard (IJKL, U, O, P...) for testing without a gamepad.</summary>
+    public bool KeyboardPlayerTwo { get; init; }
+
     /// <summary>Wave number the run starts at.</summary>
     public int StartWave { get; init; } = 1;
 

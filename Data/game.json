@@ -10,7 +10,7 @@
     ]
   },
   "camera": { "zoom": 1.15, "leadFraction": 0.35, "leadMaxDistance": 260, "smoothing": 10, "edgeMargin": 120 },
-  "debug": { "hotkeys": true, "practiceTargets": false, "oneShotKills": false },
+  "debug": { "hotkeys": true, "practiceTargets": false, "oneShotKills": false, "keyboardPlayerTwo": true },
   "maxAliveEnemies": 60,
   "restCountdownSeconds": 5,
   "xp": { "base": 60, "exponent": 1.35, "sharedFullToAllPlayers": true },

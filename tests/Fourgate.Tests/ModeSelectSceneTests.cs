@@ -23,7 +23,7 @@ public class ModeSelectSceneTests
     }
 
     [Fact]
-    public void TwoPlayers_CannotBeStarted_UntilCoopExists()
+    public void MovingRight_AndConfirming_ChoosesTwoPlayers()
     {
         var input = new FakeInput { MenuRightPressed = true };
         var scene = new ModeSelectScene(input, TestData.Game());
@@ -33,7 +33,7 @@ public class ModeSelectSceneTests
         input.ConfirmPressed = true;
         scene.Update(Step);
 
-        Assert.Null(scene.ChosenPlayers);
+        Assert.Equal(2, scene.ChosenPlayers);
     }
 
     [Fact]

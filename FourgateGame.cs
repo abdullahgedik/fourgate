@@ -34,6 +34,8 @@ public sealed class FourgateGame : Game
     private ShapeRenderer? _renderer;
     private IScene? _scene;
     private IPlayerInput? _playerOneInput;
+    private IPlayerInput[] _singleInputs = Array.Empty<IPlayerInput>();
+    private IPlayerInput[] _coopInputs = Array.Empty<IPlayerInput>();
     private int _lastChosenPlayers = 1;
 
     // The run in progress, for the debug hotkeys; null on the start screen.
@@ -61,7 +63,15 @@ public sealed class FourgateGame : Game
         _renderer = new ShapeRenderer(GraphicsDevice, _spriteBatch, File.ReadAllBytes(FontPath));
 
         // Single-player: keyboard+mouse or the first gamepad, whichever was used last.
-        _playerOneInput = new SwitchingInput(new KeyboardMouseInput(_screen), new GamepadInput(PlayerIndex.One));
+        // Co-op: player 1 on keyboard+mouse, player 2 on the gamepad (and, for testing, debug keys).
+        var keyboardMouse = new KeyboardMouseInput(_screen);
+        var gamepad = new GamepadInput(PlayerIndex.One);
+        _playerOneInput = new SwitchingInput(keyboardMouse, gamepad);
+        _singleInputs = new[] { _playerOneInput };
+        IPlayerInput playerTwo = _data.Game.Debug.KeyboardPlayerTwo
+            ? new SwitchingInput(gamepad, new DebugKeyboardInput())
+            : gamepad;
+        _coopInputs = new[] { keyboardMouse, playerTwo };
         _scene = new ModeSelectScene(_playerOneInput, _data.Game);
     }
 
@@ -111,7 +121,7 @@ public sealed class FourgateGame : Game
         if (_scene is ModeSelectScene { ChosenPlayers: { } players })
         {
             _lastChosenPlayers = players;
-            _scene = new GameplayScene(_data, _playerOneInput, _audio);
+            _scene = new GameplayScene(_data, players == 2 ? _coopInputs : _singleInputs, _audio);
         }
         else if (_scene is GameplayScene { RestartRequested: true })
         {
