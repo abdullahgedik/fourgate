@@ -30,6 +30,8 @@ public sealed class Enemy : IHittable
 
     public bool IsAlive => Hp > 0f;
 
+    public float HitPointsLeft => Math.Max(0f, Hp);
+
     /// <summary>True when the enemy's contact attack is off cooldown.</summary>
     public bool CanAttack => _attackCooldownLeft <= 0f;
 

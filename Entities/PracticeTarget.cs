@@ -41,6 +41,9 @@ public sealed class PracticeTarget : IHittable
 
     public float Radius { get; }
 
+    // Dummies never die.
+    public float HitPointsLeft => float.PositiveInfinity;
+
     /// <summary>Number of hits taken so far.</summary>
     public int HitCount { get; private set; }
 

@@ -39,6 +39,9 @@ public sealed class Bullet
     /// <summary>Damage multiplier applied each time the bullet bounces to an enemy.</summary>
     public float RicochetDamageMult { get; private set; }
 
+    /// <summary>After a kill, the leftover damage keeps flying to the next enemy in line.</summary>
+    public bool Overkill { get; private set; }
+
     /// <summary>
     /// True once the bullet has hit something or run out of range. It stays for one more
     /// frame so it is seen arriving at the point where it stopped.
@@ -58,7 +61,8 @@ public sealed class Bullet
         int pierce,
         int ricochets,
         float ricochetRadius,
-        float ricochetDamageMult)
+        float ricochetDamageMult,
+        bool overkill)
     {
         _origin = origin;
         _travelled = 0f;
@@ -73,6 +77,7 @@ public sealed class Bullet
         RicochetsLeft = ricochets;
         RicochetRadius = ricochetRadius;
         RicochetDamageMult = ricochetDamageMult;
+        Overkill = overkill;
         IsSpent = false;
     }
 
@@ -93,6 +98,13 @@ public sealed class Bullet
     public bool HasHit(IHittable target)
     {
         return _alreadyHit.Contains(target);
+    }
+
+    /// <summary>Carries on through a target the bullet just killed, with only the damage it had left.</summary>
+    public void CarryOn(IHittable target, float damageLeft)
+    {
+        Damage = damageLeft;
+        _alreadyHit.Add(target);
     }
 
     /// <summary>Uses up one pierce on a target the bullet now passes through.</summary>

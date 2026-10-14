@@ -306,7 +306,8 @@ public sealed class Weapon
             Stats.Pierce,
             Stats.Ricochets,
             Stats.RicochetRadius,
-            Stats.RicochetDamageMult);
+            Stats.RicochetDamageMult,
+            Stats.Overkill);
     }
 
     // Turns the aim inside the weapon's spread cone. A single bullet lands anywhere in the

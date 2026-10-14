@@ -28,7 +28,8 @@ public readonly record struct WeaponStats(
     int EmpoweredEvery,
     float EmpoweredDamageMult,
     float OverdriveFireRateMult,
-    float OverdriveSeconds)
+    float OverdriveSeconds,
+    bool Overkill)
 {
     /// <summary>
     /// Applies every level bonus up to <paramref name="level"/> to the weapon's base stats;
@@ -80,6 +81,7 @@ public readonly record struct WeaponStats(
         var empoweredDamageMult = 1f;
         var overdriveFireRateMult = 1f;
         var overdriveSeconds = 0f;
+        var overkill = false;
         if (level >= WeaponConfig.MaxLevel && config.LevelTen is not null)
         {
             damage *= config.LevelTen.DamageMult;
@@ -114,6 +116,10 @@ public readonly record struct WeaponStats(
                         empoweredDamageMult = abilities[i].DamageMult;
                         break;
 
+                    case WeaponAbility.Overkill:
+                        overkill = true;
+                        break;
+
                     case WeaponAbility.Overdrive:
                         overdriveFireRateMult = abilities[i].FireRateMult;
                         overdriveSeconds = abilities[i].Seconds;
@@ -133,7 +139,7 @@ public readonly record struct WeaponStats(
             damage, fireRate, magSize, reloadTime, range, spread, config.Pellets, automatic,
             pierce, ricochets, ricochetRadius, ricochetDamageMult, dualWield,
             blastRadius, reserveMaxBonus, clusterCount, clusterDistance, clusterDamageMult, clusterRadiusMult,
-            empoweredEvery, empoweredDamageMult, overdriveFireRateMult, overdriveSeconds);
+            empoweredEvery, empoweredDamageMult, overdriveFireRateMult, overdriveSeconds, overkill);
     }
 
     /// <summary>

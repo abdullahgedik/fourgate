@@ -32,4 +32,7 @@ public enum WeaponAbility
     /// <c>seconds</c>, and settles back when fire is released.
     /// </summary>
     Overdrive,
+
+    /// <summary>After a kill, the damage left over keeps flying and hits the next enemy in line.</summary>
+    Overkill,
 }

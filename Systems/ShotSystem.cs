@@ -60,7 +60,8 @@ public sealed class ShotSystem
         int pierce = 0,
         int ricochets = 0,
         float ricochetRadius = 0f,
-        float ricochetDamageMult = 1f)
+        float ricochetDamageMult = 1f,
+        bool overkill = false)
     {
         _bullets.Rent().Launch(
             origin,
@@ -73,7 +74,8 @@ public sealed class ShotSystem
             pierce,
             ricochets,
             ricochetRadius,
-            ricochetDamageMult);
+            ricochetDamageMult,
+            overkill);
     }
 
     public void Update(float deltaSeconds)
@@ -144,10 +146,19 @@ public sealed class ShotSystem
                 break;
             }
 
-            hit.Hit(OneShotKills ? float.MaxValue : bullet.Damage, bullet.OwnerIndex);
+            var damage = OneShotKills ? float.MaxValue : bullet.Damage;
+            var hpBefore = hit.HitPointsLeft;
+            hit.Hit(damage, bullet.OwnerIndex);
             if (bullet.PierceLeft > 0)
             {
                 bullet.PassThrough(hit);
+                continue;
+            }
+
+            if (bullet.Overkill && damage > hpBefore)
+            {
+                // The kill used up only part of the bullet; the rest flies on.
+                bullet.CarryOn(hit, damage - hpBefore);
                 continue;
             }
 

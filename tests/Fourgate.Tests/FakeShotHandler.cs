@@ -23,6 +23,8 @@ public sealed class FakeShotHandler : IShotHandler
 
     public float LastRicochetRadius { get; private set; }
 
+    public bool LastOverkill { get; private set; }
+
     /// <summary>Every explosive thrown, in order.</summary>
     public List<ExplosiveShot> Throws { get; } = new();
 
@@ -39,7 +41,8 @@ public sealed class FakeShotHandler : IShotHandler
         int pierce = 0,
         int ricochets = 0,
         float ricochetRadius = 0f,
-        float ricochetDamageMult = 1f)
+        float ricochetDamageMult = 1f,
+        bool overkill = false)
     {
         Count++;
         LastOrigin = origin;
@@ -50,6 +53,7 @@ public sealed class FakeShotHandler : IShotHandler
         LastPierce = pierce;
         LastRicochets = ricochets;
         LastRicochetRadius = ricochetRadius;
+        LastOverkill = overkill;
     }
 
     public void ThrowExplosive(in ExplosiveShot shot)
