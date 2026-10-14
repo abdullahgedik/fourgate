@@ -68,6 +68,28 @@
       "knockbackResist": 0.75,
       "shape": "square",
       "color": [ 140, 30, 35 ]
+    },
+    {
+      "id": "elite",
+      "displayName": "Elite Zombie",
+      "hp": 300,
+      "speed": 160,
+      "radius": 26,
+      "contactDamage": 25,
+      "contactCooldown": 0.8,
+      "attack": {
+        "type": "fireball", "damage": 10, "range": 500, "telegraphSeconds": 0.5, "cooldownSeconds": 1.4,
+        "projectileSpeed": 380, "projectileRadius": 12, "projectileRange": 750,
+        "count": 3, "spreadDegrees": 15, "strafeSpeed": 120
+      },
+      "xp": 80,
+      "scoreValue": 80,
+      "cost": 10,
+      "unlockWave": 12,
+      "dropChance": 0.4,
+      "knockbackResist": 0.4,
+      "shape": "hexagon",
+      "color": [ 210, 60, 200 ]
     }
   ]
 }

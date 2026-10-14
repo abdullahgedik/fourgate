@@ -179,7 +179,7 @@ public sealed class EnemySystem : IHittableSource
         {
             if (enemy.TickWindUp(deltaSeconds, attack.CooldownSeconds))
             {
-                Fireballs?.Fire(enemy.Position + enemy.AimDirection * enemy.Radius, enemy.AimDirection, attack);
+                ThrowVolley(enemy, attack);
                 _audio.PlaySfx(SfxIds.EnemyFireball);
             }
 
@@ -211,8 +211,40 @@ public sealed class EnemySystem : IHittableSource
             enemy.StartWindUp(direction, attack.TelegraphSeconds);
             _audio.PlaySfx(SfxIds.EnemyTelegraph);
         }
+        else if (attack.StrafeSpeed > 0f)
+        {
+            // Sidestep across the line to the target, harder to pin down between throws.
+            var side = new Vector2(-direction.Y, direction.X) * enemy.StrafeSide;
+            enemy.Position += side * (attack.StrafeSpeed * deltaSeconds);
+        }
 
         return true;
+    }
+
+    // One fireball along the locked aim, or a volley fanned evenly across the spread.
+    private void ThrowVolley(Enemy enemy, EnemyAttackConfig attack)
+    {
+        if (Fireballs is null)
+        {
+            return;
+        }
+
+        var aim = enemy.AimDirection;
+        var origin = enemy.Position + aim * enemy.Radius;
+        if (attack.Count <= 1)
+        {
+            Fireballs.Fire(origin, aim, attack);
+            return;
+        }
+
+        var spread = MathHelper.ToRadians(attack.SpreadDegrees);
+        for (var i = 0; i < attack.Count; i++)
+        {
+            var angle = MathHelper.Lerp(-spread, spread, i / (attack.Count - 1f));
+            var cos = MathF.Cos(angle);
+            var sin = MathF.Sin(angle);
+            Fireballs.Fire(origin, new Vector2(aim.X * cos - aim.Y * sin, aim.X * sin + aim.Y * cos), attack);
+        }
     }
 
     private static Player? NearestLivingPlayer(Vector2 position, IReadOnlyList<Player> players)

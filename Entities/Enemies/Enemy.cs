@@ -47,6 +47,9 @@ public sealed class Enemy : IHittable
     /// <summary>How far the wind-up has got, 0 to 1.</summary>
     public float WindUpProgress => _windUpSeconds > 0f ? 1f - _windUpLeft / _windUpSeconds : 1f;
 
+    /// <summary>Which way it sidesteps between throws: 1 or -1; switches after every throw.</summary>
+    public float StrafeSide { get; private set; } = 1f;
+
     /// <summary>True when its ranged attack is off cooldown.</summary>
     public bool CanStartRangedAttack => _rangedCooldownLeft <= 0f && !IsWindingUp;
 
@@ -92,6 +95,7 @@ public sealed class Enemy : IHittable
         _windUpLeft = 0f;
         _windUpSeconds = 0f;
         _rangedCooldownLeft = 0f;
+        StrafeSide = id % 2 == 0 ? 1f : -1f;
         _bodyColor = new Color(config.Color[0], config.Color[1], config.Color[2]);
         Hp = config.Hp;
         LastHitBy = 0;
@@ -140,6 +144,7 @@ public sealed class Enemy : IHittable
 
         _windUpLeft = 0f;
         _rangedCooldownLeft = cooldownSeconds;
+        StrafeSide = -StrafeSide;
         return true;
     }
 

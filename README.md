@@ -26,6 +26,7 @@ local co-op and menus are still to come.
 - Upgrade cards between waves: three random cards per pick, covering weapon levels and
   player stats
 - Health, ammo, upgrade and weapon crates
+- A start screen to choose 1 or 2 players (co-op is coming)
 - A game over screen with wave reached, kills and time
 
 ## Planned
@@ -71,7 +72,8 @@ dotnet test tests/Fourgate.Tests
 | Use equipment (grenade) | G | Left trigger |
 | Next equipment | T | D-pad left / right |
 | Choose an upgrade card | Click, or A / D then Enter | Left / right, then A |
-| Restart after game over | Enter | A or Start |
+| Choose on the start screen | A / D or arrows, Enter or click | D-pad, A |
+| Back to the start screen after game over | Enter | A or Start |
 | Borderless fullscreen | F11 | |
 | Cycle window size | F9 | |
 

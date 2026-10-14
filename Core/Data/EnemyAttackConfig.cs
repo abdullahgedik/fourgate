@@ -26,6 +26,18 @@ public sealed class EnemyAttackConfig
     /// <summary>How far a fireball flies before it fizzles out.</summary>
     public required float ProjectileRange { get; init; }
 
+    /// <summary>Fireballs per throw, fanned out evenly across the spread.</summary>
+    public int Count { get; init; } = 1;
+
+    /// <summary>Angle (degrees) to each side of the aim the outer fireballs of a volley fly.</summary>
+    public float SpreadDegrees { get; init; }
+
+    /// <summary>
+    /// World units per second it sidesteps between throws, keeping its distance; 0 to stand
+    /// still. It never moves during a wind-up.
+    /// </summary>
+    public float StrafeSpeed { get; init; }
+
     public void Validate(string file, string path)
     {
         DataLoadException.Require(Damage > 0, file, $"{path}.damage", "must be greater than 0");
@@ -37,5 +49,9 @@ public sealed class EnemyAttackConfig
         DataLoadException.Require(ProjectileRadius > 0, file, $"{path}.projectileRadius", "must be greater than 0");
         DataLoadException.Require(
             ProjectileRange >= Range, file, $"{path}.projectileRange", "must reach at least as far as range");
+        DataLoadException.Require(Count >= 1, file, $"{path}.count", "must be 1 or greater");
+        DataLoadException.Require(
+            SpreadDegrees >= 0 && SpreadDegrees < 90, file, $"{path}.spreadDegrees", "must be from 0 up to (not including) 90");
+        DataLoadException.Require(StrafeSpeed >= 0, file, $"{path}.strafeSpeed", "must not be negative");
     }
 }

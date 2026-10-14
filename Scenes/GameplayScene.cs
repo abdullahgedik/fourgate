@@ -15,7 +15,7 @@ using Microsoft.Xna.Framework;
 namespace Fourgate.Scenes;
 
 /// <summary>The arena and everything that happens in it.</summary>
-public sealed class GameplayScene
+public sealed class GameplayScene : IScene
 {
     // Floor grid spacing when no weapon snaps to a grid.
     private const float GridSpacing = 100f;

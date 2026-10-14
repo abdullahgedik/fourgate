@@ -10,7 +10,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Fourgate;
 
-/// <summary>Game entry point: owns the main loop and (later) scene switching.</summary>
+/// <summary>Game entry point: owns the main loop and switches between the start screen and runs.</summary>
 public sealed class FourgateGame : Game
 {
     private const int SimulationHz = 60;
@@ -32,8 +32,12 @@ public sealed class FourgateGame : Game
     private SpriteBatch? _spriteBatch;
     private VirtualScreen? _screen;
     private ShapeRenderer? _renderer;
-    private GameplayScene? _scene;
+    private IScene? _scene;
     private IPlayerInput? _playerOneInput;
+    private int _lastChosenPlayers = 1;
+
+    // The run in progress, for the debug hotkeys; null on the start screen.
+    private GameplayScene? CurrentRun => _scene as GameplayScene;
 
     public FourgateGame()
     {
@@ -58,7 +62,7 @@ public sealed class FourgateGame : Game
 
         // Single-player: keyboard+mouse or the first gamepad, whichever was used last.
         _playerOneInput = new SwitchingInput(new KeyboardMouseInput(_screen), new GamepadInput(PlayerIndex.One));
-        _scene = new GameplayScene(_data, _playerOneInput, _audio);
+        _scene = new ModeSelectScene(_playerOneInput, _data.Game);
     }
 
     protected override void UnloadContent()
@@ -90,13 +94,29 @@ public sealed class FourgateGame : Game
             }
 
             _scene?.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
-            if (_scene is { RestartRequested: true } && _playerOneInput is not null)
-            {
-                _scene = new GameplayScene(_data, _playerOneInput, _audio);
-            }
+            SwitchScene();
         }
 
         base.Update(gameTime);
+    }
+
+    // The start screen leads into a run; a finished run goes back to the start screen.
+    private void SwitchScene()
+    {
+        if (_playerOneInput is null)
+        {
+            return;
+        }
+
+        if (_scene is ModeSelectScene { ChosenPlayers: { } players })
+        {
+            _lastChosenPlayers = players;
+            _scene = new GameplayScene(_data, _playerOneInput, _audio);
+        }
+        else if (_scene is GameplayScene { RestartRequested: true })
+        {
+            _scene = new ModeSelectScene(_playerOneInput, _data.Game, _lastChosenPlayers);
+        }
     }
 
     private void UpdateDebugHotkeys()
@@ -106,43 +126,43 @@ public sealed class FourgateGame : Game
         if (_debugHotkeys.NextEnemyPressed)
         {
             _debugEnemyIndex = (_debugEnemyIndex + 1) % _data.Enemies.Count;
-            _scene?.ShowDebugNotice($"F1/F2 spawn: {_data.Enemies[_debugEnemyIndex].DisplayName}");
+            CurrentRun?.ShowDebugNotice($"F1/F2 spawn: {_data.Enemies[_debugEnemyIndex].DisplayName}");
         }
 
         var enemyId = _data.Enemies[_debugEnemyIndex].Id;
         if (_debugHotkeys.SpawnOnePressed)
         {
-            _scene?.DebugSpawnEnemies(enemyId, 1);
+            CurrentRun?.DebugSpawnEnemies(enemyId, 1);
         }
 
         if (_debugHotkeys.SpawnManyPressed)
         {
-            _scene?.DebugSpawnEnemies(enemyId, DebugSpawnGroupSize);
+            CurrentRun?.DebugSpawnEnemies(enemyId, DebugSpawnGroupSize);
         }
 
         if (_debugHotkeys.GrantXpPressed)
         {
-            _scene?.DebugGrantXp(DebugXpGrant);
+            CurrentRun?.DebugGrantXp(DebugXpGrant);
         }
 
         if (_debugHotkeys.DropCratesPressed)
         {
-            _scene?.DebugDropCrates();
+            CurrentRun?.DebugDropCrates();
         }
 
         if (_debugHotkeys.GrantWeaponsPressed)
         {
-            _scene?.DebugGrantAllWeapons();
+            CurrentRun?.DebugGrantAllWeapons();
         }
 
         if (_debugHotkeys.OneShotKillsPressed)
         {
-            _scene?.DebugToggleOneShotKills();
+            CurrentRun?.DebugToggleOneShotKills();
         }
 
         if (_debugHotkeys.LevelUpWeaponPressed)
         {
-            _scene?.DebugLevelUpCurrentWeapons();
+            CurrentRun?.DebugLevelUpCurrentWeapons();
         }
     }
 

@@ -10,4 +10,7 @@ public enum ShapeKind
 
     /// <summary>A square standing on one corner; does not turn.</summary>
     Diamond,
+
+    /// <summary>Six-sided; turns with the rotation like the triangle.</summary>
+    Hexagon,
 }

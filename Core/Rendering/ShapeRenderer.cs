@@ -20,6 +20,7 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
     private readonly Texture2D _pixel;
     private readonly Texture2D _circle;
     private readonly Texture2D _triangle;
+    private readonly Texture2D _hexagon;
     private readonly FontSystem _fonts = new();
 
     /// <param name="device">Graphics device to create textures on.</param>
@@ -37,6 +38,7 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
 
         _circle = CreateCircleTexture(device, CircleTextureSize);
         _triangle = CreateTriangleTexture(device, CircleTextureSize);
+        _hexagon = CreateHexagonTexture(device, CircleTextureSize);
     }
 
     public void BeginScreen()
@@ -83,11 +85,20 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
                 break;
 
             case ShapeKind.Triangle:
-                var scale = visual.Radius * 2f / CircleTextureSize;
-                var origin = new Vector2(CircleTextureSize / 2f);
-                _spriteBatch.Draw(_triangle, position, null, visual.Color, rotation, origin, scale, SpriteEffects.None, 0f);
+                DrawShapeTexture(_triangle, visual, position, rotation);
+                break;
+
+            case ShapeKind.Hexagon:
+                DrawShapeTexture(_hexagon, visual, position, rotation);
                 break;
         }
+    }
+
+    private void DrawShapeTexture(Texture2D texture, in VisualDescriptor visual, Vector2 position, float rotation)
+    {
+        var scale = visual.Radius * 2f / CircleTextureSize;
+        var origin = new Vector2(CircleTextureSize / 2f);
+        _spriteBatch.Draw(texture, position, null, visual.Color, rotation, origin, scale, SpriteEffects.None, 0f);
     }
 
     public void FillRect(Vector2 topLeft, Vector2 size, Color color)
@@ -128,18 +139,42 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
         _pixel.Dispose();
         _circle.Dispose();
         _triangle.Dispose();
+        _hexagon.Dispose();
     }
 
-    // A triangle filling the circle of the texture, its tip pointing to +X. Each pixel is
-    // sampled 4x4 times for a soft edge; premultiplied alpha like the circle.
+    // A triangle filling the circle of the texture, its tip pointing to +X.
     private static Texture2D CreateTriangleTexture(GraphicsDevice device, int size)
+    {
+        var radius = size / 2f;
+        return CreatePolygonTexture(device, size, new[]
+        {
+            new Vector2(radius, 0f),
+            new Vector2(-radius * 0.75f, radius * 0.87f),
+            new Vector2(-radius * 0.75f, -radius * 0.87f),
+        });
+    }
+
+    // A hexagon touching the circle of the texture, with a corner pointing to +X.
+    private static Texture2D CreateHexagonTexture(GraphicsDevice device, int size)
+    {
+        var radius = size / 2f;
+        var corners = new Vector2[6];
+        for (var i = 0; i < corners.Length; i++)
+        {
+            var angle = MathF.PI / 3f * i;
+            corners[i] = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius;
+        }
+
+        return CreatePolygonTexture(device, size, corners);
+    }
+
+    // A convex polygon (corners around the texture's center, in order). Each pixel is sampled
+    // 4x4 times for a soft edge; premultiplied alpha like the circle.
+    private static Texture2D CreatePolygonTexture(GraphicsDevice device, int size, Vector2[] corners)
     {
         const int Samples = 4;
         var data = new Color[size * size];
         var radius = size / 2f;
-        var tip = new Vector2(radius, 0f);
-        var top = new Vector2(-radius * 0.75f, -radius * 0.87f);
-        var bottom = new Vector2(-radius * 0.75f, radius * 0.87f);
 
         for (var y = 0; y < size; y++)
         {
@@ -153,7 +188,7 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
                         var point = new Vector2(
                             x + (sx + 0.5f) / Samples - radius,
                             y + (sy + 0.5f) / Samples - radius);
-                        if (IsInsideTriangle(point, tip, top, bottom))
+                        if (IsInsideConvex(point, corners))
                         {
                             inside++;
                         }
@@ -169,12 +204,21 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
         return texture;
     }
 
-    private static bool IsInsideTriangle(Vector2 point, Vector2 a, Vector2 b, Vector2 c)
+    // Inside when the point is on the same side of every edge.
+    private static bool IsInsideConvex(Vector2 point, Vector2[] corners)
     {
-        var ab = Cross(b - a, point - a);
-        var bc = Cross(c - b, point - b);
-        var ca = Cross(a - c, point - c);
-        return (ab >= 0f && bc >= 0f && ca >= 0f) || (ab <= 0f && bc <= 0f && ca <= 0f);
+        var positive = false;
+        var negative = false;
+        for (var i = 0; i < corners.Length; i++)
+        {
+            var a = corners[i];
+            var b = corners[(i + 1) % corners.Length];
+            var side = Cross(b - a, point - a);
+            positive |= side > 0f;
+            negative |= side < 0f;
+        }
+
+        return !(positive && negative);
     }
 
     private static float Cross(Vector2 a, Vector2 b)
