@@ -27,6 +27,7 @@ public sealed class Weapon
     private float _reloadLeft;
     private bool _fireQueued;
     private float _clickBufferLeft;
+    private int _shotsFired;
 
     /// <param name="config">The weapon's data.</param>
     /// <param name="rules">Global reload rules.</param>
@@ -203,16 +204,26 @@ public sealed class Weapon
             return;
         }
 
+        var damage = NextShotDamage();
         if (!Stats.DualWield)
         {
-            FireVolley(muzzle, direction, ownerIndex, shots);
+            FireVolley(muzzle, direction, damage, ownerIndex, shots);
             return;
         }
 
         // Two muzzles side by side, one volley from each.
         var side = new Vector2(-direction.Y, direction.X) * DualWieldOffset;
-        FireVolley(muzzle + side, direction, ownerIndex, shots);
-        FireVolley(muzzle - side, direction, ownerIndex, shots);
+        FireVolley(muzzle + side, direction, damage, ownerIndex, shots);
+        FireVolley(muzzle - side, direction, damage, ownerIndex, shots);
+    }
+
+    // Counts shots so that every Nth one can be empowered. The count carries over reloads
+    // and weapon switches, so the rhythm is not reset by them.
+    private float NextShotDamage()
+    {
+        _shotsFired++;
+        var empowered = Stats.EmpoweredEvery > 0 && _shotsFired % Stats.EmpoweredEvery == 0;
+        return empowered ? Stats.Damage * Stats.EmpoweredDamageMult : Stats.Damage;
     }
 
     // Lands on the aim point, or at the weapon's reach when aiming farther (or with a stick).
@@ -235,21 +246,21 @@ public sealed class Weapon
         _audio.PlaySfx(SfxIds.WeaponThrow);
     }
 
-    private void FireVolley(Vector2 muzzle, Vector2 direction, int ownerIndex, IShotHandler shots)
+    private void FireVolley(Vector2 muzzle, Vector2 direction, float damage, int ownerIndex, IShotHandler shots)
     {
         for (var pellet = 0; pellet < Stats.Pellets; pellet++)
         {
-            FireBullet(muzzle, Scatter(direction, pellet, Stats.Pellets), ownerIndex, shots);
+            FireBullet(muzzle, Scatter(direction, pellet, Stats.Pellets), damage, ownerIndex, shots);
         }
     }
 
-    private void FireBullet(Vector2 muzzle, Vector2 direction, int ownerIndex, IShotHandler shots)
+    private void FireBullet(Vector2 muzzle, Vector2 direction, float damage, int ownerIndex, IShotHandler shots)
     {
         shots.FireProjectile(
             muzzle,
             direction,
             Config.Projectile!,
-            Stats.Damage,
+            damage,
             ownerIndex,
             Stats.Range,
             Stats.Pierce,

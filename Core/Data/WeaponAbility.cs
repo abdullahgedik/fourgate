@@ -23,4 +23,7 @@ public enum WeaponAbility
     /// radius and hit with its damage and radius multipliers.
     /// </summary>
     Cluster,
+
+    /// <summary>Every <c>count</c>-th shot deals the ability's <c>damageMult</c> times the damage.</summary>
+    EmpoweredShot,
 }

@@ -24,7 +24,9 @@ public readonly record struct WeaponStats(
     int ClusterCount,
     float ClusterDistance,
     float ClusterDamageMult,
-    float ClusterRadiusMult)
+    float ClusterRadiusMult,
+    int EmpoweredEvery,
+    float EmpoweredDamageMult)
 {
     /// <summary>
     /// Applies every level bonus up to <paramref name="level"/> to the weapon's base stats;
@@ -72,6 +74,8 @@ public readonly record struct WeaponStats(
         var clusterDistance = 0f;
         var clusterDamageMult = 1f;
         var clusterRadiusMult = 1f;
+        var empoweredEvery = 0;
+        var empoweredDamageMult = 1f;
         if (level >= WeaponConfig.MaxLevel && config.LevelTen is not null)
         {
             damage *= config.LevelTen.DamageMult;
@@ -101,6 +105,11 @@ public readonly record struct WeaponStats(
                         automatic = true;
                         break;
 
+                    case WeaponAbility.EmpoweredShot:
+                        empoweredEvery = abilities[i].Count;
+                        empoweredDamageMult = abilities[i].DamageMult;
+                        break;
+
                     case WeaponAbility.Cluster:
                         clusterCount += abilities[i].Count;
                         clusterDistance = abilities[i].Radius;
@@ -114,7 +123,8 @@ public readonly record struct WeaponStats(
         return new WeaponStats(
             damage, fireRate, magSize, reloadTime, range, spread, config.Pellets, automatic,
             pierce, ricochets, ricochetRadius, ricochetDamageMult, dualWield,
-            blastRadius, reserveMaxBonus, clusterCount, clusterDistance, clusterDamageMult, clusterRadiusMult);
+            blastRadius, reserveMaxBonus, clusterCount, clusterDistance, clusterDamageMult, clusterRadiusMult,
+            empoweredEvery, empoweredDamageMult);
     }
 
     /// <summary>

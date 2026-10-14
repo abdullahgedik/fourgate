@@ -13,8 +13,9 @@ local co-op and menus are still to come.
 - A 3000×3000 arena with a camera that follows the player and leans toward the aim point
 - Waves that grow with a spawn budget; doors glow before a group emerges, and an
   edge-of-screen marker points to a glowing door outside the view
-- Three weapons: pistol, SMG and shotgun, each with levels 1–10 and a special ability at
-  level 10
+- Five weapons: pistol, SMG, shotgun, marksman rifle and hand grenade, each with levels 1–10
+  and a special ability at level 10
+- Explosions that hurt the thrower too (at half strength)
 - Fast bullets with swept collision, so nothing is skipped at high speed
 - Player health, contact damage, and a dash with invincibility frames
 - XP and levels; every level banks an upgrade pick
@@ -25,8 +26,9 @@ local co-op and menus are still to come.
 
 ## Planned
 
-- Eight more weapons: hand grenade, rifle, molotov, mine, flamethrower, rocket launcher,
-  explosive barrel and railgun
+- More guns: assault rifle, sniper rifle, flamethrower, rocket launcher and railgun
+- An equipment slot for grenades, molotovs, mines and explosive barrels, used with its own
+  button so the gun stays in hand
 - More enemy types with telegraphed ranged attacks
 - A boss every tenth wave
 - Local two-player split-screen co-op
