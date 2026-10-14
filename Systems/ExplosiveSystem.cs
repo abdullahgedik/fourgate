@@ -218,6 +218,9 @@ public sealed class ExplosiveSystem
         }
     }
 
+    /// <summary>World units a blast pushes enemies away from its center.</summary>
+    public float KnockbackDistance { get; set; }
+
     private void Explode(in ExplosiveShot shot, IReadOnlyList<Player> players)
     {
         var center = shot.Target;
@@ -240,6 +243,11 @@ public sealed class ExplosiveSystem
         for (var i = 0; i < _inBlast.Count; i++)
         {
             _inBlast[i].Hit(damage, shot.OwnerIndex);
+            var away = _inBlast[i].Position - center;
+            if (away.LengthSquared() > 0.0001f)
+            {
+                _inBlast[i].Knock(Vector2.Normalize(away) * KnockbackDistance);
+            }
         }
 
         DamagePlayers(shot, players);

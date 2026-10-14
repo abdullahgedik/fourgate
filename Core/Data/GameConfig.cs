@@ -21,6 +21,9 @@ public sealed class GameConfig
 
     public DebugConfig Debug { get; init; } = new();
 
+    /// <summary>How hits push enemies back; no knockback when left out.</summary>
+    public KnockbackConfig Knockback { get; init; } = new();
+
     /// <summary>Most enemies allowed in the arena at once; further spawns wait at the doors.</summary>
     public required int MaxAliveEnemies { get; init; }
 
@@ -47,6 +50,9 @@ public sealed class GameConfig
         DataLoadException.Require(Xp is not null, file, "xp", "is required");
         DataLoadException.Require(Xp!.Base > 0, file, "xp.base", "must be greater than 0");
         DataLoadException.Require(Xp.Exponent >= 0, file, "xp.exponent", "must not be negative");
+
+        DataLoadException.Require(Knockback is not null, file, "knockback", "must not be null");
+        Knockback!.Validate(file);
 
         DataLoadException.Require(FriendlyFire is not null, file, "friendlyFire", "is required");
         FriendlyFire!.Validate(file);

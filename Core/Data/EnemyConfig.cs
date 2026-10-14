@@ -31,6 +31,9 @@ public sealed class EnemyConfig
     /// <summary>Chance (0–1) to drop a crate when killed.</summary>
     public required float DropChance { get; init; }
 
+    /// <summary>Share of knockback it ignores (0–1); 0 (the default) takes the full push.</summary>
+    public float KnockbackResist { get; init; }
+
     /// <summary>Checks value ranges; <paramref name="path"/> locates this entry inside the file.</summary>
     public void Validate(string file, string path)
     {
@@ -48,5 +51,7 @@ public sealed class EnemyConfig
         DataLoadException.Require(UnlockWave >= 1, file, $"{path}.unlockWave", "must be 1 or greater");
         DataLoadException.Require(
             DropChance >= 0 && DropChance <= 1, file, $"{path}.dropChance", "must be between 0 and 1");
+        DataLoadException.Require(
+            KnockbackResist >= 0 && KnockbackResist <= 1, file, $"{path}.knockbackResist", "must be between 0 and 1");
     }
 }

@@ -20,6 +20,7 @@ public sealed class Enemy : IHittable
     private float _flashLeft;
     private bool _wasHit;
     private float _attackCooldownLeft;
+    private Vector2 _knockLeft;
     private float _burnLeft;
     private float _burnSeconds;
     private float _burnDamagePerSecond;
@@ -73,9 +74,26 @@ public sealed class Enemy : IHittable
         _flashLeft = 0f;
         _wasHit = false;
         _attackCooldownLeft = 0f;
+        _knockLeft = Vector2.Zero;
         _burnLeft = 0f;
         _burnCanSpread = false;
         _scorchLeft = 0f;
+    }
+
+    public void Knock(Vector2 push)
+    {
+        if (IsAlive)
+        {
+            _knockLeft += push * (1f - Config.KnockbackResist);
+        }
+    }
+
+    /// <summary>Takes a share (0–1) of the push still owed; the caller moves the enemy by it.</summary>
+    public Vector2 TakeKnockStep(float share)
+    {
+        var step = _knockLeft * share;
+        _knockLeft -= step;
+        return step;
     }
 
     /// <summary>Starts the wait before the next contact attack.</summary>

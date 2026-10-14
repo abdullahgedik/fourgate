@@ -164,6 +164,8 @@ public sealed class WeaponConfig
         DataLoadException.Require(projectile.Speed > 0, file, $"{path}.projectile.speed", "must be greater than 0");
         DataLoadException.Require(projectile.Radius > 0, file, $"{path}.projectile.radius", "must be greater than 0");
         DataLoadException.Require(projectile.Range > 0, file, $"{path}.projectile.range", "must be greater than 0");
+        DataLoadException.Require(
+            projectile.Knockback >= 0, file, $"{path}.projectile.knockback", "must not be negative");
     }
 
     private void ValidateThrown(string file, string path)

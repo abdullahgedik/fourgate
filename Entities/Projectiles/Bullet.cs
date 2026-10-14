@@ -25,6 +25,9 @@ public sealed class Bullet
     /// <summary>Index of the player who fired it.</summary>
     public int OwnerIndex { get; private set; }
 
+    /// <summary>World units a hit pushes an enemy along the bullet's path.</summary>
+    public float Knockback { get; private set; }
+
     /// <summary>World units left before the bullet runs out of range.</summary>
     public float RangeLeft { get; private set; }
 
@@ -67,8 +70,10 @@ public sealed class Bullet
         float ricochetRadius,
         float ricochetDamageMult,
         bool overkill,
-        RocketPayload? rocket)
+        RocketPayload? rocket,
+        float knockback = 0f)
     {
+        Knockback = knockback;
         Rocket = rocket;
         _origin = origin;
         _travelled = 0f;

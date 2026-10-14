@@ -26,4 +26,10 @@ public interface IHittable
     /// <param name="damagePerSecond">Damage per second while burning.</param>
     /// <param name="ownerIndex">Index of the player whose fire it is.</param>
     void Ignite(float seconds, float damagePerSecond, int ownerIndex);
+
+    /// <summary>Pushes it by a distance and direction; most things do not move.</summary>
+    /// <param name="push">Direction times the distance in world units.</param>
+    void Knock(Vector2 push)
+    {
+    }
 }

@@ -81,7 +81,8 @@ public sealed class ShotSystem
             ricochetRadius,
             ricochetDamageMult,
             overkill,
-            rocket);
+            rocket,
+            projectile.Knockback);
     }
 
     public void Update(float deltaSeconds)
@@ -174,6 +175,7 @@ public sealed class ShotSystem
             var damage = OneShotKills ? float.MaxValue : bullet.Damage;
             var hpBefore = hit.HitPointsLeft;
             hit.Hit(damage, bullet.OwnerIndex);
+            hit.Knock(direction * bullet.Knockback);
             if (bullet.PierceLeft > 0)
             {
                 bullet.PassThrough(hit);

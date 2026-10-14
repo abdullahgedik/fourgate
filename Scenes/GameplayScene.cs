@@ -84,14 +84,17 @@ public sealed class GameplayScene
         var config = data.Game;
         _random = new GameRandom(config.Debug.Seed ?? Environment.TickCount);
         _arena = new Arena(config.Arena);
-        _enemies = new EnemySystem(audio);
+        _enemies = new EnemySystem(audio) { KnockbackDamping = config.Knockback.Damping };
         _shots = new ShotSystem(_arena);
         _shots.AddSource(_enemies);
         _xp = new XpSystem(config.Xp, audio);
         _shots.OneShotKills = config.Debug.OneShotKills;
         _hazards = new HazardSystem(config.FriendlyFire);
         _hazards.AddSource(_enemies);
-        _explosives = new ExplosiveSystem(_arena, config.FriendlyFire, _random, audio, _hazards);
+        _explosives = new ExplosiveSystem(_arena, config.FriendlyFire, _random, audio, _hazards)
+        {
+            KnockbackDistance = config.Knockback.Explosion,
+        };
         _shots.Explosives = _explosives;
         _explosives.AddSource(_enemies);
         _explosives.OneShotKills = config.Debug.OneShotKills;

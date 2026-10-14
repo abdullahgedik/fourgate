@@ -50,6 +50,9 @@ public sealed class EnemySystem : IHittableSource
         return enemy;
     }
 
+    /// <summary>Share of an enemy's remaining knockback applied per second; 0 applies it at once.</summary>
+    public float KnockbackDamping { get; set; }
+
     public void Update(float deltaSeconds, IReadOnlyList<Player> players, Arena arena)
     {
         RemoveDead();
@@ -64,6 +67,8 @@ public sealed class EnemySystem : IHittableSource
             }
 
             MoveTowardNearestPlayer(enemy, players, arena, deltaSeconds);
+            enemy.Position += enemy.TakeKnockStep(
+                KnockbackDamping > 0f ? Math.Min(1f, KnockbackDamping * deltaSeconds) : 1f);
         }
 
         RebuildHash();

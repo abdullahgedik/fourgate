@@ -11,4 +11,7 @@ public sealed class ProjectileConfig
 
     /// <summary>World units a bullet travels before it disappears.</summary>
     public required float Range { get; init; }
+
+    /// <summary>World units a hit pushes an enemy along the bullet's path; 0 for none.</summary>
+    public float Knockback { get; init; }
 }
