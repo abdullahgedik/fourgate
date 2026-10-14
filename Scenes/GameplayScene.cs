@@ -37,6 +37,8 @@ public sealed class GameplayScene : IScene
     private const float DebugNoticeSeconds = 2f;
     private const float PlayerSpawnSpacing = 90f;
     private const float SplitLineThickness = 4f;
+    private const float DownedNoticeY = 200f;
+    private const float DownedNoticeSize = 30f;
     private const float DebugNoticeY = 140f;
     private const float DebugNoticeSize = 28f;
 
@@ -53,6 +55,7 @@ public sealed class GameplayScene : IScene
     private static readonly Color ReloadBarFillColor = new(255, 225, 120);
     private static readonly Color DebugNoticeColor = new(255, 225, 120);
     private static readonly Color SplitLineColor = new(10, 10, 14);
+    private static readonly Color DownedNoticeColor = new(255, 120, 100);
 
     private readonly GameData _data;
     private readonly float _floorCellSize;
@@ -85,6 +88,15 @@ public sealed class GameplayScene : IScene
     private readonly List<Player> _players = new();
     private readonly List<Camera2D> _cameras = new();
     private readonly List<PlayerHud> _playerHuds = new();
+
+    // Each player's half of the screen in co-op, whether their view is drawn (a downed
+    // player's is not while the partner fights on), and the notice shown to the partner.
+    private readonly List<Rectangle> _splitViews = new();
+    private readonly List<bool> _viewShown = new();
+    private readonly List<string> _downedNotices = new();
+    private readonly Rectangle _fullView;
+    private readonly WeaponConfig _startingWeapon;
+    private WavePhase? _lastWavePhase;
 
     /// <param name="data">All game data.</param>
     /// <param name="inputs">One input per player: one for single-player, two for co-op.</param>
@@ -131,7 +143,9 @@ public sealed class GameplayScene : IScene
         _waves = config.Debug.DisableWaves ? null : new WaveSystem(data, _enemies, _arena, _random, audio);
 
         var startingWeapon = data.GetWeapon(config.Player.StartingWeapon);
+        _startingWeapon = startingWeapon;
         _unlocks.Unlock(startingWeapon);
+        _fullView = new Rectangle(0, 0, config.VirtualWidth, config.VirtualHeight);
 
         // Side by side in the middle; with two players the screen is split down the middle,
         // player 1 on the left.
@@ -143,6 +157,8 @@ public sealed class GameplayScene : IScene
             _unlocks.Grant(player, startingWeapon);
             AddPlayer(player, new Rectangle(i * viewWidth, 0, viewWidth, config.VirtualHeight), config.Camera);
         }
+
+        _lastWavePhase = _waves?.Phase;
 
         if (config.Debug.PracticeTargets)
         {
@@ -181,6 +197,12 @@ public sealed class GameplayScene : IScene
         }
 
         _waves?.Update(deltaSeconds);
+        if (_lastWavePhase == WavePhase.Active && _waves?.Phase == WavePhase.Rest)
+        {
+            ReviveDownedPlayers();
+        }
+
+        _lastWavePhase = _waves?.Phase;
         UnlockWeaponsForStartedWaves();
         _enemies.Update(deltaSeconds, _players, _arena);
         _fireballs.Update(deltaSeconds, _players, _arena);
@@ -207,6 +229,7 @@ public sealed class GameplayScene : IScene
         _flames.Update(deltaSeconds);
         _drops.Update(deltaSeconds, _players);
 
+        LayOutViews();
         if (!AnyPlayerAlive())
         {
             IsGameOver = true;
@@ -226,6 +249,74 @@ public sealed class GameplayScene : IScene
                 RestartRequested = true;
             }
         }
+    }
+
+    // Co-op: a downed player stays out for the rest of the wave. If the partner clears it,
+    // the downed player comes back beside them with part of their HP and only the starting
+    // weapon; weapon levels and upgrades are kept.
+    private void ReviveDownedPlayers()
+    {
+        var partner = FirstLivingPlayer();
+        if (partner is null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < _players.Count; i++)
+        {
+            var player = _players[i];
+            if (player.IsAlive)
+            {
+                continue;
+            }
+
+            var spot = _arena.ResolveMovement(partner.Position + new Vector2(PlayerSpawnSpacing, 0f), player.Radius);
+            player.Revive(spot, _data.Game.Coop.ReviveHpFraction);
+            _unlocks.Grant(player, _startingWeapon);
+            LayOutViews();
+            _cameras[i].SnapTo(player.Position, _cameras[i].ViewCenter);
+        }
+    }
+
+    // With two players the screen is split; while only one is alive, their view takes the
+    // whole screen.
+    private void LayOutViews()
+    {
+        if (_players.Count < 2)
+        {
+            return;
+        }
+
+        var survivor = -1;
+        var alive = 0;
+        for (var i = 0; i < _players.Count; i++)
+        {
+            if (_players[i].IsAlive)
+            {
+                alive++;
+                survivor = i;
+            }
+        }
+
+        for (var i = 0; i < _players.Count; i++)
+        {
+            var alone = alive == 1;
+            _viewShown[i] = !alone || i == survivor;
+            _cameras[i].ViewRect = alone && i == survivor ? _fullView : _splitViews[i];
+        }
+    }
+
+    private Player? FirstLivingPlayer()
+    {
+        for (var i = 0; i < _players.Count; i++)
+        {
+            if (_players[i].IsAlive)
+            {
+                return _players[i];
+            }
+        }
+
+        return null;
     }
 
     private bool AnyPlayerAlive()
@@ -321,6 +412,12 @@ public sealed class GameplayScene : IScene
     /// <summary>The players of this run, in order (player 1 first).</summary>
     public IReadOnlyList<Player> Players => _players;
 
+    /// <summary>The screen area showing a player's view; empty while it is hidden (that player is down).</summary>
+    public Rectangle GetView(int playerIndex)
+    {
+        return _viewShown[playerIndex] ? _cameras[playerIndex].ViewRect : Rectangle.Empty;
+    }
+
     /// <summary>Debug helper: shows a short message under the wave title for a moment.</summary>
     public void ShowDebugNotice(string text)
     {
@@ -361,6 +458,11 @@ public sealed class GameplayScene : IScene
     {
         for (var i = 0; i < _cameras.Count; i++)
         {
+            if (!_viewShown[i])
+            {
+                continue;
+            }
+
             renderer.BeginWorld(_cameras[i]);
             DrawArena(renderer);
             _hazards.Draw(renderer);
@@ -384,6 +486,11 @@ public sealed class GameplayScene : IScene
         renderer.BeginScreen();
         for (var i = 1; i < _cameras.Count; i++)
         {
+            if (!_viewShown[i] || !_viewShown[i - 1])
+            {
+                continue;
+            }
+
             var view = _cameras[i].ViewRect;
             renderer.FillRect(
                 new Vector2(view.X - SplitLineThickness / 2f, view.Y), new Vector2(SplitLineThickness, view.Height),
@@ -392,6 +499,16 @@ public sealed class GameplayScene : IScene
 
         for (var i = 0; i < _players.Count; i++)
         {
+            if (!_viewShown[i])
+            {
+                // The partner's view shows that this player is out for now.
+                var view = _fullView;
+                renderer.DrawText(
+                    _downedNotices[i], new Vector2(view.Width / 2f, DownedNoticeY), DownedNoticeSize, DownedNoticeColor,
+                    TextAlign.Center);
+                continue;
+            }
+
             DrawDoorIndicators(renderer, _cameras[i]);
             DrawWeaponCrateIndicators(renderer, _cameras[i]);
             _playerHuds[i].Draw(renderer, _players[i], _cameras[i].ViewRect);
@@ -525,6 +642,9 @@ public sealed class GameplayScene : IScene
 
         _players.Add(player);
         _cameras.Add(camera);
+        _splitViews.Add(viewRect);
+        _viewShown.Add(true);
+        _downedNotices.Add($"PLAYER {player.Index + 1} IS DOWN  ·  BACK AFTER THIS WAVE");
         _playerHuds.Add(new PlayerHud(_data.Game.Xp));
     }
 

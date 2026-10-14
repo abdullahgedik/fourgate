@@ -19,6 +19,8 @@ public sealed class GameConfig
 
     public required FriendlyFireConfig FriendlyFire { get; init; }
 
+    public required CoopConfig Coop { get; init; }
+
     public DebugConfig Debug { get; init; } = new();
 
     /// <summary>How hits push enemies back; no knockback when left out.</summary>
@@ -53,6 +55,9 @@ public sealed class GameConfig
 
         DataLoadException.Require(Knockback is not null, file, "knockback", "must not be null");
         Knockback!.Validate(file);
+
+        DataLoadException.Require(Coop is not null, file, "coop", "is required");
+        Coop!.Validate(file);
 
         DataLoadException.Require(FriendlyFire is not null, file, "friendlyFire", "is required");
         FriendlyFire!.Validate(file);

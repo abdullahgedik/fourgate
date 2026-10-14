@@ -256,6 +256,23 @@ public sealed class Player
     }
 
     /// <summary>Restores all HP of a living player.</summary>
+    /// <summary>
+    /// Brings a downed player back (co-op, after the wave): at the given spot and share of max
+    /// HP, with an empty inventory. Weapon levels and upgrades are kept.
+    /// </summary>
+    public void Revive(Vector2 position, float hpFraction)
+    {
+        _weapons.Clear();
+        CurrentWeapon = null;
+        ActiveEquipment = null;
+        Position = position;
+        Hp = Math.Max(1f, MaxHp * hpFraction);
+        _dashTimeLeft = 0f;
+        _dashCooldownLeft = 0f;
+        _hurtFlashLeft = 0f;
+        _audio.PlaySfx(SfxIds.PlayerRevive);
+    }
+
     public void HealToFull()
     {
         if (IsAlive)
