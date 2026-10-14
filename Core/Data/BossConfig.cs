@@ -62,6 +62,9 @@ public sealed class BossConfig
     /// <summary>Random (weighted) or the listed sequence.</summary>
     public BossPatternOrder PatternOrder { get; init; } = BossPatternOrder.Random;
 
+    /// <summary>Later phases, from the highest HP threshold down; empty for a one-phase boss.</summary>
+    public List<BossPhaseConfig> Phases { get; init; } = new();
+
     /// <summary>Enemies it bursts into when it dies; null for none.</summary>
     public BossDeathSpawnConfig? DeathSpawn { get; init; }
 
@@ -92,6 +95,21 @@ public sealed class BossConfig
         Color = Color,
         IsBoss = true,
     };
+
+    /// <summary>Every pattern of every phase (not counting follow-ups), for cross-file checks.</summary>
+    public List<BossPatternConfig> AllPatterns
+    {
+        get
+        {
+            var all = new List<BossPatternConfig>(Patterns);
+            for (var i = 0; i < Phases.Count; i++)
+            {
+                all.AddRange(Phases[i].Patterns);
+            }
+
+            return all;
+        }
+    }
 
     public void Validate(string file, string path)
     {
@@ -124,6 +142,15 @@ public sealed class BossConfig
             Color is not null && Color.Count == 3 && Color.TrueForAll(c => c >= 0 && c <= 255),
             file, $"{path}.color", "must be three numbers from 0 to 255 (red, green, blue)");
         DeathSpawn?.Validate(file, $"{path}.deathSpawn");
+        DataLoadException.Require(Phases is not null, file, $"{path}.phases", "must not be null");
+        for (var i = 0; i < Phases!.Count; i++)
+        {
+            DataLoadException.Require(Phases[i] is not null, file, $"{path}.phases[{i}]", "must not be null");
+            Phases[i].Validate(file, $"{path}.phases[{i}]");
+            DataLoadException.Require(
+                i == 0 || Phases[i].HpFraction < Phases[i - 1].HpFraction, file, $"{path}.phases[{i}].hpFraction",
+                "must be lower than the phase before it");
+        }
         DataLoadException.Require(Patterns is { Count: > 0 }, file, $"{path}.patterns", "must list at least one pattern");
         for (var i = 0; i < Patterns!.Count; i++)
         {

@@ -143,6 +143,7 @@ public sealed class BossPatternConfig
                     SpreadDegrees >= 0 && SpreadDegrees < 90, file, $"{path}.spreadDegrees", "must be from 0 up to 90");
                 break;
 
+            case BossPatternType.LaserSweep:
             case BossPatternType.FireStream:
                 RequireAreaTelegraph(file, path);
                 DataLoadException.Require(Damage > 0, file, $"{path}.damage", "must be greater than 0 (per second)");

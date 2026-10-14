@@ -17,8 +17,9 @@ local co-op and menus are still to come.
 - Five zombie types (normal, fast, ranged with telegraphed fireballs, tank, elite with a
   fireball volley) and bosses: The Butcher on wave 10 (charge, ground slam, summons),
   the Pyre Witch on wave 20 (fireball rings and spirals, teleport, summons), The
-  Juggernaut on wave 30 (shield, sweeping fire stream, charge), and the Swarm Mother on
+  Juggernaut on wave 30 (shield, sweeping fire stream, charge), the Swarm Mother on
   wave 40 (summons every zombie kind, each followed by a matching attack; splits on death)
+  and The Warden on wave 50 (three phases, borrowed attacks, a sweeping laser)
 - Knockback on hits
 - Nine guns (pistol, SMG, shotgun, marksman rifle, assault rifle, sniper rifle,
   flamethrower, rocket launcher, railgun) and four pieces of equipment (hand grenade, molotov, mine,

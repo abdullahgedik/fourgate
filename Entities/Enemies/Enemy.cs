@@ -58,6 +58,9 @@ public sealed class Enemy : IHittable
 
     public float Hp { get; private set; }
 
+    /// <summary>True while nothing can hurt it (a boss changing phase).</summary>
+    public bool IsInvulnerable { get; set; }
+
     /// <summary>HP it started with (after any scaling), for health bars.</summary>
     public float MaxHp { get; private set; }
 
@@ -94,6 +97,7 @@ public sealed class Enemy : IHittable
         Config = config;
         Position = position;
         Facing = 0f;
+        IsInvulnerable = false;
         AimDirection = Vector2.Zero;
         _windUpLeft = 0f;
         _windUpSeconds = 0f;
@@ -253,7 +257,7 @@ public sealed class Enemy : IHittable
 
     public void Hit(float damage, int ownerIndex)
     {
-        if (!IsAlive)
+        if (!IsAlive || IsInvulnerable)
         {
             return;
         }
@@ -266,7 +270,7 @@ public sealed class Enemy : IHittable
 
     public void Burn(float damage, int ownerIndex)
     {
-        if (!IsAlive || damage <= 0f)
+        if (!IsAlive || damage <= 0f || IsInvulnerable)
         {
             return;
         }

@@ -41,10 +41,10 @@ public sealed class GameData
             DataLoadException.Require(
                 !_enemiesById.ContainsKey(boss.Id), DataLoader.BossesFileName, $"bosses[{i}].id",
                 $"'{boss.Id}' is also an enemy id in {DataLoader.EnemiesFileName}");
-            for (var p = 0; p < boss.Patterns.Count; p++)
+            for (var p = 0; p < boss.AllPatterns.Count; p++)
             {
-                var pattern = boss.Patterns[p];
-                var patternPath = $"bosses[{i}].patterns[{p}]";
+                var pattern = boss.AllPatterns[p];
+                var patternPath = $"bosses[{i}] pattern {p}";
                 while (pattern is not null)
                 {
                     DataLoadException.Require(

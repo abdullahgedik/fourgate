@@ -601,6 +601,102 @@ public class BossTests
         }
     }
 
+    [Fact]
+    public void ShippedWarden_LeadsWaveFifty_InThreePhases_BorrowingFromEveryBoss()
+    {
+        var warden = DataLoader.LoadAll(DataLoader.DefaultDirectory).GetBossForWave(50);
+
+        Assert.NotNull(warden);
+        Assert.Equal(20000f, warden!.Hp);
+        Assert.Equal(2, warden.Phases.Count);
+        Assert.Equal(0.66f, warden.Phases[0].HpFraction, 3);
+        Assert.Equal(0.33f, warden.Phases[1].HpFraction, 3);
+        Assert.Contains(warden.Patterns, p => p.Type == BossPatternType.LaserSweep);
+        Assert.All(warden.Phases, phase => Assert.Contains(phase.Patterns, p => p.Type == BossPatternType.LaserSweep));
+
+        var all = warden.AllPatterns;
+        foreach (var borrowed in new[]
+        {
+            BossPatternType.LineCharge, BossPatternType.GroundSlamRing, BossPatternType.FireballRing,
+            BossPatternType.FireballSpiral, BossPatternType.Teleport, BossPatternType.FireStream, BossPatternType.Summon,
+        })
+        {
+            Assert.Contains(all, p => p.Type == borrowed);
+        }
+
+        Assert.Contains(all, p => p.FollowUp is not null);
+    }
+
+    [Fact]
+    public void Phases_OutOfOrder_AreRejected()
+    {
+        const string json = """
+            { "bosses": [ { "id": "b", "displayName": "B", "wave": 10, "hp": 100, "speed": 1, "radius": 40,
+              "contactDamage": 0, "contactCooldown": 1, "xp": 1, "scoreValue": 1, "addsBudgetFraction": 0.3,
+              "idleSeconds": 1, "patterns": [ { "type": "teleport", "telegraphSeconds": 0.8 } ],
+              "phases": [
+                { "hpFraction": 0.33, "transitionSeconds": 1, "patterns": [ { "type": "teleport", "telegraphSeconds": 0.8 } ] },
+                { "hpFraction": 0.66, "transitionSeconds": 1, "patterns": [ { "type": "teleport", "telegraphSeconds": 0.8 } ] }
+              ] } ] }
+            """;
+
+        var error = Assert.Throws<DataLoadException>(() => DataLoader.ParseBosses(json, "bosses.json"));
+
+        Assert.Equal("bosses[0].phases[1].hpFraction", error.Field);
+    }
+
+    [Fact]
+    public void Boss_ChangesPhase_AtItsHpThreshold_UnhurtableWhileItDoes()
+    {
+        var phases = new List<BossPhaseConfig>
+        {
+            new() { HpFraction = 0.5f, TransitionSeconds = 1f, Patterns = new List<BossPatternConfig> { Pattern(BossPatternType.Summon) } },
+        };
+        var world = new World(Pattern(BossPatternType.LineCharge), phases: phases);
+        world.AddPlayer(new Vector2(1800, 1000));
+        var boss = world.SpawnBoss(new Vector2(1000, 1000));
+        world.Run(Step);
+        Assert.Equal(0, world.Bosses.Phase);
+
+        boss.Hit(60f, 0);
+        world.Run(Step);
+        Assert.Equal(1, world.Bosses.Phase);
+        Assert.True(world.Bosses.IsChangingPhase);
+
+        boss.Hit(30f, 0);
+        Assert.Equal(40f, boss.Hp, 3);
+
+        world.Run(1.1f);
+        Assert.False(world.Bosses.IsChangingPhase);
+        boss.Hit(10f, 0);
+        Assert.Equal(30f, boss.Hp, 3);
+
+        // The new phase's patterns: it summons now instead of charging.
+        world.Run(2f);
+        Assert.True(world.Enemies.Count > 1);
+    }
+
+    [Fact]
+    public void LaserSweep_CutsAcrossThePlayer_FromOneSide()
+    {
+        var laser = new BossPatternConfig
+        {
+            Type = BossPatternType.LaserSweep, TelegraphSeconds = 1f, Damage = 70, Distance = 1400, Width = 16,
+            Seconds = 1.6f, SpinDegreesPerSecond = 70,
+        };
+        var world = new World(laser);
+        var player = world.AddPlayer(new Vector2(1600, 1000));
+        world.SpawnBoss(new Vector2(1000, 1000));
+
+        // The warning starts after 1 s; the beam does not touch the player yet.
+        world.Run(1.5f);
+        Assert.Equal(BossPatternType.LaserSweep, world.Bosses.CurrentPattern);
+        Assert.Equal(100f, player.Hp);
+
+        world.Run(2.5f);
+        Assert.True(player.Hp < 100f);
+    }
+
     private static int StartWave(GameData shipped, int wave)
     {
         var config = TestData.Game(startWave: wave);
@@ -644,7 +740,8 @@ public class BossTests
 
         public World(
             BossPatternConfig pattern, float turnDegreesPerSecond = 0f, float armorGap = 0f, float armorThickness = 0f,
-            float speed = 0f, List<BossPatternConfig>? patterns = null, BossPatternOrder order = BossPatternOrder.Random)
+            float speed = 0f, List<BossPatternConfig>? patterns = null, BossPatternOrder order = BossPatternOrder.Random,
+            List<BossPhaseConfig>? phases = null)
         {
             _boss = new BossConfig
             {
@@ -654,6 +751,7 @@ public class BossTests
                 FrontArmorGap = armorGap, FrontArmorThickness = armorThickness,
                 Patterns = patterns ?? new List<BossPatternConfig> { pattern },
                 PatternOrder = order,
+                Phases = phases ?? new List<BossPhaseConfig>(),
             };
             var data = new GameData(
                 TestData.Game(), new[] { TestData.Pistol() }, new[] { TestData.Zombie() }, TestData.Waves(), TestData.Upgrades(),

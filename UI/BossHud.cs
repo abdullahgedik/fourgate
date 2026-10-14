@@ -11,12 +11,13 @@ public sealed class BossHud
     private const float NameSize = 30f;
     private const float BarWidth = 800f;
     private const float BarHeight = 18f;
-    private const float BarGap = 22f;
+    private const float BarGap = 40f;
     private const float Border = 3f;
 
     private static readonly Color NameColor = new(255, 200, 180);
     private static readonly Color BackColor = new(20, 10, 12);
     private static readonly Color FillColor = new(210, 50, 45);
+    private static readonly Color InvulnerableColor = new(150, 150, 160);
     private static readonly Color BorderColor = new(90, 30, 30);
 
     public void Draw(IRenderer renderer, string name, Enemy boss, int screenWidth)
@@ -29,6 +30,7 @@ public sealed class BossHud
         renderer.FillRect(topLeft, new Vector2(BarWidth, BarHeight), BackColor);
 
         var share = boss.MaxHp > 0f ? MathHelper.Clamp(boss.Hp / boss.MaxHp, 0f, 1f) : 0f;
-        renderer.FillRect(topLeft, new Vector2(BarWidth * share, BarHeight), FillColor);
+        renderer.FillRect(
+            topLeft, new Vector2(BarWidth * share, BarHeight), boss.IsInvulnerable ? InvulnerableColor : FillColor);
     }
 }

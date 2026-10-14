@@ -29,4 +29,7 @@ public enum BossPatternType
 
     /// <summary>Throws bursts of fireballs fanned out at the player, aimed when the warning starts.</summary>
     FireballVolley,
+
+    /// <summary>Fires a long thin beam that sweeps across where the player stood.</summary>
+    LaserSweep,
 }

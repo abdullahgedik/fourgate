@@ -26,6 +26,9 @@ public sealed class BossSystem
     private static readonly Color FireCoreColor = new(255, 220, 120);
     private static readonly Color ArmorColor = new(200, 205, 215);
     private static readonly Color HasteColor = new(255, 230, 80);
+    private static readonly Color LaserColor = new(255, 40, 60);
+    private static readonly Color LaserCoreColor = new(255, 235, 240);
+    private static readonly Color TransitionColor = new(255, 240, 200);
 
     // A turning boss only charges at a target this close to straight ahead (degrees either side).
     private const float ChargeAheadDegrees = 30f;
@@ -54,6 +57,9 @@ public sealed class BossSystem
     private float _streamLength;
     private BossPatternConfig? _queuedFollowUp;
     private int _nextInSequence;
+    private int _phase = -1;
+    private float _sweepSign = 1f;
+    private float _transitionAge;
     private readonly List<BossPatternConfig> _round = new();
     private BossPatternConfig? _lastFromRound;
     private float _hasteLeft;
@@ -72,6 +78,7 @@ public sealed class BossSystem
         Walking,
         Telegraph,
         Acting,
+        ChangingPhase,
     }
 
     /// <summary>Multiplies a boss's HP when it appears (co-op scaling); 1 for one player.</summary>
@@ -88,6 +95,12 @@ public sealed class BossSystem
 
     public BossConfig? Config { get; private set; }
 
+    /// <summary>0 for the first phase, then 1, 2... as HP thresholds are crossed.</summary>
+    public int Phase => _phase + 1;
+
+    /// <summary>True while the boss is changing phase (it cannot be hurt).</summary>
+    public bool IsChangingPhase => Boss is not null && _state == State.ChangingPhase;
+
     /// <summary>True while a pattern's ground marker is showing.</summary>
     public bool IsTelegraphing => Boss is not null && _state == State.Telegraph;
 
@@ -103,6 +116,10 @@ public sealed class BossSystem
 
         var boss = Boss!;
         _hasteLeft = Math.Max(0f, _hasteLeft - deltaSeconds);
+        if (_state != State.ChangingPhase && TryEnterNextPhase(boss))
+        {
+            return;
+        }
         var target = NearestLivingPlayer(boss.Position, players);
         if (target is null)
         {
@@ -138,6 +155,18 @@ public sealed class BossSystem
 
                 break;
 
+            case State.ChangingPhase:
+                _stateLeft -= deltaSeconds;
+                _transitionAge += deltaSeconds;
+                if (_stateLeft <= 0f)
+                {
+                    boss.IsInvulnerable = false;
+                    _state = State.Walking;
+                    _stateLeft = ActiveIdleSeconds;
+                }
+
+                break;
+
             case State.Acting:
                 Act(boss, players, arena, deltaSeconds);
                 break;
@@ -147,6 +176,15 @@ public sealed class BossSystem
     /// <summary>Ground markers of a pattern about to happen; drawn under the enemies.</summary>
     public void DrawMarkers(IRenderer renderer)
     {
+        if (IsChangingPhase)
+        {
+            // A big pulsing glow while it changes phase and cannot be hurt.
+            var pulse = 0.5f + 0.5f * MathF.Sin(_transitionAge * 12f);
+            renderer.FillCircle(Boss!.Position, Boss.Radius * (2.2f + 0.6f * pulse), TransitionColor * (0.15f + 0.2f * pulse));
+            renderer.FillCircle(Boss.Position, Boss.Radius * 1.5f, TransitionColor * 0.35f);
+            return;
+        }
+
         if (Boss is null || _pattern is null || _state != State.Telegraph)
         {
             return;
@@ -211,6 +249,20 @@ public sealed class BossSystem
 
                 break;
 
+            case BossPatternType.LaserSweep:
+                // The wedge it will sweep: both edges, and the start lane filling up.
+                var sweep = MathHelper.ToRadians(_pattern.SpinDegreesPerSecond) * _pattern.Seconds * _sweepSign;
+                var first = MathF.Atan2(_direction.Y, _direction.X);
+                for (var i = 0; i <= 8; i++)
+                {
+                    var edge = _origin + Direction(first + sweep * i / 8f) * _pattern.Distance;
+                    renderer.DrawLine(_origin, edge, i == 0 || i == 8 ? 6f : 2f, MarkerColor * (i == 0 || i == 8 ? 0.45f : 0.18f));
+                }
+
+                var laserEnd = _origin + _direction * _streamLength;
+                renderer.DrawLine(_origin, Vector2.Lerp(_origin, laserEnd, progress), _pattern.Width, MarkerColor * 0.5f);
+                break;
+
             case BossPatternType.FireStream:
                 // The reach it can sweep, and the lane where the fire starts.
                 renderer.FillCircle(_origin, _pattern.Distance, MarkerColor * 0.1f);
@@ -236,6 +288,15 @@ public sealed class BossSystem
         }
 
         DrawArmor(renderer, Boss);
+        if (_pattern is { Type: BossPatternType.LaserSweep } && _state == State.Acting)
+        {
+            var end = Boss.Position + _direction * _streamLength;
+            renderer.DrawLine(Boss.Position, end, _pattern.Width * 2.5f, LaserColor * 0.35f);
+            renderer.DrawLine(Boss.Position, end, _pattern.Width, LaserColor);
+            renderer.DrawLine(Boss.Position, end, _pattern.Width * 0.35f, LaserCoreColor);
+            return;
+        }
+
         if (_pattern is { Type: BossPatternType.FireStream } && _state == State.Acting)
         {
             var end = Boss.Position + _direction * _streamLength;
@@ -340,7 +401,10 @@ public sealed class BossSystem
         _nextInSequence = 0;
         _round.Clear();
         _lastFromRound = null;
+        _phase = -1;
         _stateLeft = Config?.IdleSeconds ?? 0f;
+        _phase = -1;
+        found.IsInvulnerable = false;
         return Config is not null;
     }
 
@@ -400,7 +464,7 @@ public sealed class BossSystem
 
         _usable.Clear();
         var totalWeight = 0f;
-        var patterns = Config!.Patterns;
+        var patterns = ActivePatterns;
         for (var i = 0; i < patterns.Count; i++)
         {
             var pattern = patterns[i];
@@ -415,6 +479,7 @@ public sealed class BossSystem
                 BossPatternType.FireballSpiral => distance <= pattern.ProjectileRange,
                 BossPatternType.Teleport => arena.Doors.Count > 1,
                 BossPatternType.FireStream => distance <= pattern.Distance,
+                BossPatternType.LaserSweep => distance <= pattern.Distance,
                 BossPatternType.Haste => true,
                 BossPatternType.FireballVolley => distance <= pattern.ProjectileRange,
                 _ => false,
@@ -427,7 +492,7 @@ public sealed class BossSystem
             }
         }
 
-        if (Config.PatternOrder == BossPatternOrder.Shuffled)
+        if (ActiveOrder == BossPatternOrder.Shuffled)
         {
             if (_round.Count == 0)
             {
@@ -446,7 +511,7 @@ public sealed class BossSystem
             return;
         }
 
-        if (Config.PatternOrder == BossPatternOrder.Sequence)
+        if (ActiveOrder == BossPatternOrder.Sequence)
         {
             // The next one in the list; it waits (walking) until it makes sense from here.
             var next = patterns[_nextInSequence % patterns.Count];
@@ -477,6 +542,37 @@ public sealed class BossSystem
         }
 
         StartPattern(boss, target, arena, picked);
+    }
+
+    private IReadOnlyList<BossPatternConfig> ActivePatterns =>
+        _phase >= 0 ? Config!.Phases[_phase].Patterns : Config!.Patterns;
+
+    private BossPatternOrder ActiveOrder => _phase >= 0 ? Config!.Phases[_phase].PatternOrder : Config!.PatternOrder;
+
+    private float ActiveIdleSeconds =>
+        _phase >= 0 ? Config!.Phases[_phase].IdleSeconds ?? Config.IdleSeconds : Config!.IdleSeconds;
+
+    // When HP falls to the next phase's threshold, whatever it was doing is dropped and it
+    // changes phase: it stands still, cannot be hurt, and glows.
+    private bool TryEnterNextPhase(Enemy boss)
+    {
+        var phases = Config!.Phases;
+        if (_phase + 1 >= phases.Count || boss.MaxHp <= 0f || boss.Hp / boss.MaxHp > phases[_phase + 1].HpFraction)
+        {
+            return false;
+        }
+
+        _phase++;
+        _state = State.ChangingPhase;
+        _stateLeft = phases[_phase].TransitionSeconds;
+        _transitionAge = 0f;
+        _queuedFollowUp = null;
+        _round.Clear();
+        _lastFromRound = null;
+        _nextInSequence = 0;
+        boss.IsInvulnerable = true;
+        _audio.PlaySfx(SfxIds.BossTelegraph);
+        return true;
     }
 
     // Every pattern once, shuffled; drawn from the end. The first one drawn is never the one
@@ -517,8 +613,16 @@ public sealed class BossSystem
             _direction = new Vector2(MathF.Cos(boss.Facing), MathF.Sin(boss.Facing));
         }
 
+        // A laser starts to one side of the target and sweeps across it, either way round.
+        if (_pattern.Type == BossPatternType.LaserSweep)
+        {
+            _sweepSign = _random.Chance(0.5f) ? 1f : -1f;
+            var half = MathHelper.ToRadians(_pattern.SpinDegreesPerSecond) * _pattern.Seconds * 0.5f;
+            _direction = Direction(MathF.Atan2(direction.Y, direction.X) - half * _sweepSign);
+        }
+
         boss.Facing = MathF.Atan2(_direction.Y, _direction.X);
-        _streamLength = _pattern.Type == BossPatternType.FireStream
+        _streamLength = _pattern.Type is BossPatternType.FireStream or BossPatternType.LaserSweep
             ? Math.Min(_pattern.Distance, arena.Raycast(boss.Position, _direction, out _))
             : 0f;
         _reach = _pattern.Type == BossPatternType.LineCharge ? Math.Min(_pattern.Distance, clearAhead) : 0f;
@@ -678,10 +782,12 @@ public sealed class BossSystem
                 break;
 
             case BossPatternType.FireStream:
+            case BossPatternType.LaserSweep:
                 // Sweeps round from where it started; pillars and walls cut it short.
                 _elapsed += deltaSeconds;
                 var start = MathF.Atan2(_direction.Y, _direction.X);
-                var angle = start + MathHelper.ToRadians(pattern.SpinDegreesPerSecond) * deltaSeconds;
+                var turn = pattern.Type == BossPatternType.LaserSweep ? _sweepSign : 1f;
+                var angle = start + MathHelper.ToRadians(pattern.SpinDegreesPerSecond) * turn * deltaSeconds;
                 _direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
                 boss.Facing = angle;
                 _streamLength = Math.Min(pattern.Distance, arena.Raycast(boss.Position, _direction, out _));
@@ -693,7 +799,7 @@ public sealed class BossSystem
         if (done)
         {
             _state = State.Walking;
-            _stateLeft = Config!.IdleSeconds;
+            _stateLeft = ActiveIdleSeconds;
             _queuedFollowUp = pattern.FollowUp;
         }
     }

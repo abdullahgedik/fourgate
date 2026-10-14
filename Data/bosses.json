@@ -123,6 +123,74 @@
           }
         }
       ]
+    },
+    {
+      "id": "warden",
+      "displayName": "The Warden",
+      "wave": 50,
+      "hp": 20000,
+      "speed": 85,
+      "radius": 60,
+      "contactDamage": 40,
+      "contactCooldown": 1.0,
+      "xp": 3000,
+      "scoreValue": 10000,
+      "addsBudgetFraction": 0.3,
+      "idleSeconds": 1.4,
+      "knockbackResist": 1.0,
+      "shape": "hexagon",
+      "color": [ 225, 205, 140 ],
+      "patterns": [
+        { "type": "lineCharge", "telegraphSeconds": 0.9, "weight": 2, "damage": 40, "distance": 850, "speed": 1150 },
+        { "type": "groundSlamRing", "telegraphSeconds": 0.9, "weight": 2, "damage": 30, "radius": 400, "ringSpeed": 650, "ringWidth": 40 },
+        {
+          "type": "fireballRing", "telegraphSeconds": 0.7, "weight": 2, "damage": 12, "count": 18, "bursts": 2,
+          "interval": 0.35, "projectileSpeed": 320, "projectileRadius": 12, "projectileRange": 900
+        },
+        { "type": "laserSweep", "telegraphSeconds": 1.0, "weight": 2, "damage": 70, "distance": 1400, "width": 16, "seconds": 1.6, "spinDegreesPerSecond": 70 }
+      ],
+      "phases": [
+        {
+          "hpFraction": 0.66,
+          "transitionSeconds": 2.0,
+          "idleSeconds": 1.2,
+          "patterns": [
+            { "type": "fireStream", "telegraphSeconds": 1.0, "weight": 2, "damage": 40, "distance": 550, "width": 34, "seconds": 2.5, "spinDegreesPerSecond": 90 },
+            { "type": "teleport", "telegraphSeconds": 0.8, "weight": 1 },
+            {
+              "type": "summon", "telegraphSeconds": 0.8, "weight": 1.5, "enemyId": "fast", "count": 6, "spawnRadius": 100,
+              "followUp": { "type": "haste", "telegraphSeconds": 0.6, "speedMultiplier": 2.5, "seconds": 3 }
+            },
+            {
+              "type": "fireballSpiral", "telegraphSeconds": 0.7, "weight": 2, "damage": 10, "count": 3, "seconds": 2.5,
+              "interval": 0.12, "spinDegreesPerSecond": 140, "projectileSpeed": 300, "projectileRadius": 12, "projectileRange": 900
+            },
+            { "type": "laserSweep", "telegraphSeconds": 0.9, "weight": 2, "damage": 70, "distance": 1400, "width": 16, "seconds": 1.6, "spinDegreesPerSecond": 85 }
+          ]
+        },
+        {
+          "hpFraction": 0.33,
+          "transitionSeconds": 2.0,
+          "idleSeconds": 0.9,
+          "patternOrder": "shuffled",
+          "patterns": [
+            { "type": "laserSweep", "telegraphSeconds": 0.8, "damage": 80, "distance": 1400, "width": 18, "seconds": 1.4, "spinDegreesPerSecond": 110 },
+            {
+              "type": "summon", "telegraphSeconds": 0.8, "enemyId": "elite", "count": 1, "spawnRadius": 110,
+              "followUp": {
+                "type": "fireballVolley", "telegraphSeconds": 0.6, "damage": 14, "count": 5, "spreadDegrees": 25, "bursts": 3,
+                "interval": 0.3, "projectileSpeed": 420, "projectileRadius": 12, "projectileRange": 900
+              }
+            },
+            { "type": "lineCharge", "telegraphSeconds": 0.8, "damage": 45, "distance": 900, "speed": 1250 },
+            { "type": "groundSlamRing", "telegraphSeconds": 0.8, "damage": 30, "radius": 420, "ringSpeed": 700, "ringWidth": 40 },
+            {
+              "type": "fireballSpiral", "telegraphSeconds": 0.6, "damage": 10, "count": 4, "seconds": 2.5,
+              "interval": 0.1, "spinDegreesPerSecond": 160, "projectileSpeed": 320, "projectileRadius": 12, "projectileRange": 900
+            }
+          ]
+        }
+      ]
     }
   ]
 }
