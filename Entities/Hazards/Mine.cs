@@ -27,6 +27,7 @@ public sealed class Mine : IHittable
 
     private float _armLeft;
     private float _age;
+    private int _enemyHitsTaken;
 
     public MineShot Shot { get; private set; }
 
@@ -51,9 +52,17 @@ public sealed class Mine : IHittable
     /// <summary>Set once it goes off; it explodes and is removed this frame.</summary>
     public bool IsDetonating { get; set; }
 
+    /// <summary>True when zombies attack it instead of just being blocked by it.</summary>
+    public bool CanBeStruck => Shot.Solid && Shot.EnemyHitsToDetonate > 0 && !IsTriggered && !IsDetonating;
+
+    // A barrel darkens with each zombie hit, so the player can see how long it will hold.
     public VisualDescriptor BodyVisual => Shot.Shootable
-        ? new VisualDescriptor(ShapeKind.Square, Radius, BarrelColor)
+        ? new VisualDescriptor(ShapeKind.Square, Radius, Color.Lerp(BarrelColor, BodyColor, DamageShown))
         : new VisualDescriptor(ShapeKind.Circle, VisualRadius, BodyColor);
+
+    private float DamageShown => Shot.EnemyHitsToDetonate > 0
+        ? 0.7f * _enemyHitsTaken / Shot.EnemyHitsToDetonate
+        : 0f;
 
     /// <summary>A mine's small light (yellow while arming, blinking red once armed), or a barrel's warning band.</summary>
     public VisualDescriptor LightVisual
@@ -79,6 +88,17 @@ public sealed class Mine : IHittable
         _age = 0f;
         IsTriggered = false;
         IsDetonating = false;
+        _enemyHitsTaken = 0;
+    }
+
+    /// <summary>A zombie hit; the last one it can take sets it off.</summary>
+    public void Strike()
+    {
+        _enemyHitsTaken++;
+        if (_enemyHitsTaken >= Shot.EnemyHitsToDetonate)
+        {
+            IsTriggered = true;
+        }
     }
 
     public void Tick(float deltaSeconds)

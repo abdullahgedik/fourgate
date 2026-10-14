@@ -149,6 +149,8 @@ public sealed class WeaponConfig
         DataLoadException.Require(
             !placed.Solid || placed.GridSize > 0, file, $"{path}.placed.gridSize", "must be greater than 0 for a solid weapon");
         DataLoadException.Require(placed.PlaceDistance >= 0, file, $"{path}.placed.placeDistance", "must not be negative");
+        DataLoadException.Require(
+            placed.EnemyHitsToDetonate >= 0, file, $"{path}.placed.enemyHitsToDetonate", "must not be negative");
 
         DataLoadException.Require(Explosion is not null, file, $"{path}.explosion", "is required for this weapon type");
         DataLoadException.Require(

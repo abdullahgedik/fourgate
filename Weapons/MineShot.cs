@@ -22,6 +22,7 @@ namespace Fourgate.Weapons;
 /// <param name="FireHurtsPlayers">False when that fire pool spares players.</param>
 /// <param name="Solid">True when nothing can walk through it; it then snaps to a grid cell.</param>
 /// <param name="GridSize">Size of a grid cell for a solid one.</param>
+/// <param name="EnemyHitsToDetonate">Zombie hits a solid one takes before going off; 0 when zombies leave it alone.</param>
 public readonly record struct MineShot(
     Vector2 Position,
     float Damage,
@@ -41,4 +42,5 @@ public readonly record struct MineShot(
     float FireDamagePerSecond = 0f,
     bool FireHurtsPlayers = true,
     bool Solid = false,
-    float GridSize = 0f);
+    float GridSize = 0f,
+    int EnemyHitsToDetonate = 0);

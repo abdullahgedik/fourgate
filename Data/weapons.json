@@ -325,7 +325,7 @@
       "fireRate": 6,
       "automatic": true,
       "ammo": { "usesMagazine": false, "reserveMax": 10, "infiniteReserve": false },
-      "placed": { "shootable": true, "solid": true, "chainDetonation": true, "gridSize": 60, "placeDistance": 40 },
+      "placed": { "shootable": true, "solid": true, "chainDetonation": true, "gridSize": 60, "placeDistance": 40, "enemyHitsToDetonate": 3 },
       "explosion": { "radius": 160 },
       "levels": [
         { "level": 2, "damageMult": 1.08, "blastRadiusMult": 1.05 },

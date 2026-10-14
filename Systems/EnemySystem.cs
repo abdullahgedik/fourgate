@@ -74,6 +74,7 @@ public sealed class EnemySystem : IHittableSource
             PushOutOfPlayers(enemy, players);
             enemy.Position = arena.ResolveMovement(enemy.Position, enemy.Radius);
             AttackTouchingPlayers(enemy, players);
+            AttackTouchingObstacles(enemy, arena);
             SpreadFire(enemy);
         }
 
@@ -238,6 +239,21 @@ public sealed class EnemySystem : IHittableSource
                 enemy.StartAttackCooldown();
                 return;
             }
+        }
+    }
+
+    // Zombies hit barrels in their way (and any they brush past) with their contact attack;
+    // a player in reach is always hit first.
+    private static void AttackTouchingObstacles(Enemy enemy, Arena arena)
+    {
+        if (!enemy.IsAlive || !enemy.CanAttack || enemy.Config.ContactDamage <= 0f || arena.Obstacles is null)
+        {
+            return;
+        }
+
+        if (arena.Obstacles.StrikeTouching(enemy.Position, enemy.Radius, TouchSlack))
+        {
+            enemy.StartAttackCooldown();
         }
     }
 

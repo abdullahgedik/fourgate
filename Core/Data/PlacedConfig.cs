@@ -18,6 +18,12 @@ public sealed class PlacedConfig
     /// <summary>Size of a grid cell for solid placed weapons; the object nearly fills one cell.</summary>
     public float GridSize { get; init; }
 
+    /// <summary>
+    /// Zombie hits a solid one takes before it goes off; 0 (the default) when zombies do not
+    /// attack it. Player damage still sets it off at once.
+    /// </summary>
+    public int EnemyHitsToDetonate { get; init; }
+
     /// <summary>How far ahead of the player, along the aim, the cell to fill is looked for.</summary>
     public float PlaceDistance { get; init; }
 

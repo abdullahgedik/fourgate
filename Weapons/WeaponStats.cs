@@ -59,7 +59,8 @@ public readonly record struct WeaponStats(
     bool LeaveFireHurtsPlayers,
     bool Solid,
     float GridSize,
-    float PlaceDistance)
+    float PlaceDistance,
+    int EnemyHitsToDetonate)
 {
     /// <summary>
     /// Applies every level bonus up to <paramref name="level"/> to the weapon's base stats;
@@ -254,7 +255,7 @@ public readonly record struct WeaponStats(
             ringCount, ringDistance, ringDamageMult, ringRadiusMult, ringDelay, ringInterval,
             config.Placed?.Shootable ?? false, leaveFireRadius, leaveFireSeconds, leaveFireDamageMult,
             leaveFireHurtsPlayers, config.Placed?.Solid ?? false, config.Placed?.GridSize ?? 0f,
-            config.Placed?.PlaceDistance ?? 0f);
+            config.Placed?.PlaceDistance ?? 0f, config.Placed?.EnemyHitsToDetonate ?? 0);
     }
 
     /// <summary>

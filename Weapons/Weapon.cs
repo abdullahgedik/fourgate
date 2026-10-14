@@ -265,7 +265,8 @@ public sealed class Weapon
                 Stats.Damage * Stats.LeaveFireDamageMult,
                 Stats.LeaveFireHurtsPlayers,
                 Stats.Solid,
-                Stats.GridSize));
+                Stats.GridSize,
+                Stats.EnemyHitsToDetonate));
         }
 
         var damage = NextShotDamage();

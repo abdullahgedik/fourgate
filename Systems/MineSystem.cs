@@ -111,6 +111,27 @@ public sealed class MineSystem : IHittableSource, IObstacleSource
         return true;
     }
 
+    public bool StrikeTouching(Vector2 position, float radius, float slack)
+    {
+        for (var i = 0; i < _mines.Count; i++)
+        {
+            var mine = _mines[i];
+            if (!mine.CanBeStruck)
+            {
+                continue;
+            }
+
+            var pushed = Collision2D.PushOutOfBox(position, radius + slack, mine.Position, new Vector2(mine.Radius));
+            if (pushed != position)
+            {
+                mine.Strike();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public Vector2 PushOut(Vector2 position, float radius)
     {
         for (var i = 0; i < _mines.Count; i++)
