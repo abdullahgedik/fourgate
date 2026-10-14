@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Fourgate.Weapons;
 using Microsoft.Xna.Framework;
 
 namespace Fourgate.Entities.Projectiles;
@@ -42,6 +43,9 @@ public sealed class Bullet
     /// <summary>After a kill, the leftover damage keeps flying to the next enemy in line.</summary>
     public bool Overkill { get; private set; }
 
+    /// <summary>Set for a rocket: it explodes where it stops instead of hitting directly.</summary>
+    public RocketPayload? Rocket { get; private set; }
+
     /// <summary>
     /// True once the bullet has hit something or run out of range. It stays for one more
     /// frame so it is seen arriving at the point where it stopped.
@@ -62,8 +66,10 @@ public sealed class Bullet
         int ricochets,
         float ricochetRadius,
         float ricochetDamageMult,
-        bool overkill)
+        bool overkill,
+        RocketPayload? rocket)
     {
+        Rocket = rocket;
         _origin = origin;
         _travelled = 0f;
         _alreadyHit.Clear();

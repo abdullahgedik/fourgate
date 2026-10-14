@@ -16,11 +16,15 @@ public sealed class ShotSystem
     private const int InitialBullets = 128;
     private const float StreakLength = 90f;
     private const float StreakThickness = 4f;
+    private const float RocketLength = 30f;
+    private const float RocketThickness = 10f;
 
     // How close to a wall line counts as touching it when working out a bounce.
     private const float WallSlack = 0.5f;
 
     private static readonly Color BulletColor = new(255, 225, 120);
+    private static readonly Color RocketColor = new(200, 205, 215);
+    private static readonly Color RocketFlameColor = new(255, 150, 50);
 
     private readonly Arena _arena;
     private readonly Pool<Bullet> _bullets = new(InitialBullets);
@@ -34,6 +38,9 @@ public sealed class ShotSystem
     }
 
     public int BulletCount => _bullets.Count;
+
+    /// <summary>Where rockets explode. Without it, rockets hit like ordinary bullets.</summary>
+    public ExplosiveSystem? Explosives { get; set; }
 
     /// <summary>Debug switch: every bullet kills what it hits.</summary>
     public bool OneShotKills { get; set; }
@@ -61,7 +68,8 @@ public sealed class ShotSystem
         int ricochets = 0,
         float ricochetRadius = 0f,
         float ricochetDamageMult = 1f,
-        bool overkill = false)
+        bool overkill = false,
+        RocketPayload? rocket = null)
     {
         _bullets.Rent().Launch(
             origin,
@@ -75,7 +83,8 @@ public sealed class ShotSystem
             ricochets,
             ricochetRadius,
             ricochetDamageMult,
-            overkill);
+            overkill,
+            rocket);
     }
 
     public void Update(float deltaSeconds)
@@ -99,7 +108,16 @@ public sealed class ShotSystem
         for (var i = 0; i < _bullets.Count; i++)
         {
             var bullet = _bullets[i];
-            renderer.DrawLine(bullet.GetTail(StreakLength), bullet.Position, StreakThickness, BulletColor);
+            if (bullet.Rocket is null)
+            {
+                renderer.DrawLine(bullet.GetTail(StreakLength), bullet.Position, StreakThickness, BulletColor);
+                continue;
+            }
+
+            // A rocket: a short, thick body with a flame behind it.
+            var tail = bullet.GetTail(RocketLength);
+            renderer.DrawLine(bullet.GetTail(RocketLength * 1.8f), tail, RocketThickness * 0.7f, RocketFlameColor);
+            renderer.DrawLine(tail, bullet.Position, RocketThickness, RocketColor);
         }
     }
 
@@ -146,6 +164,14 @@ public sealed class ShotSystem
                 break;
             }
 
+            if (bullet.Rocket is not null && Explosives is not null)
+            {
+                // A rocket does not hit directly: its blast hits everything, including this target.
+                bullet.Advance(hitDistance);
+                ExplodeRocket(bullet);
+                return;
+            }
+
             var damage = OneShotKills ? float.MaxValue : bullet.Damage;
             var hpBefore = hit.HitPointsLeft;
             hit.Hit(damage, bullet.OwnerIndex);
@@ -179,8 +205,20 @@ public sealed class ShotSystem
         }
         else if (atWall || outOfRange)
         {
+            if (bullet.Rocket is not null && Explosives is not null)
+            {
+                ExplodeRocket(bullet);
+                return;
+            }
+
             bullet.Stop();
         }
+    }
+
+    private void ExplodeRocket(Bullet bullet)
+    {
+        bullet.Stop();
+        Explosives!.QueueRocketBlast(bullet.Position, bullet.Damage, bullet.Rocket!.Value, bullet.OwnerIndex);
     }
 
     // Sends a bullet that still has a ricochet from the enemy it just hit to the nearest

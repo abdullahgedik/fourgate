@@ -63,4 +63,11 @@ public enum WeaponAbility
     /// weapon's damage per second.
     /// </summary>
     FireTrail,
+
+    /// <summary>
+    /// <c>seconds</c> after an explosion, <c>count</c> smaller blasts evenly spaced around a ring
+    /// <c>radius</c> away from it go off one by one in a random order, <c>interval</c> apart, with
+    /// <c>damageMult</c> and <c>radiusMult</c> of the main blast.
+    /// </summary>
+    RingBlast,
 }

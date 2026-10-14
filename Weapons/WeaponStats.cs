@@ -45,7 +45,13 @@ public readonly record struct WeaponStats(
     float TrailSeconds,
     float TrailRadius,
     float TrailDamageMult,
-    float TrailSpacing)
+    float TrailSpacing,
+    int RingCount,
+    float RingDistance,
+    float RingDamageMult,
+    float RingRadiusMult,
+    float RingDelay,
+    float RingInterval)
 {
     /// <summary>
     /// Applies every level bonus up to <paramref name="level"/> to the weapon's base stats;
@@ -115,6 +121,12 @@ public readonly record struct WeaponStats(
         var trailRadius = 0f;
         var trailDamageMult = 0f;
         var trailSpacing = 0f;
+        var ringCount = 0;
+        var ringDistance = 0f;
+        var ringDamageMult = 1f;
+        var ringRadiusMult = 1f;
+        var ringDelay = 0f;
+        var ringInterval = 0f;
         if (level >= WeaponConfig.MaxLevel && config.LevelTen is not null)
         {
             damage *= config.LevelTen.DamageMult;
@@ -158,6 +170,15 @@ public readonly record struct WeaponStats(
 
                     case WeaponAbility.ChainDetonation:
                         chainDetonation = true;
+                        break;
+
+                    case WeaponAbility.RingBlast:
+                        ringCount = abilities[i].Count;
+                        ringDistance = abilities[i].Radius;
+                        ringDamageMult = abilities[i].DamageMult;
+                        ringRadiusMult = abilities[i].RadiusMult;
+                        ringDelay = abilities[i].Seconds;
+                        ringInterval = abilities[i].Interval;
                         break;
 
                     case WeaponAbility.PassThrough:
@@ -209,7 +230,8 @@ public readonly record struct WeaponStats(
             fireRadius, fireSeconds, igniteSeconds,
             config.Placed?.TriggerRadius ?? 0f, armSeconds, maxPlaced, chainDetonation,
             blastCount, blastInterval, blastSpread,
-            passThrough, trailInterval, trailSeconds, trailRadius, trailDamageMult, trailSpacing);
+            passThrough, trailInterval, trailSeconds, trailRadius, trailDamageMult, trailSpacing,
+            ringCount, ringDistance, ringDamageMult, ringRadiusMult, ringDelay, ringInterval);
     }
 
     /// <summary>

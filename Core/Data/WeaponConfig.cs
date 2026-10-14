@@ -50,7 +50,7 @@ public sealed class WeaponConfig
     /// <summary>Flight values; required for <see cref="WeaponType.Thrown"/> weapons.</summary>
     public ThrownConfig? Thrown { get; init; }
 
-    /// <summary>Blast values of a thrown weapon that explodes.</summary>
+    /// <summary>Blast values of a weapon that explodes (thrown, placed, or a projectile that explodes where it stops).</summary>
     public ExplosionConfig? Explosion { get; init; }
 
     /// <summary>Fire pool of a thrown weapon that burns; its damage is then per second.</summary>

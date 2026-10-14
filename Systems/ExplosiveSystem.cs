@@ -34,6 +34,8 @@ public sealed class ExplosiveSystem
     private readonly List<IHittableSource> _sources = new();
     private readonly List<IHittable> _inBlast = new();
     private readonly List<ExplosiveShot> _landed = new();
+    private readonly List<QueuedBlast> _queued = new();
+    private readonly List<int> _ringOrder = new();
 
     private readonly HazardSystem? _hazards;
 
@@ -77,8 +79,54 @@ public sealed class ExplosiveSystem
         _thrown.Rent().Launch(shot with { Target = landing });
     }
 
+    /// <summary>Blasts waiting to go off: rocket impacts and the rings that follow them.</summary>
+    public int QueuedBlastCount => _queued.Count;
+
+    /// <summary>
+    /// A rocket's blast, resolved on the next update (which knows the players); a ring of
+    /// smaller blasts follows when the payload has one, going off one by one in a random order.
+    /// </summary>
+    public void QueueRocketBlast(Vector2 center, float damage, in RocketPayload payload, int ownerIndex)
+    {
+        _queued.Add(new QueuedBlast(center, damage, payload.BlastRadius, ownerIndex, 0f));
+
+        if (payload.RingCount <= 0)
+        {
+            return;
+        }
+
+        // Evenly spaced around the ring, but going off in a random order.
+        _ringOrder.Clear();
+        for (var i = 0; i < payload.RingCount; i++)
+        {
+            _ringOrder.Add(i);
+        }
+
+        for (var i = _ringOrder.Count - 1; i > 0; i--)
+        {
+            var swap = _random.NextIndex(i + 1);
+            (_ringOrder[i], _ringOrder[swap]) = (_ringOrder[swap], _ringOrder[i]);
+        }
+
+        var step = MathF.Tau / payload.RingCount;
+        var start = _random.Range(0f, step);
+        for (var i = 0; i < payload.RingCount; i++)
+        {
+            var angle = start + step * _ringOrder[i];
+            var offset = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * payload.RingDistance;
+            _queued.Add(new QueuedBlast(
+                _arena.ClampInside(center + offset, 1f),
+                damage * payload.RingDamageMult,
+                payload.BlastRadius * payload.RingRadiusMult,
+                ownerIndex,
+                payload.RingDelay + payload.RingInterval * i));
+        }
+    }
+
     public void Update(float deltaSeconds, IReadOnlyList<Player> players)
     {
+        UpdateQueuedBlasts(deltaSeconds, players);
+
         // Blasts are resolved after the loop so cluster bombs thrown by a blast do not
         // disturb the pool while it is being walked.
         _landed.Clear();
@@ -131,6 +179,25 @@ public sealed class ExplosiveSystem
     {
         Explode(new ExplosiveShot(center, center, 0f, 0f, damage, blastRadius, ownerIndex), players);
     }
+
+    private void UpdateQueuedBlasts(float deltaSeconds, IReadOnlyList<Player> players)
+    {
+        for (var i = _queued.Count - 1; i >= 0; i--)
+        {
+            var blast = _queued[i];
+            if (blast.SecondsLeft > 0f)
+            {
+                _queued[i] = blast with { SecondsLeft = blast.SecondsLeft - deltaSeconds };
+                continue;
+            }
+
+            Detonate(blast.Center, blast.Damage, blast.Radius, blast.OwnerIndex, players);
+            _queued.RemoveAt(i);
+        }
+    }
+
+    private readonly record struct QueuedBlast(
+        Vector2 Center, float Damage, float Radius, int OwnerIndex, float SecondsLeft);
 
     private void Land(in ExplosiveShot shot, IReadOnlyList<Player> players)
     {

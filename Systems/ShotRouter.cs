@@ -31,11 +31,13 @@ public sealed class ShotRouter : IShotHandler
         int ricochets = 0,
         float ricochetRadius = 0f,
         float ricochetDamageMult = 1f,
-        bool overkill = false)
+        bool overkill = false,
+        RocketPayload? rocket = null)
     {
         _bullets.FireProjectile(
             origin, direction, projectile, damage, ownerIndex, range, pierce, ricochets, ricochetRadius, ricochetDamageMult,
-            overkill);
+            overkill,
+            rocket);
     }
 
     public void ThrowExplosive(in ExplosiveShot shot)

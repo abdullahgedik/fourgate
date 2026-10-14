@@ -89,6 +89,7 @@ public sealed class GameplayScene
         _hazards = new HazardSystem(config.FriendlyFire);
         _hazards.AddSource(_enemies);
         _explosives = new ExplosiveSystem(_arena, config.FriendlyFire, _random, audio, _hazards);
+        _shots.Explosives = _explosives;
         _explosives.AddSource(_enemies);
         _explosives.OneShotKills = config.Debug.OneShotKills;
         _mines = new MineSystem(_explosives, _random, audio);

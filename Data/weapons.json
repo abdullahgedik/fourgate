@@ -285,6 +285,34 @@
           { "id": "fireTrail", "interval": 0.25, "seconds": 2, "radius": 40, "spacing": 80, "damageMult": 0.25 }
         ]
       }
+    },
+    {
+      "id": "rocket",
+      "displayName": "Rocket Launcher",
+      "slot": 8,
+      "unlockWave": 14,
+      "type": "projectile",
+      "damage": 120,
+      "fireRate": 0.8,
+      "automatic": false,
+      "ammo": { "magSize": 1, "reserveMax": 12, "reloadTime": 1.8, "infiniteReserve": false },
+      "projectile": { "speed": 1400, "radius": 8, "range": 1600 },
+      "explosion": { "radius": 170 },
+      "levels": [
+        { "level": 2, "damageMult": 1.08, "fireRateMult": 1.08 },
+        { "level": 3, "damageMult": 1.08, "reserveMaxBonus": 2 },
+        { "level": 4, "damageMult": 1.08, "reloadTimeMult": 0.90 },
+        { "level": 5, "damageMult": 1.08, "blastRadiusMult": 1.08 },
+        { "level": 6, "damageMult": 1.08, "fireRateMult": 1.08 },
+        { "level": 7, "damageMult": 1.08, "reserveMaxBonus": 2 },
+        { "level": 8, "damageMult": 1.08, "reloadTimeMult": 0.90 },
+        { "level": 9, "damageMult": 1.08, "blastRadiusMult": 1.08 }
+      ],
+      "levelTen": {
+        "description": [ "A ring of 6 smaller blasts", "follows each explosion", "+8% damage" ],
+        "damageMult": 1.08,
+        "abilities": [ { "id": "ringBlast", "count": 6, "radius": 120, "damageMult": 0.4, "radiusMult": 0.65, "seconds": 0.15, "interval": 0.07 } ]
+      }
     }
   ]
 }

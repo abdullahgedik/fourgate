@@ -364,7 +364,17 @@ public sealed class Weapon
             Stats.Ricochets,
             Stats.RicochetRadius,
             Stats.RicochetDamageMult,
-            Stats.Overkill);
+            Stats.Overkill,
+            Config.Explosion is null
+                ? null
+                : new RocketPayload(
+                    Stats.BlastRadius,
+                    Stats.RingCount,
+                    Stats.RingDistance,
+                    Stats.RingDamageMult,
+                    Stats.RingRadiusMult,
+                    Stats.RingDelay,
+                    Stats.RingInterval));
     }
 
     // Turns the aim inside the weapon's spread cone. A single bullet lands anywhere in the
