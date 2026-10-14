@@ -17,6 +17,9 @@ public sealed class Weapon
     // is not ready yet. Input feel, not balance.
     private const float ClickBufferSeconds = 0.2f;
 
+    // Overdrive settles back this many times faster than it builds up.
+    private const float OverdriveSettleSpeed = 3f;
+
     // Half the gap between the two muzzles of a dual-wielded weapon.
     private const float DualWieldOffset = 7f;
 
@@ -28,6 +31,7 @@ public sealed class Weapon
     private bool _fireQueued;
     private float _clickBufferLeft;
     private int _shotsFired;
+    private float _overdrive;
 
     /// <param name="config">The weapon's data.</param>
     /// <param name="rules">Global reload rules.</param>
@@ -91,6 +95,12 @@ public sealed class Weapon
         }
     }
 
+    /// <summary>How far the overdrive has built up: 0 at rest, 1 at full speed.</summary>
+    public float Overdrive => _overdrive;
+
+    /// <summary>Shots per second right now, including any overdrive.</summary>
+    public float CurrentFireRate => Stats.FireRate * (1f + (Stats.OverdriveFireRateMult - 1f) * _overdrive);
+
     private float ReloadSeconds => Stats.ReloadTime * _rules.GlobalReloadTimeMultiplier;
 
     private bool ReserveHasAmmo => HasInfiniteReserve || Reserve > 0;
@@ -133,6 +143,7 @@ public sealed class Weapon
         // into the next shot so the fire rate stays exact. An idle weapon rests at zero.
         _cooldown = _cooldown <= 0f ? 0f : _cooldown - deltaSeconds;
         _clickBufferLeft = Math.Max(0f, _clickBufferLeft - deltaSeconds);
+        UpdateOverdrive(deltaSeconds, trigger.Held);
 
         if (IsReloading)
         {
@@ -164,11 +175,11 @@ public sealed class Weapon
         {
             // A dry trigger pull also waits out the fire interval, so holding fire on an
             // empty weapon does not click every frame.
-            _cooldown = 1f / Stats.FireRate;
+            _cooldown = 1f / CurrentFireRate;
             return;
         }
 
-        _cooldown += 1f / Stats.FireRate;
+        _cooldown += 1f / CurrentFireRate;
         Fire(muzzle, direction, trigger.AimDistance, ownerIndex, shots);
         _audio.PlaySfx(SfxIds.WeaponFire);
 
@@ -194,6 +205,7 @@ public sealed class Weapon
     /// <summary>Drops an unfinished reload; its progress is lost (weapon switch).</summary>
     public void CancelReload()
     {
+        _overdrive = 0f;
         _reloadLeft = 0f;
         _fireQueued = false;
         _clickBufferLeft = 0f;
@@ -227,6 +239,22 @@ public sealed class Weapon
         var side = new Vector2(-direction.Y, direction.X) * DualWieldOffset;
         FireVolley(muzzle + side, direction, damage, ownerIndex, shots);
         FireVolley(muzzle - side, direction, damage, ownerIndex, shots);
+    }
+
+    // Builds up while the trigger is held (and the weapon is not reloading), and settles
+    // back faster once it is let go.
+    private void UpdateOverdrive(float deltaSeconds, bool triggerHeld)
+    {
+        if (Stats.OverdriveFireRateMult <= 1f)
+        {
+            _overdrive = 0f;
+            return;
+        }
+
+        var rate = Stats.OverdriveSeconds > 0f ? deltaSeconds / Stats.OverdriveSeconds : 1f;
+        _overdrive = triggerHeld && !IsReloading
+            ? Math.Min(1f, _overdrive + rate)
+            : Math.Max(0f, _overdrive - rate * OverdriveSettleSpeed);
     }
 
     // Counts shots so that every Nth one can be empowered. The count carries over reloads

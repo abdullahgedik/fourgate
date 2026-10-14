@@ -26,4 +26,10 @@ public enum WeaponAbility
 
     /// <summary>Every <c>count</c>-th shot deals the ability's <c>damageMult</c> times the damage.</summary>
     EmpoweredShot,
+
+    /// <summary>
+    /// While fire is held the fire rate climbs to the ability's <c>fireRateMult</c> over
+    /// <c>seconds</c>, and settles back when fire is released.
+    /// </summary>
+    Overdrive,
 }

@@ -16,4 +16,10 @@ public sealed class WeaponAbilityConfig
 
     /// <summary>Size multiplier applied by the ability (cluster: mini-bomb blast radius).</summary>
     public float RadiusMult { get; init; } = 1f;
+
+    /// <summary>Fire rate multiplier reached by the ability (overdrive: at full ramp).</summary>
+    public float FireRateMult { get; init; } = 1f;
+
+    /// <summary>Time the ability takes, in seconds (overdrive: to ramp up fully).</summary>
+    public float Seconds { get; init; }
 }

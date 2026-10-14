@@ -141,6 +141,34 @@
         "damageMult": 1.08,
         "abilities": [ { "id": "pierce", "count": 3 }, { "id": "empoweredShot", "count": 4, "damageMult": 2.0 } ]
       }
+    },
+    {
+      "id": "assault",
+      "displayName": "Assault Rifle",
+      "slot": 5,
+      "unlockWave": 7,
+      "type": "projectile",
+      "damage": 18,
+      "fireRate": 8,
+      "automatic": true,
+      "spreadDegrees": 3,
+      "ammo": { "magSize": 30, "reserveMax": 180, "reloadTime": 1.4, "infiniteReserve": false },
+      "projectile": { "speed": 7000, "radius": 4, "range": 1300 },
+      "levels": [
+        { "level": 2, "damageMult": 1.08, "fireRateMult": 1.08 },
+        { "level": 3, "damageMult": 1.08, "magSizeBonus": 5 },
+        { "level": 4, "damageMult": 1.08, "reloadTimeMult": 0.90 },
+        { "level": 5, "damageMult": 1.08, "spreadMult": 0.85 },
+        { "level": 6, "damageMult": 1.08, "fireRateMult": 1.08 },
+        { "level": 7, "damageMult": 1.08, "magSizeBonus": 5 },
+        { "level": 8, "damageMult": 1.08, "reloadTimeMult": 0.90 },
+        { "level": 9, "damageMult": 1.08, "spreadMult": 0.85 }
+      ],
+      "levelTen": {
+        "description": [ "Overdrive: fire rate climbs", "while the trigger is held", "+8% damage" ],
+        "damageMult": 1.08,
+        "abilities": [ { "id": "overdrive", "fireRateMult": 1.75, "seconds": 1.5 } ]
+      }
     }
   ]
 }
