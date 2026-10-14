@@ -40,6 +40,18 @@ public sealed class EnemyConfig
     /// <summary>Placeholder body color as red, green, blue (0–255).</summary>
     public List<int> Color { get; init; } = new() { 90, 190, 100 };
 
+    /// <summary>Width (degrees) of the front arc that is armored; 0 for no armor.</summary>
+    public float FrontArmorArcDegrees { get; init; }
+
+    /// <summary>Share of bullet and beam damage that gets through the front armor (0–1).</summary>
+    public float FrontArmorDamageMult { get; init; } = 1f;
+
+    /// <summary>Space between the body and the shield band in front of it; 0 with no band.</summary>
+    public float FrontArmorGap { get; init; }
+
+    /// <summary>Thickness of the shield band; 0 for armor on the body itself.</summary>
+    public float FrontArmorThickness { get; init; }
+
     /// <summary>True for a boss's body: the boss system moves it instead of the zombie AI.</summary>
     public bool IsBoss { get; init; }
 
@@ -72,5 +84,13 @@ public sealed class EnemyConfig
             Color is not null && Color.Count == 3 && Color.TrueForAll(c => c >= 0 && c <= 255),
             file, $"{path}.color", "must be three numbers from 0 to 255 (red, green, blue)");
         Attack?.Validate(file, $"{path}.attack");
+        DataLoadException.Require(
+            FrontArmorArcDegrees >= 0 && FrontArmorArcDegrees <= 360, file, $"{path}.frontArmorArcDegrees",
+            "must be between 0 and 360");
+        DataLoadException.Require(
+            FrontArmorDamageMult >= 0 && FrontArmorDamageMult <= 1, file, $"{path}.frontArmorDamageMult",
+            "must be between 0 and 1");
+        DataLoadException.Require(FrontArmorGap >= 0, file, $"{path}.frontArmorGap", "must not be negative");
+        DataLoadException.Require(FrontArmorThickness >= 0, file, $"{path}.frontArmorThickness", "must not be negative");
     }
 }

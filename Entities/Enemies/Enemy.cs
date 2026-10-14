@@ -165,6 +165,92 @@ public sealed class Enemy : IHittable
         _attackCooldownLeft = Config.ContactCooldown;
     }
 
+    /// <summary>
+    /// A bullet or beam hit: one landing on the armored front arc only does part of its damage
+    /// (none at all with a multiplier of 0, and then the body does not flash).
+    /// </summary>
+    public void HitAt(float damage, int ownerIndex, Vector2 impact)
+    {
+        if (IsInFrontArc(impact - Position))
+        {
+            damage *= Config.FrontArmorDamageMult;
+            if (damage <= 0f)
+            {
+                return;
+            }
+        }
+
+        Hit(damage, ownerIndex);
+    }
+
+    /// <summary>A bullet or beam landing on the armored front stops there, piercing or not.</summary>
+    public bool BlocksShotAt(Vector2 impact)
+    {
+        return IsAlive && IsInFrontArc(impact - Position);
+    }
+
+    /// <summary>True when the armor is a band standing out in front of the body.</summary>
+    public bool HasShieldBand => Config.FrontArmorArcDegrees > 0f && Config.FrontArmorThickness > 0f;
+
+    /// <summary>Distance from the center to the inner edge of the shield band.</summary>
+    public float ShieldInnerRadius => Radius + Config.FrontArmorGap;
+
+    /// <summary>Distance from the center to the outer edge of the shield band.</summary>
+    public float ShieldOuterRadius => ShieldInnerRadius + Config.FrontArmorThickness;
+
+    /// <summary>How far from its center shots can meet it: its body or its shield band.</summary>
+    public float HitReach => HasShieldBand ? Math.Max(Radius, ShieldOuterRadius) : Radius;
+
+    /// <summary>A shot crossing the outer edge of the shield band inside the armored arc stops there.</summary>
+    public bool TryHitShield(
+        Vector2 origin, Vector2 direction, float reach, float shotRadius, out float distance, out Vector2 point)
+    {
+        distance = 0f;
+        point = Vector2.Zero;
+        if (!IsAlive || !HasShieldBand)
+        {
+            return false;
+        }
+
+        var outer = ShieldOuterRadius + shotRadius;
+        var toCenter = Position - origin;
+        var along = Vector2.Dot(toCenter, direction);
+        var offsetSquared = toCenter.LengthSquared() - along * along;
+        if (offsetSquared > outer * outer)
+        {
+            return false;
+        }
+
+        // A shot starting inside the band's circle (fired from up close) is left to the body test.
+        var enter = along - MathF.Sqrt(outer * outer - offsetSquared);
+        if (enter < 0f || enter > reach)
+        {
+            return false;
+        }
+
+        point = origin + direction * enter;
+        if (!IsInFrontArc(point - Position))
+        {
+            return false;
+        }
+
+        distance = enter;
+        return true;
+    }
+
+    /// <summary>True when a point (given from the enemy's center) lies in its armored front arc.</summary>
+    public bool IsInFrontArc(Vector2 offset)
+    {
+        if (Config.FrontArmorArcDegrees <= 0f || offset == Vector2.Zero)
+        {
+            return false;
+        }
+
+        var facing = new Vector2(MathF.Cos(Facing), MathF.Sin(Facing));
+        var halfArc = MathHelper.ToRadians(Config.FrontArmorArcDegrees / 2f);
+        return Vector2.Dot(Vector2.Normalize(offset), facing) >= MathF.Cos(halfArc);
+    }
+
     public void Hit(float damage, int ownerIndex)
     {
         if (!IsAlive)

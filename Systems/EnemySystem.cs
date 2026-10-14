@@ -175,7 +175,7 @@ public sealed class EnemySystem : IHittableSource
         for (var i = 0; i < _enemies.Count; i++)
         {
             var enemy = _enemies[i];
-            _hash.Insert(enemy, enemy.Position, enemy.Radius);
+            _hash.Insert(enemy, enemy.Position, enemy.HitReach);
         }
     }
 

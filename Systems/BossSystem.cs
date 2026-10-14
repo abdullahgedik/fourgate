@@ -22,6 +22,13 @@ public sealed class BossSystem
 
     private static readonly Color MarkerColor = new(255, 60, 40);
     private static readonly Color ShockwaveColor = new(255, 200, 120);
+    private static readonly Color FireColor = new(255, 120, 30);
+    private static readonly Color FireCoreColor = new(255, 220, 120);
+    private static readonly Color ArmorColor = new(200, 205, 215);
+
+    // A turning boss only charges at a target this close to straight ahead (degrees either side).
+    private const float ChargeAheadDegrees = 30f;
+    private const int ArmorPlateSegments = 14;
 
     private readonly EnemySystem _enemies;
     private readonly GameData _data;
@@ -43,6 +50,7 @@ public sealed class BossSystem
     private float _nextThrowIn;
     private float _elapsed;
     private Vector2 _teleportTo;
+    private float _streamLength;
 
     public BossSystem(EnemySystem enemies, GameData data, GameRandom random, IAudioManager audio)
     {
@@ -97,6 +105,7 @@ public sealed class BossSystem
         {
             case State.Walking:
                 Walk(boss, target, arena, deltaSeconds);
+                TurnToward(boss, target.Position, deltaSeconds);
                 _stateLeft -= deltaSeconds;
                 if (_stateLeft <= 0f && target.CanSee(boss.Position, boss.Radius))
                 {
@@ -168,6 +177,14 @@ public sealed class BossSystem
 
                 break;
 
+            case BossPatternType.FireStream:
+                // The reach it can sweep, and the lane where the fire starts.
+                renderer.FillCircle(_origin, _pattern.Distance, MarkerColor * 0.1f);
+                var streamEnd = _origin + _direction * _streamLength;
+                renderer.DrawLine(_origin, streamEnd, _pattern.Width, MarkerColor * 0.25f);
+                renderer.DrawLine(_origin, Vector2.Lerp(_origin, streamEnd, progress), _pattern.Width, MarkerColor * 0.45f);
+                break;
+
             case BossPatternType.Teleport:
                 renderer.FillCircle(_origin, Boss.Radius * (1.5f - 0.5f * progress), MarkerColor * 0.2f);
                 renderer.FillCircle(_teleportTo, Boss.Radius, MarkerColor * 0.2f);
@@ -179,7 +196,21 @@ public sealed class BossSystem
     /// <summary>The shockwave of a slam in progress; drawn over the enemies.</summary>
     public void DrawEffects(IRenderer renderer)
     {
-        if (Boss is null || _pattern is not { Type: BossPatternType.GroundSlamRing } || _state != State.Acting)
+        if (Boss is null)
+        {
+            return;
+        }
+
+        DrawArmor(renderer, Boss);
+        if (_pattern is { Type: BossPatternType.FireStream } && _state == State.Acting)
+        {
+            var end = Boss.Position + _direction * _streamLength;
+            renderer.DrawLine(Boss.Position, end, _pattern.Width, FireColor * 0.85f);
+            renderer.DrawLine(Boss.Position, end, _pattern.Width * 0.4f, FireCoreColor);
+            return;
+        }
+
+        if (_pattern is not { Type: BossPatternType.GroundSlamRing } || _state != State.Acting)
         {
             return;
         }
@@ -193,6 +224,34 @@ public sealed class BossSystem
             renderer.DrawLine(previous, point, _pattern.RingWidth, ShockwaveColor * 0.75f);
             previous = point;
         }
+    }
+
+    // A plate across the armored front, so players can see which side to avoid. Its inner edge
+    // overlaps the body, where blocked shots stop.
+    private void DrawArmor(IRenderer renderer, Enemy boss)
+    {
+        if (!boss.HasShieldBand)
+        {
+            return;
+        }
+
+        // A curved band along exactly the armored arc, where shots are stopped.
+        var halfArc = MathHelper.ToRadians(boss.Config.FrontArmorArcDegrees / 2f);
+        var radius = (boss.ShieldInnerRadius + boss.ShieldOuterRadius) / 2f;
+        var thickness = boss.Config.FrontArmorThickness;
+        var previous = boss.Position + Direction(boss.Facing - halfArc) * radius;
+        for (var i = 1; i <= ArmorPlateSegments; i++)
+        {
+            var angle = boss.Facing - halfArc + 2f * halfArc * i / ArmorPlateSegments;
+            var point = boss.Position + Direction(angle) * radius;
+            renderer.DrawLine(previous, point, thickness, ArmorColor);
+            previous = point;
+        }
+    }
+
+    private static Vector2 Direction(float angle)
+    {
+        return new Vector2(MathF.Cos(angle), MathF.Sin(angle));
     }
 
     // Picks up a boss that has just come in through a door and lets go of one that died.
@@ -237,6 +296,22 @@ public sealed class BossSystem
         return null;
     }
 
+    // Turns at the boss's turn rate (at once when it has none), so a slow turner can be flanked.
+    private void TurnToward(Enemy boss, Vector2 point, float deltaSeconds)
+    {
+        var desired = MathF.Atan2(point.Y - boss.Position.Y, point.X - boss.Position.X);
+        var rate = Config?.TurnDegreesPerSecond ?? 0f;
+        if (rate <= 0f)
+        {
+            boss.Facing = desired;
+            return;
+        }
+
+        var difference = MathHelper.WrapAngle(desired - boss.Facing);
+        var most = MathHelper.ToRadians(rate) * deltaSeconds;
+        boss.Facing = MathHelper.WrapAngle(boss.Facing + Math.Clamp(difference, -most, most));
+    }
+
     private static void Walk(Enemy boss, Player target, Arena arena, float deltaSeconds)
     {
         var waypoint = arena.NextWaypoint(boss.Position, target.Position, boss.Radius);
@@ -248,7 +323,6 @@ public sealed class BossSystem
             return;
         }
 
-        boss.Facing = MathF.Atan2(toWaypoint.Y, toWaypoint.X);
         var step = Math.Min(boss.Config.Speed * deltaSeconds, distance - stopAt);
         boss.Position += toWaypoint / distance * step;
     }
@@ -270,12 +344,14 @@ public sealed class BossSystem
             var pattern = patterns[i];
             var usable = pattern.Type switch
             {
-                BossPatternType.LineCharge => clearAhead >= distance && distance <= pattern.Distance + target.Radius,
+                BossPatternType.LineCharge => clearAhead >= distance && distance <= pattern.Distance + target.Radius
+                    && IsAhead(boss, direction),
                 BossPatternType.GroundSlamRing => distance <= pattern.Radius,
                 BossPatternType.Summon => _enemies.Count + pattern.Count <= MaxAliveEnemies,
                 BossPatternType.FireballRing => distance <= pattern.ProjectileRange,
                 BossPatternType.FireballSpiral => distance <= pattern.ProjectileRange,
                 BossPatternType.Teleport => arena.Doors.Count > 1,
+                BossPatternType.FireStream => distance <= pattern.Distance,
                 _ => false,
             };
 
@@ -307,7 +383,17 @@ public sealed class BossSystem
         _stateLeft = _pattern.TelegraphSeconds;
         _origin = boss.Position;
         _direction = direction;
-        boss.Facing = MathF.Atan2(direction.Y, direction.X);
+
+        // A fire stream starts where a slow turner is facing; everything else is aimed at the target.
+        if (_pattern.Type == BossPatternType.FireStream && Config.TurnDegreesPerSecond > 0f)
+        {
+            _direction = new Vector2(MathF.Cos(boss.Facing), MathF.Sin(boss.Facing));
+        }
+
+        boss.Facing = MathF.Atan2(_direction.Y, _direction.X);
+        _streamLength = _pattern.Type == BossPatternType.FireStream
+            ? Math.Min(_pattern.Distance, arena.Raycast(boss.Position, _direction, out _))
+            : 0f;
         _reach = _pattern.Type == BossPatternType.LineCharge ? Math.Min(_pattern.Distance, clearAhead) : 0f;
 
         _summonPoints.Clear();
@@ -328,6 +414,17 @@ public sealed class BossSystem
         }
 
         _audio.PlaySfx(SfxIds.BossTelegraph);
+    }
+
+    private bool IsAhead(Enemy boss, Vector2 direction)
+    {
+        if (Config is not { TurnDegreesPerSecond: > 0f })
+        {
+            return true;
+        }
+
+        var facing = new Vector2(MathF.Cos(boss.Facing), MathF.Sin(boss.Facing));
+        return Vector2.Dot(facing, direction) >= MathF.Cos(MathHelper.ToRadians(ChargeAheadDegrees));
     }
 
     // Just inside a random door other than the one the boss is nearest to.
@@ -434,12 +531,43 @@ public sealed class BossSystem
                 boss.Position = _teleportTo;
                 done = true;
                 break;
+
+            case BossPatternType.FireStream:
+                // Sweeps round from where it started; pillars and walls cut it short.
+                _elapsed += deltaSeconds;
+                var start = MathF.Atan2(_direction.Y, _direction.X);
+                var angle = start + MathHelper.ToRadians(pattern.SpinDegreesPerSecond) * deltaSeconds;
+                _direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+                boss.Facing = angle;
+                _streamLength = Math.Min(pattern.Distance, arena.Raycast(boss.Position, _direction, out _));
+                BurnAlongStream(boss, players, pattern, deltaSeconds);
+                done = _elapsed >= pattern.Seconds;
+                break;
         }
 
         if (done)
         {
             _state = State.Walking;
             _stateLeft = Config!.IdleSeconds;
+        }
+    }
+
+    private void BurnAlongStream(Enemy boss, IReadOnlyList<Player> players, BossPatternConfig pattern, float deltaSeconds)
+    {
+        for (var i = 0; i < players.Count; i++)
+        {
+            var player = players[i];
+            if (!player.IsAlive)
+            {
+                continue;
+            }
+
+            var along = Math.Clamp(Vector2.Dot(player.Position - boss.Position, _direction), 0f, _streamLength);
+            var reach = pattern.Width / 2f + player.Radius;
+            if (Vector2.DistanceSquared(boss.Position + _direction * along, player.Position) <= reach * reach)
+            {
+                player.TakeDamage(pattern.Damage * deltaSeconds, silent: true);
+            }
         }
     }
 

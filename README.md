@@ -15,8 +15,9 @@ local co-op and menus are still to come.
 - Waves that grow with a spawn budget; doors glow before a group emerges, and an
   edge-of-screen marker points to a glowing door outside the view
 - Five zombie types (normal, fast, ranged with telegraphed fireballs, tank, elite with a
-  fireball volley) and bosses: The Butcher on wave 10 (charge, ground slam, summons) and
-  the Pyre Witch on wave 20 (fireball rings and spirals, teleport, summons)
+  fireball volley) and bosses: The Butcher on wave 10 (charge, ground slam, summons),
+  the Pyre Witch on wave 20 (fireball rings and spirals, teleport, summons) and The
+  Juggernaut on wave 30 (armored front, sweeping fire stream, charge)
 - Knockback on hits
 - Nine guns (pistol, SMG, shotgun, marksman rifle, assault rifle, sniper rifle,
   flamethrower, rocket launcher, railgun) and four pieces of equipment (hand grenade, molotov, mine,

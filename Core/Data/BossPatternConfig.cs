@@ -16,10 +16,10 @@ public sealed class BossPatternConfig
     /// <summary>Relative chance of picking this pattern among the ones usable right now.</summary>
     public float Weight { get; init; } = 1f;
 
-    /// <summary>Damage to a player it hits (charge, ring).</summary>
+    /// <summary>Damage to a player it hits (charge, ring, fireballs); per second for a fire stream.</summary>
     public float Damage { get; init; }
 
-    /// <summary>Charge: how far it rushes.</summary>
+    /// <summary>Charge: how far it rushes. Fire stream: how far the fire reaches.</summary>
     public float Distance { get; init; }
 
     /// <summary>Charge: world units per second while rushing.</summary>
@@ -49,11 +49,14 @@ public sealed class BossPatternConfig
     /// <summary>Ring: seconds between bursts. Spiral: seconds between throws.</summary>
     public float Interval { get; init; }
 
-    /// <summary>Spiral: how long it keeps throwing.</summary>
+    /// <summary>Spiral: how long it keeps throwing. Fire stream: how long it breathes fire.</summary>
     public float Seconds { get; init; }
 
-    /// <summary>Spiral: how fast the arms turn, in degrees per second (negative turns the other way).</summary>
+    /// <summary>Spiral, fire stream: how fast it turns, in degrees per second (negative turns the other way).</summary>
     public float SpinDegreesPerSecond { get; init; }
+
+    /// <summary>Fire stream: thickness of the fire.</summary>
+    public float Width { get; init; }
 
     /// <summary>Ring, spiral: world units per second a fireball flies.</summary>
     public float ProjectileSpeed { get; init; }
@@ -109,6 +112,14 @@ public sealed class BossPatternConfig
 
             case BossPatternType.Teleport:
                 DataLoadException.Require(TelegraphSeconds > 0, file, $"{path}.telegraphSeconds", "must be greater than 0");
+                break;
+
+            case BossPatternType.FireStream:
+                RequireAreaTelegraph(file, path);
+                DataLoadException.Require(Damage > 0, file, $"{path}.damage", "must be greater than 0 (per second)");
+                DataLoadException.Require(Distance > 0, file, $"{path}.distance", "must be greater than 0");
+                DataLoadException.Require(Width > 0, file, $"{path}.width", "must be greater than 0");
+                DataLoadException.Require(Seconds > 0, file, $"{path}.seconds", "must be greater than 0");
                 break;
         }
     }

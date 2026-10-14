@@ -4,6 +4,7 @@ using Fourgate.Core.Rng;
 using Fourgate.Entities;
 using Fourgate.Entities.Enemies;
 using Fourgate.Systems;
+using Fourgate.Weapons;
 using Microsoft.Xna.Framework;
 
 namespace Fourgate.Tests;
@@ -195,6 +196,210 @@ public class BossTests
         Assert.True(nearDoor);
     }
 
+    [Fact]
+    public void ShippedJuggernaut_LeadsWaveThirty_ArmoredInFront_WithAFireStreamAndACharge()
+    {
+        var juggernaut = DataLoader.LoadAll(DataLoader.DefaultDirectory).GetBossForWave(30);
+
+        Assert.NotNull(juggernaut);
+        Assert.Equal(8000f, juggernaut!.Hp);
+        Assert.True(juggernaut.FrontArmorArcDegrees >= 120f);
+        Assert.Equal(0f, juggernaut.FrontArmorDamageMult);
+        Assert.True(juggernaut.TurnDegreesPerSecond > 0f);
+        Assert.Contains(juggernaut.Patterns, p => p.Type == BossPatternType.FireStream && p.TelegraphSeconds >= 0.8f);
+        Assert.Contains(juggernaut.Patterns, p => p.Type == BossPatternType.LineCharge);
+    }
+
+    [Fact]
+    public void FrontArmor_TakesMostOfAShotFromTheFront_ButNotFromBehindOrFromABlast()
+    {
+        var world = new World(Pattern(BossPatternType.Summon));
+        var boss = world.SpawnBoss(new Vector2(1000, 1000));
+        boss.Facing = 0f;
+
+        // Landing on the +X side: the armored front.
+        boss.HitAt(10f, 0, boss.Position + Vector2.UnitX * 50f);
+        Assert.Equal(98f, boss.Hp, 3);
+
+        boss.HitAt(10f, 0, boss.Position - Vector2.UnitX * 50f);
+        Assert.Equal(88f, boss.Hp, 3);
+
+        boss.Hit(10f, 0);
+        Assert.Equal(78f, boss.Hp, 3);
+    }
+
+    [Theory]
+    [InlineData(true, 0)]
+    [InlineData(false, 1)]
+    public void PiercingBullet_StopsOnTheArmoredFront_ButPassesThroughFromBehind(bool fromTheFront, int hitsBehind)
+    {
+        var world = new World(Pattern(BossPatternType.Summon));
+        var boss = world.SpawnBoss(new Vector2(1000, 1000));
+        boss.Facing = fromTheFront ? 0f : MathF.PI;
+        world.Enemies.Update(Step, new List<Player>(), new Arena(TestData.Arena()));
+        var shots = new ShotSystem(new Arena(TestData.Arena()));
+        shots.AddSource(world.Enemies);
+        var behind = new PracticeTarget(new Vector2(700, 1000), 20);
+        shots.AddTarget(behind);
+
+        // Flying toward -X: it meets the +X side of the boss first.
+        shots.FireProjectile(
+            new Vector2(1400, 1000), -Vector2.UnitX, new ProjectileConfig { Speed = 6000, Radius = 4, Range = 1100 }, 10, 0,
+            pierce: 3);
+        for (var i = 0; i < 20; i++)
+        {
+            shots.Update(Step);
+        }
+
+        Assert.Equal(hitsBehind, behind.HitCount);
+        Assert.Equal(fromTheFront ? 98f : 90f, boss.Hp, 3);
+    }
+
+    [Fact]
+    public void Shot_IsBlocked_ByWhereItLands_NotTheWayItFlies()
+    {
+        var world = new World(Pattern(BossPatternType.Summon));
+        var boss = world.SpawnBoss(new Vector2(1000, 1000));
+        boss.Facing = 0f;
+        world.Enemies.Update(Step, new List<Player>(), new Arena(TestData.Arena()));
+        var shots = new ShotSystem(new Arena(TestData.Arena()));
+        shots.AddSource(world.Enemies);
+
+        // Flying straight down at the boss's upper-right edge: it lands about 40 degrees off the
+        // facing, inside the 90-degree armored arc, so the plate takes it.
+        shots.FireProjectile(
+            new Vector2(1038, 700), Vector2.UnitY, new ProjectileConfig { Speed = 6000, Radius = 1, Range = 1100 }, 10, 0,
+            pierce: 3);
+        for (var i = 0; i < 10; i++)
+        {
+            shots.Update(Step);
+        }
+
+        Assert.Equal(98f, boss.Hp, 3);
+        Assert.Equal(1, shots.SparkCount);
+    }
+
+    [Fact]
+    public void ArmorWithNoDamageThrough_LeavesTheBossUntouched()
+    {
+        var shipped = DataLoader.LoadAll(DataLoader.DefaultDirectory).GetBossForWave(30)!;
+        var enemies = new EnemySystem(new NullAudioManager());
+        var boss = enemies.Spawn(shipped.AsEnemy, new Vector2(1000, 1000));
+        boss.Facing = 0f;
+
+        boss.HitAt(500f, 0, boss.Position + Vector2.UnitX * boss.Radius);
+
+        Assert.Equal(boss.MaxHp, boss.Hp);
+        Assert.False(boss.ConsumeHit());
+    }
+
+    [Fact]
+    public void ShieldBand_StopsShotsOutInFrontOfTheBody()
+    {
+        var world = new World(Pattern(BossPatternType.Summon), armorGap: 20f, armorThickness: 20f);
+        var boss = world.SpawnBoss(new Vector2(1000, 1000));
+        boss.Facing = 0f;
+        world.Enemies.Update(Step, new List<Player>(), new Arena(TestData.Arena()));
+        var shots = new ShotSystem(new Arena(TestData.Arena()));
+        shots.AddSource(world.Enemies);
+        var behind = new PracticeTarget(new Vector2(700, 1000), 20);
+        shots.AddTarget(behind);
+
+        shots.FireProjectile(
+            new Vector2(1400, 1000), -Vector2.UnitX, new ProjectileConfig { Speed = 600, Radius = 4, Range = 1100 }, 10, 0,
+            pierce: 3);
+        for (var i = 0; i < 60 && shots.BulletCount > 0; i++)
+        {
+            shots.Update(Step);
+        }
+
+        // Body radius 50 + gap 20 + band 20: it stops 90 out (plus its own radius), untouched behind.
+        Assert.Equal(0, shots.BulletCount);
+        Assert.Equal(1, shots.SparkCount);
+        Assert.Equal(100f, boss.Hp);
+        Assert.Equal(0, behind.HitCount);
+
+        // A beam stops at the band too.
+        shots.FireBeam(new BeamShot(new Vector2(1400, 1000), -Vector2.UnitX, 10, 2400, 10, 0, 0));
+        Assert.Equal(0, behind.HitCount);
+        Assert.Equal(100f, boss.Hp);
+    }
+
+    [Fact]
+    public void ShieldBand_LeavesTheSidesOpen()
+    {
+        var world = new World(Pattern(BossPatternType.Summon), armorGap: 20f, armorThickness: 20f);
+        var boss = world.SpawnBoss(new Vector2(1000, 1000));
+        boss.Facing = 0f;
+        world.Enemies.Update(Step, new List<Player>(), new Arena(TestData.Arena()));
+        var shots = new ShotSystem(new Arena(TestData.Arena()));
+        shots.AddSource(world.Enemies);
+
+        // Straight down onto the top of the body, 90 degrees from the facing.
+        shots.FireProjectile(
+            new Vector2(1000, 600), Vector2.UnitY, new ProjectileConfig { Speed = 6000, Radius = 4, Range = 1100 }, 10, 0);
+        for (var i = 0; i < 10; i++)
+        {
+            shots.Update(Step);
+        }
+
+        Assert.Equal(90f, boss.Hp, 3);
+        Assert.Equal(0, shots.SparkCount);
+    }
+
+    [Fact]
+    public void Beam_StopsOnTheArmoredFront()
+    {
+        var world = new World(Pattern(BossPatternType.Summon));
+        var boss = world.SpawnBoss(new Vector2(1000, 1000));
+        boss.Facing = 0f;
+        world.Enemies.Update(Step, new List<Player>(), new Arena(TestData.Arena()));
+        var shots = new ShotSystem(new Arena(TestData.Arena()));
+        shots.AddSource(world.Enemies);
+        var behind = new PracticeTarget(new Vector2(700, 1000), 20);
+        shots.AddTarget(behind);
+
+        shots.FireBeam(new BeamShot(new Vector2(1400, 1000), -Vector2.UnitX, 10, 2400, 10, 0, 0));
+
+        Assert.Equal(0, behind.HitCount);
+        Assert.Equal(98f, boss.Hp, 3);
+    }
+
+    [Fact]
+    public void SlowTurner_CanBeFlanked_AndDoesNotChargeAtATargetBehindIt()
+    {
+        var world = new World(Pattern(BossPatternType.LineCharge), turnDegreesPerSecond: 60f);
+        var boss = world.SpawnBoss(new Vector2(1000, 1000));
+        boss.Facing = 0f;
+        world.AddPlayer(new Vector2(700, 1000));
+
+        // Behind it: half a second turns it only 30 degrees, and it does not charge yet.
+        world.Run(0.5f);
+        Assert.InRange(MathF.Abs(boss.Facing), 0.45f, 0.6f);
+
+        world.Run(0.6f);
+        Assert.False(world.Bosses.IsTelegraphing);
+    }
+
+    [Fact]
+    public void FireStream_BurnsAPlayerInItsPath_OverTime()
+    {
+        var pattern = new BossPatternConfig
+        {
+            Type = BossPatternType.FireStream, TelegraphSeconds = 0.8f, Damage = 40, Distance = 420, Width = 34,
+            Seconds = 1f, SpinDegreesPerSecond = 0,
+        };
+        var world = new World(pattern);
+        var inFront = world.AddPlayer(new Vector2(1300, 1000));
+        var farAway = world.AddPlayer(new Vector2(1000, 1600));
+        world.SpawnBoss(new Vector2(1000, 1000));
+
+        world.Run(3f);
+
+        Assert.InRange(inFront.Hp, 58f, 62f);
+        Assert.Equal(100f, farAway.Hp);
+    }
+
     private static int StartWave(GameData shipped, int wave)
     {
         var config = TestData.Game(startWave: wave);
@@ -236,12 +441,14 @@ public class BossTests
         private readonly List<Player> _players = new();
         private readonly BossConfig _boss;
 
-        public World(BossPatternConfig pattern)
+        public World(BossPatternConfig pattern, float turnDegreesPerSecond = 0f, float armorGap = 0f, float armorThickness = 0f)
         {
             _boss = new BossConfig
             {
                 Id = "boss", DisplayName = "Boss", Wave = 10, Hp = 100, Speed = 0, Radius = 50, ContactDamage = 0,
                 ContactCooldown = 1, Xp = 1, ScoreValue = 1, AddsBudgetFraction = 0.3f, IdleSeconds = 1,
+                TurnDegreesPerSecond = turnDegreesPerSecond, FrontArmorArcDegrees = 90, FrontArmorDamageMult = 0.2f,
+                FrontArmorGap = armorGap, FrontArmorThickness = armorThickness,
                 Patterns = new List<BossPatternConfig> { pattern },
             };
             var data = new GameData(

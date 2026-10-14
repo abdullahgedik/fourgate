@@ -126,7 +126,7 @@ public sealed class GameplayScene : IScene
             MaxAliveEnemies = config.MaxAliveEnemies,
             Fireballs = _fireballs,
         };
-        _shots = new ShotSystem(_arena);
+        _shots = new ShotSystem(_arena, audio);
         _shots.AddSource(_enemies);
         _xp = new XpSystem(config.Xp, audio);
         _shots.OneShotKills = config.Debug.OneShotKills;

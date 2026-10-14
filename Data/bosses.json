@@ -50,6 +50,35 @@
         { "type": "teleport", "telegraphSeconds": 0.8, "weight": 1 },
         { "type": "summon", "telegraphSeconds": 0.8, "weight": 1, "enemyId": "ranged", "count": 3, "spawnRadius": 150 }
       ]
+    },
+    {
+      "id": "juggernaut",
+      "displayName": "The Juggernaut",
+      "wave": 30,
+      "hp": 8000,
+      "speed": 75,
+      "radius": 58,
+      "contactDamage": 35,
+      "contactCooldown": 1.0,
+      "xp": 1200,
+      "scoreValue": 3000,
+      "addsBudgetFraction": 0.3,
+      "idleSeconds": 1.5,
+      "knockbackResist": 1.0,
+      "turnDegreesPerSecond": 100,
+      "frontArmorArcDegrees": 140,
+      "frontArmorDamageMult": 0,
+      "frontArmorGap": 14,
+      "frontArmorThickness": 22,
+      "shape": "square",
+      "color": [ 110, 115, 130 ],
+      "patterns": [
+        {
+          "type": "fireStream", "telegraphSeconds": 1.0, "weight": 2, "damage": 40, "distance": 650, "width": 34,
+          "seconds": 3, "spinDegreesPerSecond": 75
+        },
+        { "type": "lineCharge", "telegraphSeconds": 1.0, "weight": 2, "damage": 55, "distance": 900, "speed": 1200 }
+      ]
     }
   ]
 }

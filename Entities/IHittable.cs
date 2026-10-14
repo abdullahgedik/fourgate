@@ -16,6 +16,38 @@ public interface IHittable
     /// <param name="ownerIndex">Index of the player who fired.</param>
     void Hit(float damage, int ownerIndex);
 
+    /// <summary>
+    /// A bullet or beam hit landing at a point on the body, for things whose armor depends on
+    /// where they are struck. Most things treat it as a plain hit.
+    /// </summary>
+    /// <param name="damage">Damage dealt.</param>
+    /// <param name="ownerIndex">Index of the player who fired.</param>
+    /// <param name="impact">Where on (or next to) the body the shot lands.</param>
+    void HitAt(float damage, int ownerIndex, Vector2 impact)
+    {
+        Hit(damage, ownerIndex);
+    }
+
+    /// <summary>
+    /// True when a shot landing at this point meets armor that stops it there (even a piercing
+    /// one). Most things have no armor.
+    /// </summary>
+    bool BlocksShotAt(Vector2 impact)
+    {
+        return false;
+    }
+
+    /// <summary>
+    /// Where a shot moving along a ray first meets a shield standing out from the body, if it
+    /// does within <paramref name="reach"/>. Most things have no shield.
+    /// </summary>
+    bool TryHitShield(Vector2 origin, Vector2 direction, float reach, float shotRadius, out float distance, out Vector2 point)
+    {
+        distance = 0f;
+        point = Vector2.Zero;
+        return false;
+    }
+
     /// <summary>Damage over time (fire): no hit flash or hit sound for every small tick.</summary>
     /// <param name="damage">Damage dealt this frame.</param>
     /// <param name="ownerIndex">Index of the player whose fire it is.</param>

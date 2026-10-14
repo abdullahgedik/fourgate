@@ -38,6 +38,21 @@ public sealed class BossConfig
 
     public float KnockbackResist { get; init; }
 
+    /// <summary>How fast it turns to face its target, in degrees per second; 0 turns at once.</summary>
+    public float TurnDegreesPerSecond { get; init; }
+
+    /// <summary>Width (degrees) of its armored front arc; 0 for no armor.</summary>
+    public float FrontArmorArcDegrees { get; init; }
+
+    /// <summary>Share of bullet and beam damage that gets through the front armor (0–1).</summary>
+    public float FrontArmorDamageMult { get; init; } = 1f;
+
+    /// <summary>Space between the body and the shield band in front of it.</summary>
+    public float FrontArmorGap { get; init; }
+
+    /// <summary>Thickness of the shield band; shots crossing it inside the arc stop there.</summary>
+    public float FrontArmorThickness { get; init; }
+
     public ShapeKind Shape { get; init; } = ShapeKind.Circle;
 
     public List<int> Color { get; init; } = new() { 200, 60, 60 };
@@ -63,6 +78,10 @@ public sealed class BossConfig
         UnlockWave = Wave,
         DropChance = 0f,
         KnockbackResist = KnockbackResist,
+        FrontArmorArcDegrees = FrontArmorArcDegrees,
+        FrontArmorDamageMult = FrontArmorDamageMult,
+        FrontArmorGap = FrontArmorGap,
+        FrontArmorThickness = FrontArmorThickness,
         Shape = Shape,
         Color = Color,
         IsBoss = true,
@@ -85,6 +104,16 @@ public sealed class BossConfig
         DataLoadException.Require(IdleSeconds >= 0, file, $"{path}.idleSeconds", "must not be negative");
         DataLoadException.Require(
             KnockbackResist >= 0 && KnockbackResist <= 1, file, $"{path}.knockbackResist", "must be between 0 and 1");
+        DataLoadException.Require(
+            TurnDegreesPerSecond >= 0, file, $"{path}.turnDegreesPerSecond", "must not be negative");
+        DataLoadException.Require(
+            FrontArmorArcDegrees >= 0 && FrontArmorArcDegrees <= 360, file, $"{path}.frontArmorArcDegrees",
+            "must be between 0 and 360");
+        DataLoadException.Require(
+            FrontArmorDamageMult >= 0 && FrontArmorDamageMult <= 1, file, $"{path}.frontArmorDamageMult",
+            "must be between 0 and 1");
+        DataLoadException.Require(FrontArmorGap >= 0, file, $"{path}.frontArmorGap", "must not be negative");
+        DataLoadException.Require(FrontArmorThickness >= 0, file, $"{path}.frontArmorThickness", "must not be negative");
         DataLoadException.Require(
             Color is not null && Color.Count == 3 && Color.TrueForAll(c => c >= 0 && c <= 255),
             file, $"{path}.color", "must be three numbers from 0 to 255 (red, green, blue)");

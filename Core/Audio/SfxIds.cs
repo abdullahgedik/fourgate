@@ -27,6 +27,7 @@ public static class SfxIds
     public const string EnemyFireball = "enemy_fireball";
     public const string BossTelegraph = "boss_telegraph";
     public const string BossAttack = "boss_attack";
+    public const string ArmorHit = "armor_hit";
     public const string WeaponFire = "weapon_fire";
     public const string WeaponThrow = "weapon_throw";
     public const string Explosion = "explosion";

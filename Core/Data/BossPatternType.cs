@@ -20,4 +20,7 @@ public enum BossPatternType
 
     /// <summary>Vanishes and reappears just inside another door.</summary>
     Teleport,
+
+    /// <summary>Breathes a long stream of fire that sweeps round while it lasts.</summary>
+    FireStream,
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Fourgate.Core.Audio;
 using Fourgate.Core.Data;
 using Fourgate.Core.Pooling;
 using Fourgate.Core.Rendering;
@@ -24,23 +25,38 @@ public sealed class ShotSystem
     private static readonly Color RocketFlameColor = new(255, 150, 50);
     private static readonly Color BeamGlowColor = new(90, 180, 255);
     private static readonly Color BeamCoreColor = new(225, 245, 255);
+    private static readonly Color SparkColor = new(255, 230, 150);
+    private static readonly Color SparkCoreColor = new(255, 255, 255);
+
+    // A spark where a shot glances off armor.
+    private const float SparkSeconds = 0.2f;
+    private const float SparkStartRadius = 5f;
+    private const float SparkEndRadius = 22f;
+    private const int SparkLines = 6;
+    private const float SparkLineLength = 16f;
 
     // How long a beam stays on screen after firing, and how wide its glow is drawn.
     private const float BeamFadeSeconds = 0.3f;
     private const float BeamGlowScale = 3f;
 
     private readonly Arena _arena;
+    private readonly IAudioManager? _audio;
     private readonly Pool<Bullet> _bullets = new(InitialBullets);
     private readonly List<IHittable> _targets = new();
     private readonly List<IHittableSource> _sources = new();
     private readonly List<IHittable> _candidates = new();
     private readonly HashSet<IHittable> _beamHits = new();
     private readonly List<BeamFlash> _beams = new();
+    private readonly List<Spark> _sparks = new();
 
-    public ShotSystem(Arena arena)
+    public ShotSystem(Arena arena, IAudioManager? audio = null)
     {
         _arena = arena;
+        _audio = audio;
     }
+
+    /// <summary>Sparks still showing where shots glanced off armor.</summary>
+    public int SparkCount => _sparks.Count;
 
     public int BulletCount => _bullets.Count;
 
@@ -97,13 +113,12 @@ public sealed class ShotSystem
     }
 
     /// <summary>
-    /// Fires an instant beam: everything along it is hit at once, up to the first wall or
-    /// pillar. The whole beam shows at once, so nothing reacts before it is visibly struck.
+    /// Fires an instant beam: everything along it is hit at once, up to the first wall, pillar
+    /// or armored front. The whole beam shows at once, so nothing reacts before it is visibly struck.
     /// </summary>
     public void FireBeam(in BeamShot shot)
     {
         var length = Math.Min(shot.Range, _arena.Raycast(shot.Origin, shot.Direction, out _));
-        var end = shot.Origin + shot.Direction * length;
 
         _candidates.Clear();
         _candidates.AddRange(_targets);
@@ -113,6 +128,31 @@ public sealed class ShotSystem
             _sources[i].Collect(middle, length * 0.5f + shot.Width, _candidates);
         }
 
+        // A shield band or armor where the beam lands cuts it short.
+        var blockedAt = -1f;
+        for (var i = 0; i < _candidates.Count; i++)
+        {
+            var target = _candidates[i];
+            if (target.TryHitShield(shot.Origin, shot.Direction, length, shot.Width, out var shieldAt, out _))
+            {
+                length = shieldAt;
+                blockedAt = length;
+            }
+
+            if (!TouchesLine(shot.Origin, shot.Direction, length, shot.Width, target))
+            {
+                continue;
+            }
+
+            var along = BeamEntry(shot.Origin, shot.Direction, target);
+            if (along < length && target.BlocksShotAt(shot.Origin + shot.Direction * along))
+            {
+                length = Math.Max(0f, along);
+                blockedAt = length;
+            }
+        }
+
+        var end = shot.Origin + shot.Direction * length;
         var damage = OneShotKills ? float.MaxValue : shot.Damage;
         _beamHits.Clear();
         for (var i = 0; i < _candidates.Count; i++)
@@ -123,7 +163,7 @@ public sealed class ShotSystem
                 continue;
             }
 
-            target.Hit(damage, shot.OwnerIndex);
+            target.HitAt(damage, shot.OwnerIndex, shot.Origin + shot.Direction * BeamEntry(shot.Origin, shot.Direction, target));
             target.Knock(shot.Direction * shot.Knockback);
         }
 
@@ -133,10 +173,44 @@ public sealed class ShotSystem
         }
 
         _beams.Add(new BeamFlash(shot.Origin, end, shot.Width, 0f));
+        if (blockedAt >= 0f)
+        {
+            AddSpark(end);
+        }
+    }
+
+    // Distance along the beam to where it first meets a target's body.
+    private static float BeamEntry(Vector2 origin, Vector2 direction, IHittable target)
+    {
+        var toTarget = target.Position - origin;
+        var along = Vector2.Dot(toTarget, direction);
+        var offsetSquared = toTarget.LengthSquared() - along * along;
+        var radiusSquared = target.Radius * target.Radius;
+        return offsetSquared >= radiusSquared ? along : along - MathF.Sqrt(radiusSquared - offsetSquared);
+    }
+
+    private void AddSpark(Vector2 position)
+    {
+        _sparks.Add(new Spark(position, 0f));
+        _audio?.PlaySfx(SfxIds.ArmorHit);
     }
 
     public void Update(float deltaSeconds)
     {
+        for (var i = _sparks.Count - 1; i >= 0; i--)
+        {
+            var age = _sparks[i].Age + deltaSeconds;
+            if (age >= SparkSeconds)
+            {
+                _sparks[i] = _sparks[^1];
+                _sparks.RemoveAt(_sparks.Count - 1);
+            }
+            else
+            {
+                _sparks[i] = _sparks[i] with { Age = age };
+            }
+        }
+
         for (var i = _beams.Count - 1; i >= 0; i--)
         {
             var beam = _beams[i];
@@ -168,6 +242,25 @@ public sealed class ShotSystem
 
     public void Draw(IRenderer renderer)
     {
+        for (var i = 0; i < _sparks.Count; i++)
+        {
+            // A flash that grows and fades, with short rays flying out.
+            var spark = _sparks[i];
+            var t = spark.Age / SparkSeconds;
+            var fade = 1f - t;
+            var radius = MathHelper.Lerp(SparkStartRadius, SparkEndRadius, t);
+            renderer.FillCircle(spark.Position, radius, SparkColor * (0.6f * fade));
+            renderer.FillCircle(spark.Position, radius * 0.4f, SparkCoreColor * fade);
+            for (var r = 0; r < SparkLines; r++)
+            {
+                var angle = MathHelper.TwoPi * r / SparkLines + 0.4f;
+                var ray = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+                renderer.DrawLine(
+                    spark.Position + ray * radius, spark.Position + ray * (radius + SparkLineLength * fade), 2f,
+                    SparkColor * fade);
+            }
+        }
+
         for (var i = 0; i < _beams.Count; i++)
         {
             var beam = _beams[i];
@@ -228,10 +321,37 @@ public sealed class ShotSystem
             _sources[i].Collect(middle, distance * 0.5f + bullet.Radius, _candidates);
         }
 
+        // A shield band in the way stops the shot where it meets it.
+        var shieldDistance = float.MaxValue;
+        var shieldPoint = Vector2.Zero;
+        for (var i = 0; i < _candidates.Count; i++)
+        {
+            if (_candidates[i].TryHitShield(origin, direction, distance, bullet.Radius, out var d, out var p)
+                && d < shieldDistance)
+            {
+                shieldDistance = d;
+                shieldPoint = p;
+            }
+        }
+
         // Hit targets nearest first; a piercing bullet carries on to the next one.
         while (true)
         {
             var hit = FindNearest(bullet, origin, direction, distance, out var hitDistance);
+            if (shieldDistance < float.MaxValue && (hit is null || hitDistance > shieldDistance))
+            {
+                bullet.Advance(shieldDistance);
+                if (bullet.Rocket is not null && Explosives is not null)
+                {
+                    ExplodeRocket(bullet);
+                    return;
+                }
+
+                bullet.Stop();
+                AddSpark(shieldPoint);
+                return;
+            }
+
             if (hit is null)
             {
                 break;
@@ -247,8 +367,22 @@ public sealed class ShotSystem
 
             var damage = OneShotKills ? float.MaxValue : bullet.Damage;
             var hpBefore = hit.HitPointsLeft;
-            hit.Hit(damage, bullet.OwnerIndex);
+            // The point on the body the bullet meets.
+            var touch = origin + direction * hitDistance;
+            var impact = hit.Position + SafeNormalize(touch - hit.Position) * hit.Radius;
+            if (hit.BlocksShotAt(impact))
+            {
+                // Armor stops it outright: no damage worth the name, no piercing, carrying on or bouncing.
+                hit.HitAt(damage, bullet.OwnerIndex, impact);
+                bullet.Advance(hitDistance);
+                bullet.Stop();
+                AddSpark(impact);
+                return;
+            }
+
+            hit.HitAt(damage, bullet.OwnerIndex, impact);
             hit.Knock(direction * bullet.Knockback);
+
             if (bullet.PierceLeft > 0)
             {
                 bullet.PassThrough(hit);
@@ -423,6 +557,14 @@ public sealed class ShotSystem
         distance = along - MathF.Sqrt(radiusSquared - offsetSquared);
         return true;
     }
+
+    private static Vector2 SafeNormalize(Vector2 vector)
+    {
+        return vector.LengthSquared() > 0.000001f ? Vector2.Normalize(vector) : Vector2.Zero;
+    }
+
+    // A flash where a shot glanced off armor.
+    private readonly record struct Spark(Vector2 Position, float Age);
 
     // A fired beam fading out on screen.
     private readonly record struct BeamFlash(Vector2 From, Vector2 To, float Width, float Age);
