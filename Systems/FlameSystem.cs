@@ -117,11 +117,7 @@ public sealed class FlameSystem
 
     private bool HitsWall(Flame flame)
     {
-        var position = flame.Position;
-        return position.X <= _arena.Left
-            || position.X >= _arena.Right
-            || position.Y <= _arena.Top
-            || position.Y >= _arena.Bottom;
+        return _arena.IsSolid(flame.Position);
     }
 
     // Pools are dropped along the path the flame has covered, spacing apart.
@@ -135,7 +131,7 @@ public sealed class FlameSystem
 
         while (flame.TryTakeTrailPoint(out var point))
         {
-            var position = _arena.ClampInside(point, shot.TrailRadius * 0.5f);
+            var position = _arena.PlaceOnFloor(point, shot.TrailRadius * 0.5f);
             // The trail is laid where the player walks; it burns enemies only.
             _hazards.SpawnFire(
                 position, shot.TrailRadius, shot.TrailSeconds, shot.TrailDamagePerSecond, shot.OwnerIndex, 0f,

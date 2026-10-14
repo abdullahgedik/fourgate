@@ -17,6 +17,7 @@ namespace Fourgate.Scenes;
 /// <summary>The arena and everything that happens in it.</summary>
 public sealed class GameplayScene
 {
+    // Floor grid spacing when no weapon snaps to a grid.
     private const float GridSpacing = 100f;
     private const float GridLineThickness = 2f;
     private const float FacingLineLength = 14f;
@@ -47,6 +48,7 @@ public sealed class GameplayScene
     private static readonly Color ReloadBarFillColor = new(255, 225, 120);
 
     private readonly GameData _data;
+    private readonly float _floorCellSize;
     private readonly GameRandom _random;
     private readonly Arena _arena;
     private readonly ShotSystem _shots;
@@ -77,6 +79,7 @@ public sealed class GameplayScene
     public GameplayScene(GameData data, IPlayerInput playerOneInput, IAudioManager audio)
     {
         _data = data;
+        _floorCellSize = FloorCellSize(data);
         _audio = audio;
         var config = data.Game;
         _random = new GameRandom(config.Debug.Seed ?? Environment.TickCount);
@@ -92,10 +95,17 @@ public sealed class GameplayScene
         _shots.Explosives = _explosives;
         _explosives.AddSource(_enemies);
         _explosives.OneShotKills = config.Debug.OneShotKills;
-        _mines = new MineSystem(_explosives, _random, audio);
+        _mines = new MineSystem(_explosives, _random, audio, _hazards) { Arena = _arena };
+        _arena.Obstacles = _mines;
         _mines.AddSource(_enemies);
+
+        // Barrels can be hit by everything a player does.
+        _shots.AddSource(_mines);
+        _explosives.AddSource(_mines);
+        _hazards.AddSource(_mines);
         _flames = new FlameSystem(_arena, _hazards);
         _flames.AddSource(_enemies);
+        _flames.AddSource(_mines);
         _flames.OneShotKills = config.Debug.OneShotKills;
         _shotRouter = new ShotRouter(_shots, _explosives, _mines, _flames);
         _unlocks = new WeaponUnlocks(config, audio, _random);
@@ -226,7 +236,7 @@ public sealed class GameplayScene
             }
 
             var position = _arena.Center + new Vector2(placed * WeaponCrateSpacing, 0f);
-            _drops.SpawnWeaponCrate(weapons[i], _arena.ClampInside(position, Crate.HalfSize));
+            _drops.SpawnWeaponCrate(weapons[i], _arena.PlaceOnFloor(position, Crate.HalfSize));
             placed++;
         }
     }
@@ -285,9 +295,9 @@ public sealed class GameplayScene
     public void DebugDropCrates()
     {
         var origin = _players[0].Position + new Vector2(90f, -70f);
-        _drops.Spawn(CrateType.Ammo, _arena.ClampInside(origin, Crate.HalfSize));
-        _drops.Spawn(CrateType.Health, _arena.ClampInside(origin + new Vector2(0f, 70f), Crate.HalfSize));
-        _drops.Spawn(CrateType.Upgrade, _arena.ClampInside(origin + new Vector2(0f, 140f), Crate.HalfSize));
+        _drops.Spawn(CrateType.Ammo, _arena.PlaceOnFloor(origin, Crate.HalfSize));
+        _drops.Spawn(CrateType.Health, _arena.PlaceOnFloor(origin + new Vector2(0f, 70f), Crate.HalfSize));
+        _drops.Spawn(CrateType.Upgrade, _arena.PlaceOnFloor(origin + new Vector2(0f, 140f), Crate.HalfSize));
     }
 
     /// <summary>Debug helper: gives every player XP.</summary>
@@ -507,6 +517,22 @@ public sealed class GameplayScene
         renderer.FillRect(topLeft, new Vector2(size.X * progress, size.Y), ReloadBarFillColor);
     }
 
+    // The floor grid shows the cells barrels snap to, so a player can see where one will go.
+    private static float FloorCellSize(GameData data)
+    {
+        var weapons = data.Weapons;
+        for (var i = 0; i < weapons.Count; i++)
+        {
+            var placed = weapons[i].Placed;
+            if (placed is not null && placed.Solid && placed.GridSize > 0f)
+            {
+                return placed.GridSize;
+            }
+        }
+
+        return GridSpacing;
+    }
+
     private void DrawArena(IRenderer renderer)
     {
         var wall = new Vector2(_arena.WallThickness);
@@ -517,7 +543,7 @@ public sealed class GameplayScene
         renderer.FillRect(floorTopLeft, floorSize, FloorColor);
 
         // Floor grid: gives the eye a reference for camera and player movement.
-        for (var offset = GridSpacing; offset < _arena.Size; offset += GridSpacing)
+        for (var offset = _floorCellSize; offset < _arena.Size; offset += _floorCellSize)
         {
             renderer.FillRect(
                 new Vector2(_arena.Left + offset - GridLineThickness / 2f, _arena.Top),
@@ -527,6 +553,12 @@ public sealed class GameplayScene
                 new Vector2(_arena.Left, _arena.Top + offset - GridLineThickness / 2f),
                 new Vector2(_arena.Size, GridLineThickness),
                 GridColor);
+        }
+
+        var pillars = _arena.Pillars;
+        for (var i = 0; i < pillars.Count; i++)
+        {
+            renderer.FillRect(pillars[i].Center - pillars[i].HalfSize, pillars[i].HalfSize * 2f, WallColor);
         }
 
         var doors = _arena.Doors;

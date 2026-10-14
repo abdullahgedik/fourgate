@@ -36,8 +36,8 @@ public interface IShotHandler
     /// <summary>Throws an explosive that flies to its target and explodes where it lands.</summary>
     void ThrowExplosive(in ExplosiveShot shot);
 
-    /// <summary>Puts a mine down.</summary>
-    void PlaceMine(in MineShot shot);
+    /// <summary>Puts a mine or barrel down. Returns false when it could not be placed there.</summary>
+    bool PlaceMine(in MineShot shot);
 
     /// <summary>Sprays one flame.</summary>
     void EmitFlame(in FlameShot shot);

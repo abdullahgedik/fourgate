@@ -61,6 +61,18 @@ public sealed class GameConfig
         DataLoadException.Require(
             arena.DoorWidth > 0 && arena.DoorWidth < arena.Size,
             file, "arena.doorWidth", "must be greater than 0 and smaller than arena.size");
+        for (var i = 0; i < arena.Pillars.Count; i++)
+        {
+            var pillar = arena.Pillars[i];
+            var field = $"arena.pillars[{i}]";
+            DataLoadException.Require(pillar is not null, file, field, "must not be null");
+            DataLoadException.Require(
+                pillar!.Width > 0 && pillar.Height > 0, file, field, "width and height must be greater than 0");
+            DataLoadException.Require(
+                pillar.CenterX - pillar.Width / 2f > 0 && pillar.CenterX + pillar.Width / 2f < arena.Size
+                && pillar.CenterY - pillar.Height / 2f > 0 && pillar.CenterY + pillar.Height / 2f < arena.Size,
+                file, field, "must lie fully inside the arena floor");
+        }
 
         DataLoadException.Require(Camera is not null, file, "camera", "is required");
         var camera = Camera!;

@@ -70,4 +70,11 @@ public enum WeaponAbility
     /// <c>damageMult</c> and <c>radiusMult</c> of the main blast.
     /// </summary>
     RingBlast,
+
+    /// <summary>
+    /// A placed explosive leaves a fire pool of <c>radius</c> where it went off, burning for
+    /// <c>seconds</c> at <c>damageMult</c> of its damage per second; with <c>hurtsPlayers</c>
+    /// false the fire spares players.
+    /// </summary>
+    LeaveFire,
 }

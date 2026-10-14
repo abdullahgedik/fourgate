@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Fourgate.Core;
 using Fourgate.Core.Audio;
 using Fourgate.Core.Pooling;
 using Fourgate.Core.Rendering;
@@ -11,12 +12,18 @@ using Microsoft.Xna.Framework;
 
 namespace Fourgate.Systems;
 
-/// <summary>Owns placed mines: arming, triggering by enemies, an optional per-player cap and chain detonation.</summary>
-public sealed class MineSystem
+/// <summary>
+/// Owns placed explosives: mines (armed, then set off by enemies coming close) and barrels
+/// (set off by players hitting them), with an optional per-player cap, chain detonation,
+/// multi-blasts and fire pools.
+/// </summary>
+public sealed class MineSystem : IHittableSource, IObstacleSource
 {
     private const int InitialMines = 32;
 
     private readonly ExplosiveSystem _explosives;
+    private readonly HazardSystem? _hazards;
+    private readonly GameRandom _random;
     private readonly IAudioManager _audio;
     private readonly Pool<Mine> _mines = new(InitialMines);
     private readonly List<IHittable> _targets = new();
@@ -24,19 +31,31 @@ public sealed class MineSystem
     private readonly List<IHittable> _nearby = new();
     private readonly List<Mine> _detonating = new();
     private readonly List<FollowUpBlast> _followUps = new();
-    private readonly GameRandom _random;
     private long _placedCount;
+    private IReadOnlyList<Player> _players = Array.Empty<Player>();
+    private Arena? _arena;
 
-    public MineSystem(ExplosiveSystem explosives, GameRandom random, IAudioManager audio)
+    public MineSystem(ExplosiveSystem explosives, GameRandom random, IAudioManager audio, HazardSystem? hazards = null)
     {
-        _random = random;
         _explosives = explosives;
+        _random = random;
         _audio = audio;
+        _hazards = hazards;
     }
 
     public int Count => _mines.Count;
 
+    /// <summary>The arena, for keeping gridded barrels inside the walls.</summary>
+    public Arena? Arena
+    {
+        get => _arena;
+        set => _arena = value;
+    }
+
     public Mine this[int index] => _mines[index];
+
+    /// <summary>Explosions still to come from mines that went off with several blasts.</summary>
+    public int PendingBlastCount => _followUps.Count;
 
     /// <summary>Registers a single thing that sets mines off.</summary>
     public void AddTarget(IHittable target)
@@ -50,26 +69,112 @@ public sealed class MineSystem
         _sources.Add(source);
     }
 
-    /// <summary>
-    /// Puts a mine down. When the mine has a cap and the owner is at it, their oldest mine of
-    /// that kind disappears.
-    /// </summary>
-    public void Place(in MineShot shot)
+    /// <summary>The barrels near a point: any damage from any weapon or equipment sets them off.</summary>
+    public void Collect(Vector2 center, float radius, List<IHittable> results)
     {
-        if (shot.MaxPlaced > 0 && CountOwned(shot.OwnerIndex, shot.WeaponId) >= shot.MaxPlaced)
+        for (var i = 0; i < _mines.Count; i++)
         {
-            RemoveOldest(shot.OwnerIndex, shot.WeaponId);
+            var mine = _mines[i];
+            if (mine.Shot.Shootable && !mine.IsDetonating
+                && Vector2.Distance(mine.Position, center) <= radius + mine.Radius)
+            {
+                results.Add(mine);
+            }
         }
-
-        _mines.Rent().Place(shot, _placedCount++);
-        _audio.PlaySfx(SfxIds.MinePlaced);
     }
 
-    /// <summary>Explosions still to come from mines that went off with several blasts.</summary>
-    public int PendingBlastCount => _followUps.Count;
+    /// <summary>
+    /// Puts a mine or barrel down. A solid one snaps to the grid cell it was aimed at and is
+    /// refused (returns false) when that cell is taken, outside the walls, or overlaps a player.
+    /// When it has a cap and the owner is at it, their oldest of that kind disappears.
+    /// </summary>
+    public bool Place(in MineShot shot)
+    {
+        var placed = shot;
+        if (shot.Solid && shot.GridSize > 0f)
+        {
+            if (!TryFindFreeCell(shot, out var cell))
+            {
+                return false;
+            }
+
+            placed = shot with { Position = cell };
+        }
+
+        if (placed.MaxPlaced > 0 && CountOwned(placed.OwnerIndex, placed.WeaponId) >= placed.MaxPlaced)
+        {
+            RemoveOldest(placed.OwnerIndex, placed.WeaponId);
+        }
+
+        _mines.Rent().Place(placed, _placedCount++);
+        _audio.PlaySfx(SfxIds.MinePlaced);
+        return true;
+    }
+
+    public Vector2 PushOut(Vector2 position, float radius)
+    {
+        for (var i = 0; i < _mines.Count; i++)
+        {
+            var mine = _mines[i];
+            if (mine.Shot.Solid && !mine.IsDetonating)
+            {
+                position = Collision2D.PushOutOfBox(position, radius, mine.Position, new Vector2(mine.Radius));
+            }
+        }
+
+        return position;
+    }
+
+    private bool TryFindFreeCell(in MineShot shot, out Vector2 cell)
+    {
+        var size = shot.GridSize;
+        var originX = _arena?.Left ?? 0f;
+        var originY = _arena?.Top ?? 0f;
+        var column = MathF.Floor((shot.Position.X - originX) / size);
+        var row = MathF.Floor((shot.Position.Y - originY) / size);
+        cell = new Vector2(originX + (column + 0.5f) * size, originY + (row + 0.5f) * size);
+
+        var half = size / 2f;
+        if (_arena is not null
+            && (cell.X - half < _arena.Left || cell.X + half > _arena.Right
+                || cell.Y - half < _arena.Top || cell.Y + half > _arena.Bottom
+                || _arena.OverlapsPillar(cell, new Vector2(half))))
+        {
+            return false;
+        }
+
+        for (var i = 0; i < _mines.Count; i++)
+        {
+            if (_mines[i].Shot.Solid && Vector2.DistanceSquared(_mines[i].Position, cell) < 1f)
+            {
+                return false;
+            }
+        }
+
+        // Never wall a player in, or drop a barrel on top of one.
+        var barrelHalf = size / 2f;
+        for (var i = 0; i < _players.Count; i++)
+        {
+            var player = _players[i];
+            if (!player.IsAlive)
+            {
+                continue;
+            }
+
+            var dx = Math.Max(Math.Abs(player.Position.X - cell.X) - barrelHalf, 0f);
+            var dy = Math.Max(Math.Abs(player.Position.Y - cell.Y) - barrelHalf, 0f);
+            if (dx * dx + dy * dy < player.Radius * player.Radius)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     public void Update(float deltaSeconds, IReadOnlyList<Player> players)
     {
+        _players = players;
         UpdateFollowUps(deltaSeconds, players);
 
         _detonating.Clear();
@@ -77,20 +182,23 @@ public sealed class MineSystem
         {
             var mine = _mines[i];
             mine.Tick(deltaSeconds);
-            if (mine.IsArmed && IsTriggered(mine))
+            if (mine.IsTriggered || (mine.IsArmed && mine.Shot.TriggerRadius > 0f && IsNearEnemy(mine)))
             {
                 mine.IsDetonating = true;
                 _detonating.Add(mine);
             }
         }
 
-        // The list grows while it is walked when mines set each other off.
+        // The list grows while it is walked when explosives set each other off.
         for (var i = 0; i < _detonating.Count; i++)
         {
             var mine = _detonating[i];
             var shot = mine.Shot;
+
             _explosives.Detonate(shot.Position, shot.Damage, shot.BlastRadius, shot.OwnerIndex, players);
+
             QueueFollowUps(shot);
+            LeaveFire(shot);
 
             if (shot.ChainDetonation)
             {
@@ -115,6 +223,18 @@ public sealed class MineSystem
             renderer.DrawVisual(mine.BodyVisual, mine.Position, 0f);
             renderer.DrawVisual(mine.LightVisual, mine.Position, 0f);
         }
+    }
+
+    private void LeaveFire(in MineShot shot)
+    {
+        if (_hazards is null || shot.FireRadius <= 0f || shot.FireSeconds <= 0f)
+        {
+            return;
+        }
+
+        _hazards.SpawnFire(
+            shot.Position, shot.FireRadius, shot.FireSeconds, shot.FireDamagePerSecond, shot.OwnerIndex, 0f,
+            shot.FireHurtsPlayers);
     }
 
     // Later blasts of a multi-blast mine go off in order, each a little off center so the
@@ -148,7 +268,7 @@ public sealed class MineSystem
         }
     }
 
-    private bool IsTriggered(Mine mine)
+    private bool IsNearEnemy(Mine mine)
     {
         var reach = mine.Shot.TriggerRadius;
         for (var i = 0; i < _targets.Count; i++)
@@ -168,7 +288,7 @@ public sealed class MineSystem
         return _nearby.Count > 0;
     }
 
-    // Every mine in the blast goes off too, armed or not.
+    // Every mine or barrel in the blast goes off too, armed or not.
     private void SetOffMinesInBlast(Mine source)
     {
         var reach = source.Shot.BlastRadius;
@@ -197,9 +317,6 @@ public sealed class MineSystem
         return count;
     }
 
-    private readonly record struct FollowUpBlast(
-        Vector2 Position, float Damage, float BlastRadius, int OwnerIndex, float SecondsLeft);
-
     private void RemoveOldest(int ownerIndex, string weaponId)
     {
         var oldest = -1;
@@ -218,4 +335,7 @@ public sealed class MineSystem
             _mines.ReturnAt(oldest);
         }
     }
+
+    private readonly record struct FollowUpBlast(
+        Vector2 Position, float Damage, float BlastRadius, int OwnerIndex, float SecondsLeft);
 }

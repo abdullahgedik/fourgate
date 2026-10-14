@@ -405,7 +405,7 @@ public sealed class Player
         }
 
         Position += move * MoveSpeed * walkSeconds;
-        Position = arena.ClampInside(Position, Radius);
+        Position = arena.ResolveMovement(Position, Radius);
     }
 
     private void StartDash(Vector2 move)

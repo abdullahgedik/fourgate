@@ -25,6 +25,8 @@ public sealed class WeaponLevelTenConfig
 
     public float RangeMult { get; init; } = 1f;
 
+    public float BlastRadiusMult { get; init; } = 1f;
+
     /// <summary>Checks value ranges; <paramref name="path"/> locates this entry inside the file.</summary>
     public void Validate(string file, string path)
     {
@@ -37,6 +39,7 @@ public sealed class WeaponLevelTenConfig
         DataLoadException.Require(DurationMult > 0, file, $"{path}.durationMult", "must be greater than 0");
         DataLoadException.Require(MaxPlacedBonus >= 0, file, $"{path}.maxPlacedBonus", "must not be negative");
         DataLoadException.Require(RangeMult > 0, file, $"{path}.rangeMult", "must be greater than 0");
+        DataLoadException.Require(BlastRadiusMult > 0, file, $"{path}.blastRadiusMult", "must be greater than 0");
 
         for (var i = 0; i < Abilities!.Count; i++)
         {

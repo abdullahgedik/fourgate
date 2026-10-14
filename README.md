@@ -10,11 +10,13 @@ local co-op and menus are still to come.
 
 ## What works today
 
-- A 3000×3000 arena with a camera that follows the player and leans toward the aim point
+- A 3000×3000 arena with four symmetric pillars, and a camera that follows the player and
+  leans toward the aim point
 - Waves that grow with a spawn budget; doors glow before a group emerges, and an
   edge-of-screen marker points to a glowing door outside the view
 - Eight guns (pistol, SMG, shotgun, marksman rifle, assault rifle, sniper rifle,
-  flamethrower, rocket launcher) and the hand grenade, molotov and mine, each with levels
+  flamethrower, rocket launcher) and four pieces of equipment (hand grenade, molotov, mine,
+  explosive barrel), each with levels
   1–10 and a special ability at level 10
 - An equipment button: grenades are thrown with their own key while the gun stays in hand
 - Explosions that hurt the thrower too (at half strength)
@@ -29,7 +31,6 @@ local co-op and menus are still to come.
 ## Planned
 
 - One more gun: the railgun
-- More equipment: explosive barrel
 - More enemy types with telegraphed ranged attacks
 - A boss every tenth wave
 - Local two-player split-screen co-op

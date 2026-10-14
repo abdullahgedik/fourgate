@@ -19,9 +19,6 @@ public sealed class ShotSystem
     private const float RocketLength = 30f;
     private const float RocketThickness = 10f;
 
-    // How close to a wall line counts as touching it when working out a bounce.
-    private const float WallSlack = 0.5f;
-
     private static readonly Color BulletColor = new(255, 225, 120);
     private static readonly Color RocketColor = new(200, 205, 215);
     private static readonly Color RocketFlameColor = new(255, 150, 50);
@@ -131,6 +128,7 @@ public sealed class ShotSystem
         var distance = bullet.Speed * deltaSeconds;
         var outOfRange = false;
         var atWall = false;
+        var wallNormal = Vector2.Zero;
 
         if (bullet.RangeLeft <= distance)
         {
@@ -138,11 +136,12 @@ public sealed class ShotSystem
             outOfRange = true;
         }
 
-        var wallDistance = _arena.DistanceToWall(origin, direction);
+        var wallDistance = _arena.Raycast(origin, direction, out var surfaceNormal);
         if (wallDistance <= distance)
         {
             distance = wallDistance;
             atWall = true;
+            wallNormal = surfaceNormal;
             outOfRange = false;
         }
 
@@ -201,7 +200,7 @@ public sealed class ShotSystem
         if (atWall && bullet.RicochetsLeft > 0 && bullet.RangeLeft > 0f)
         {
             // The rest of this frame's travel is dropped; the bullet continues next frame.
-            bullet.Bounce(Reflect(bullet.Position, direction));
+            bullet.Bounce(Reflect(direction, wallNormal));
         }
         else if (atWall || outOfRange)
         {
@@ -295,15 +294,16 @@ public sealed class ShotSystem
         return nearest;
     }
 
-    // Mirrors the direction on whichever wall (or two, in a corner) the point is touching.
-    private Vector2 Reflect(Vector2 position, Vector2 direction)
+    // Mirrors the direction on each axis the surface faces; a corner's diagonal normal flips both,
+    // sending the bullet straight back.
+    private static Vector2 Reflect(Vector2 direction, Vector2 normal)
     {
-        if (position.X <= _arena.Left + WallSlack || position.X >= _arena.Right - WallSlack)
+        if (normal.X != 0f)
         {
             direction.X = -direction.X;
         }
 
-        if (position.Y <= _arena.Top + WallSlack || position.Y >= _arena.Bottom - WallSlack)
+        if (normal.Y != 0f)
         {
             direction.Y = -direction.Y;
         }

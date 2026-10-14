@@ -182,7 +182,14 @@ public sealed class Weapon
         }
 
         _cooldown += 1f / CurrentFireRate;
-        Fire(muzzle, direction, trigger.AimDistance, ownerIndex, shots);
+        if (!Fire(muzzle, direction, trigger.AimDistance, ownerIndex, shots))
+        {
+            // Nothing came out (no room to place it): the round and the wait are given back.
+            Reserve += HasInfiniteReserve ? 0 : 1;
+            _cooldown -= 1f / CurrentFireRate;
+            return;
+        }
+
         _audio.PlaySfx(SfxIds.WeaponFire);
 
         if (_rules.ReloadsEnabled && Magazine == 0)
@@ -222,24 +229,25 @@ public sealed class Weapon
         }
     }
 
-    private void Fire(Vector2 muzzle, Vector2 direction, float aimDistance, int ownerIndex, IShotHandler shots)
+    // Returns false when nothing came out (a placed weapon with no room where it was aimed).
+    private bool Fire(Vector2 muzzle, Vector2 direction, float aimDistance, int ownerIndex, IShotHandler shots)
     {
         if (Config.Type == WeaponType.Thrown)
         {
             Throw(muzzle, direction, aimDistance, ownerIndex, shots);
-            return;
+            return true;
         }
 
         if (Config.Type == WeaponType.Stream)
         {
             EmitFlame(muzzle, direction, ownerIndex, shots);
-            return;
+            return true;
         }
 
         if (Config.Type == WeaponType.Placed)
         {
-            shots.PlaceMine(new MineShot(
-                muzzle,
+            return shots.PlaceMine(new MineShot(
+                muzzle + direction * Stats.PlaceDistance,
                 Stats.Damage,
                 Stats.BlastRadius,
                 Stats.TriggerRadius,
@@ -250,21 +258,28 @@ public sealed class Weapon
                 Config.Id,
                 Stats.BlastCount,
                 Stats.BlastInterval,
-                Stats.BlastSpread));
-            return;
+                Stats.BlastSpread,
+                Stats.Shootable,
+                Stats.LeaveFireRadius,
+                Stats.LeaveFireSeconds,
+                Stats.Damage * Stats.LeaveFireDamageMult,
+                Stats.LeaveFireHurtsPlayers,
+                Stats.Solid,
+                Stats.GridSize));
         }
 
         var damage = NextShotDamage();
         if (!Stats.DualWield)
         {
             FireVolley(muzzle, direction, damage, ownerIndex, shots);
-            return;
+            return true;
         }
 
         // Two muzzles side by side, one volley from each.
         var side = new Vector2(-direction.Y, direction.X) * DualWieldOffset;
         FireVolley(muzzle + side, direction, damage, ownerIndex, shots);
         FireVolley(muzzle - side, direction, damage, ownerIndex, shots);
+        return true;
     }
 
     // Builds up while the trigger is held (and the weapon is not reloading), and settles

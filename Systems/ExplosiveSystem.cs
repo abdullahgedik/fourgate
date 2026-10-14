@@ -72,10 +72,13 @@ public sealed class ExplosiveSystem
         _sources.Add(source);
     }
 
-    /// <summary>Sends an explosive on its way. It lands inside the arena even when aimed past a wall.</summary>
+    /// <summary>
+    /// Sends an explosive on its way. It flies over pillars but lands on open floor, even when
+    /// aimed past a wall or onto a pillar.
+    /// </summary>
     public void Throw(in ExplosiveShot shot)
     {
-        var landing = _arena.ClampInside(shot.Target, shot.VisualRadius);
+        var landing = _arena.PlaceOnFloor(shot.Target, shot.VisualRadius);
         _thrown.Rent().Launch(shot with { Target = landing });
     }
 

@@ -71,9 +71,10 @@ public sealed class FakeShotHandler : IShotHandler
         Throws.Add(shot);
     }
 
-    public void PlaceMine(in MineShot shot)
+    public bool PlaceMine(in MineShot shot)
     {
         Mines.Add(shot);
+        return true;
     }
 
     public void EmitFlame(in FlameShot shot)

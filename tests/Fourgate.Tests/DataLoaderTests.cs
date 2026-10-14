@@ -84,6 +84,10 @@ public class DataLoaderTests
 
     [Theory]
     [InlineData("\"doorWidth\": 280", "\"doorWidth\": 2000", "arena.doorWidth")]
+    [InlineData(
+        "\"wallThickness\": 24 }",
+        "\"wallThickness\": 24, \"pillars\": [ { \"centerX\": 1950, \"centerY\": 1000, \"width\": 260, \"height\": 260 } ] }",
+        "arena.pillars[0]")]
     [InlineData("\"zoom\": 1.15", "\"zoom\": 0", "camera.zoom")]
     [InlineData("\"leadFraction\": 0.35", "\"leadFraction\": 1.5", "camera.leadFraction")]
     [InlineData("\"moveSpeed\": 300", "\"moveSpeed\": -1", "player.moveSpeed")]

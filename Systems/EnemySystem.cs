@@ -63,7 +63,7 @@ public sealed class EnemySystem : IHittableSource
                 _audio.PlaySfx(SfxIds.EnemyHit);
             }
 
-            MoveTowardNearestPlayer(enemy, players, deltaSeconds);
+            MoveTowardNearestPlayer(enemy, players, arena, deltaSeconds);
         }
 
         RebuildHash();
@@ -72,7 +72,7 @@ public sealed class EnemySystem : IHittableSource
             var enemy = _enemies[i];
             Separate(enemy);
             PushOutOfPlayers(enemy, players);
-            enemy.Position = arena.ClampInside(enemy.Position, enemy.Radius);
+            enemy.Position = arena.ResolveMovement(enemy.Position, enemy.Radius);
             AttackTouchingPlayers(enemy, players);
             SpreadFire(enemy);
         }
@@ -129,7 +129,8 @@ public sealed class EnemySystem : IHittableSource
         }
     }
 
-    private static void MoveTowardNearestPlayer(Enemy enemy, IReadOnlyList<Player> players, float deltaSeconds)
+    private static void MoveTowardNearestPlayer(
+        Enemy enemy, IReadOnlyList<Player> players, Arena arena, float deltaSeconds)
     {
         Player? target = null;
         var bestDistanceSquared = float.MaxValue;
@@ -150,6 +151,20 @@ public sealed class EnemySystem : IHittableSource
 
         if (target is null)
         {
+            return;
+        }
+
+        // With a pillar in the way, head for its corner first.
+        var waypoint = arena.NextWaypoint(enemy.Position, target.Position, enemy.Radius);
+        if (waypoint != target.Position)
+        {
+            var toCorner = waypoint - enemy.Position;
+            var cornerDistance = toCorner.Length();
+            if (cornerDistance > 0.0001f)
+            {
+                enemy.Position += toCorner / cornerDistance * Math.Min(enemy.Config.Speed * deltaSeconds, cornerDistance);
+            }
+
             return;
         }
 

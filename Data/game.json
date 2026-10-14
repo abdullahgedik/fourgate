@@ -1,7 +1,14 @@
 {
   "virtualWidth": 1920,
   "virtualHeight": 1080,
-  "arena": { "x": 0, "y": 0, "size": 3000, "doorWidth": 420, "wallThickness": 24 },
+  "arena": { "x": 0, "y": 0, "size": 3000, "doorWidth": 420, "wallThickness": 24,
+    "pillars": [
+      { "centerX": 990, "centerY": 990, "width": 300, "height": 300 },
+      { "centerX": 2010, "centerY": 990, "width": 300, "height": 300 },
+      { "centerX": 990, "centerY": 2010, "width": 300, "height": 300 },
+      { "centerX": 2010, "centerY": 2010, "width": 300, "height": 300 }
+    ]
+  },
   "camera": { "zoom": 1.15, "leadFraction": 0.35, "leadMaxDistance": 260, "smoothing": 10, "edgeMargin": 120 },
   "debug": { "hotkeys": true, "practiceTargets": false, "oneShotKills": false },
   "maxAliveEnemies": 60,

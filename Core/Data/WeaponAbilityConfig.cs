@@ -28,4 +28,7 @@ public sealed class WeaponAbilityConfig
 
     /// <summary>Distance between things the ability leaves along a path (fire trail: between its pools).</summary>
     public float Spacing { get; init; }
+
+    /// <summary>False when what the ability leaves behind (fire) only hurts enemies.</summary>
+    public bool HurtsPlayers { get; init; } = true;
 }

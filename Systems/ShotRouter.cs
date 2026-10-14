@@ -45,9 +45,9 @@ public sealed class ShotRouter : IShotHandler
         _explosives.Throw(shot);
     }
 
-    public void PlaceMine(in MineShot shot)
+    public bool PlaceMine(in MineShot shot)
     {
-        _mines.Place(shot);
+        return _mines.Place(shot);
     }
 
     public void EmitFlame(in FlameShot shot)

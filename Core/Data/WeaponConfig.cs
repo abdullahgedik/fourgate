@@ -139,10 +139,16 @@ public sealed class WeaponConfig
         DataLoadException.Require(Placed is not null, file, $"{path}.placed", "is required for this weapon type");
         var placed = Placed!;
         DataLoadException.Require(
-            placed.TriggerRadius > 0, file, $"{path}.placed.triggerRadius", "must be greater than 0");
+            placed.TriggerRadius >= 0, file, $"{path}.placed.triggerRadius", "must not be negative");
+        DataLoadException.Require(
+            placed.TriggerRadius > 0 || placed.Shootable,
+            file, $"{path}.placed", "needs a triggerRadius, shootable: true, or both, or nothing could set it off");
         DataLoadException.Require(placed.ArmSeconds >= 0, file, $"{path}.placed.armSeconds", "must not be negative");
         DataLoadException.Require(
             placed.MaxPlaced >= 0, file, $"{path}.placed.maxPlaced", "must not be negative (0 means no limit)");
+        DataLoadException.Require(
+            !placed.Solid || placed.GridSize > 0, file, $"{path}.placed.gridSize", "must be greater than 0 for a solid weapon");
+        DataLoadException.Require(placed.PlaceDistance >= 0, file, $"{path}.placed.placeDistance", "must not be negative");
 
         DataLoadException.Require(Explosion is not null, file, $"{path}.explosion", "is required for this weapon type");
         DataLoadException.Require(

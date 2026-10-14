@@ -51,7 +51,15 @@ public readonly record struct WeaponStats(
     float RingDamageMult,
     float RingRadiusMult,
     float RingDelay,
-    float RingInterval)
+    float RingInterval,
+    bool Shootable,
+    float LeaveFireRadius,
+    float LeaveFireSeconds,
+    float LeaveFireDamageMult,
+    bool LeaveFireHurtsPlayers,
+    bool Solid,
+    float GridSize,
+    float PlaceDistance)
 {
     /// <summary>
     /// Applies every level bonus up to <paramref name="level"/> to the weapon's base stats;
@@ -111,7 +119,7 @@ public readonly record struct WeaponStats(
         var igniteSeconds = 0f;
         var armSeconds = config.Placed?.ArmSeconds ?? 0f;
         var maxPlaced = config.Placed?.MaxPlaced ?? 0;
-        var chainDetonation = false;
+        var chainDetonation = config.Placed?.ChainDetonation ?? false;
         var blastCount = 1;
         var blastInterval = 0f;
         var blastSpread = 0f;
@@ -127,6 +135,10 @@ public readonly record struct WeaponStats(
         var ringRadiusMult = 1f;
         var ringDelay = 0f;
         var ringInterval = 0f;
+        var leaveFireRadius = 0f;
+        var leaveFireSeconds = 0f;
+        var leaveFireDamageMult = 0f;
+        var leaveFireHurtsPlayers = true;
         if (level >= WeaponConfig.MaxLevel && config.LevelTen is not null)
         {
             damage *= config.LevelTen.DamageMult;
@@ -134,6 +146,7 @@ public readonly record struct WeaponStats(
             magSize += config.LevelTen.MagSizeBonus;
             range *= config.LevelTen.RangeMult;
             fireSeconds *= config.LevelTen.DurationMult;
+            blastRadius *= config.LevelTen.BlastRadiusMult;
             maxPlaced += config.LevelTen.MaxPlacedBonus;
 
             var abilities = config.LevelTen.Abilities;
@@ -170,6 +183,13 @@ public readonly record struct WeaponStats(
 
                     case WeaponAbility.ChainDetonation:
                         chainDetonation = true;
+                        break;
+
+                    case WeaponAbility.LeaveFire:
+                        leaveFireRadius = abilities[i].Radius;
+                        leaveFireSeconds = abilities[i].Seconds;
+                        leaveFireDamageMult = abilities[i].DamageMult;
+                        leaveFireHurtsPlayers = abilities[i].HurtsPlayers;
                         break;
 
                     case WeaponAbility.RingBlast:
@@ -231,7 +251,10 @@ public readonly record struct WeaponStats(
             config.Placed?.TriggerRadius ?? 0f, armSeconds, maxPlaced, chainDetonation,
             blastCount, blastInterval, blastSpread,
             passThrough, trailInterval, trailSeconds, trailRadius, trailDamageMult, trailSpacing,
-            ringCount, ringDistance, ringDamageMult, ringRadiusMult, ringDelay, ringInterval);
+            ringCount, ringDistance, ringDamageMult, ringRadiusMult, ringDelay, ringInterval,
+            config.Placed?.Shootable ?? false, leaveFireRadius, leaveFireSeconds, leaveFireDamageMult,
+            leaveFireHurtsPlayers, config.Placed?.Solid ?? false, config.Placed?.GridSize ?? 0f,
+            config.Placed?.PlaceDistance ?? 0f);
     }
 
     /// <summary>
