@@ -38,12 +38,10 @@ local co-op and menus are still to come.
 
 ## Planned
 
-- One more gun: the railgun
-- More enemy types with telegraphed ranged attacks
-- A boss every tenth wave
-- Local two-player split-screen co-op
-- Fast and Nightmare modes, local high scores, menus and settings
+- Fast and Nightmare modes, a score, local high scores, a main menu, pause and settings
+- Visual polish: particles, hit feedback, fire and explosion animations
 - Sound and sprite art (the game currently draws geometric shapes and is silent)
+- Later: a 3D look in the style of Boxhead 2Play, with the same 2D gameplay
 
 ## Requirements
 
