@@ -15,4 +15,15 @@ public interface IHittable
     /// <param name="damage">Damage dealt.</param>
     /// <param name="ownerIndex">Index of the player who fired.</param>
     void Hit(float damage, int ownerIndex);
+
+    /// <summary>Damage over time (fire): no hit flash or hit sound for every small tick.</summary>
+    /// <param name="damage">Damage dealt this frame.</param>
+    /// <param name="ownerIndex">Index of the player whose fire it is.</param>
+    void Burn(float damage, int ownerIndex);
+
+    /// <summary>Sets it on fire: it keeps burning for a while after leaving the flames.</summary>
+    /// <param name="seconds">How long it keeps burning.</param>
+    /// <param name="damagePerSecond">Damage per second while burning.</param>
+    /// <param name="ownerIndex">Index of the player whose fire it is.</param>
+    void Ignite(float seconds, float damagePerSecond, int ownerIndex);
 }

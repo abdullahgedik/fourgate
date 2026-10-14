@@ -17,6 +17,9 @@ public sealed class WeaponLevelTenConfig
     /// <summary>Extra rounds in the magazine.</summary>
     public int MagSizeBonus { get; init; }
 
+    /// <summary>Lengthens how long a fire pool burns.</summary>
+    public float DurationMult { get; init; } = 1f;
+
     /// <summary>Checks value ranges; <paramref name="path"/> locates this entry inside the file.</summary>
     public void Validate(string file, string path)
     {
@@ -26,6 +29,7 @@ public sealed class WeaponLevelTenConfig
         DataLoadException.Require(DamageMult > 0, file, $"{path}.damageMult", "must be greater than 0");
         DataLoadException.Require(FireRateMult > 0, file, $"{path}.fireRateMult", "must be greater than 0");
         DataLoadException.Require(MagSizeBonus >= 0, file, $"{path}.magSizeBonus", "must not be negative");
+        DataLoadException.Require(DurationMult > 0, file, $"{path}.durationMult", "must be greater than 0");
 
         for (var i = 0; i < Abilities!.Count; i++)
         {

@@ -258,7 +258,9 @@ public sealed class Player
     /// <summary>
     /// Deals damage unless the player is dead or invulnerable. Returns true when it landed.
     /// </summary>
-    public bool TakeDamage(float amount)
+    /// <param name="amount">Damage dealt.</param>
+    /// <param name="silent">True for damage over time (fire), which would otherwise play the hurt sound every frame.</param>
+    public bool TakeDamage(float amount, bool silent = false)
     {
         if (!IsAlive || IsInvulnerable || amount <= 0f)
         {
@@ -267,7 +269,15 @@ public sealed class Player
 
         Hp = Math.Max(0f, Hp - amount);
         _hurtFlashLeft = HurtFlashSeconds;
-        _audio.PlaySfx(IsAlive ? SfxIds.PlayerHurt : SfxIds.PlayerDeath);
+        if (!IsAlive)
+        {
+            _audio.PlaySfx(SfxIds.PlayerDeath);
+        }
+        else if (!silent)
+        {
+            _audio.PlaySfx(SfxIds.PlayerHurt);
+        }
+
         return true;
     }
 

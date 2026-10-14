@@ -35,4 +35,10 @@ public enum WeaponAbility
 
     /// <summary>After a kill, the damage left over keeps flying and hits the next enemy in line.</summary>
     Overkill,
+
+    /// <summary>
+    /// Enemies caught in the weapon's fire keep burning for the ability's <c>seconds</c> after
+    /// leaving it, and set the enemies touching them alight once.
+    /// </summary>
+    SpreadFire,
 }

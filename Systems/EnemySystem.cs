@@ -74,6 +74,7 @@ public sealed class EnemySystem : IHittableSource
             PushOutOfPlayers(enemy, players);
             enemy.Position = arena.ClampInside(enemy.Position, enemy.Radius);
             AttackTouchingPlayers(enemy, players);
+            SpreadFire(enemy);
         }
 
         // Second rebuild so shots fired this frame are tested against final positions.
@@ -221,6 +222,27 @@ public sealed class EnemySystem : IHittableSource
                 player.TakeDamage(enemy.Config.ContactDamage);
                 enemy.StartAttackCooldown();
                 return;
+            }
+        }
+    }
+
+    // A burning enemy that caught fire from the flames themselves sets the enemies touching
+    // it alight; those cannot pass it on again.
+    private void SpreadFire(Enemy enemy)
+    {
+        if (!enemy.CanSpreadFire)
+        {
+            return;
+        }
+
+        _nearby.Clear();
+        _hash.Query(enemy.Position, enemy.Radius + TouchSlack, _nearby);
+        for (var i = 0; i < _nearby.Count; i++)
+        {
+            var other = _nearby[i];
+            if (!ReferenceEquals(other, enemy) && other.IsAlive && !other.IsBurning)
+            {
+                other.Ignite(enemy.BurnSeconds, enemy.BurnDamagePerSecond, enemy.BurnOwner, canSpread: false);
             }
         }
     }

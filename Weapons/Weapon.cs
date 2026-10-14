@@ -282,7 +282,11 @@ public sealed class Weapon
             Stats.ClusterCount,
             Stats.ClusterDistance,
             Stats.ClusterDamageMult,
-            Stats.ClusterRadiusMult));
+            Stats.ClusterRadiusMult,
+            Stats.FireRadius,
+            Stats.FireSeconds,
+            Stats.Damage,
+            Stats.IgniteSeconds));
         _audio.PlaySfx(SfxIds.WeaponThrow);
     }
 

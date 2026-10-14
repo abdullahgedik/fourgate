@@ -47,6 +47,9 @@ public sealed class PracticeTarget : IHittable
     /// <summary>Number of hits taken so far.</summary>
     public int HitCount { get; private set; }
 
+    /// <summary>Total fire damage taken so far.</summary>
+    public float BurnDamageTaken { get; private set; }
+
     public bool IsFlashing => _flashLeft > 0f;
 
     public VisualDescriptor Visual =>
@@ -56,6 +59,17 @@ public sealed class PracticeTarget : IHittable
     {
         HitCount++;
         _flashLeft = FlashSeconds;
+    }
+
+    public void Burn(float damage, int ownerIndex)
+    {
+        BurnDamageTaken += damage;
+        _flashLeft = FlashSeconds;
+    }
+
+    // Dummies do not catch fire.
+    public void Ignite(float seconds, float damagePerSecond, int ownerIndex)
+    {
     }
 
     public void Update(float deltaSeconds)

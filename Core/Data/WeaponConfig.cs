@@ -50,8 +50,11 @@ public sealed class WeaponConfig
     /// <summary>Flight values; required for <see cref="WeaponType.Thrown"/> weapons.</summary>
     public ThrownConfig? Thrown { get; init; }
 
-    /// <summary>Blast values; required for <see cref="WeaponType.Thrown"/> weapons.</summary>
+    /// <summary>Blast values of a thrown weapon that explodes.</summary>
     public ExplosionConfig? Explosion { get; init; }
+
+    /// <summary>Fire pool of a thrown weapon that burns; its damage is then per second.</summary>
+    public FireConfig? Fire { get; init; }
 
     /// <summary>Bonuses of levels 2 to 9. A level without an entry changes nothing.</summary>
     public List<WeaponLevelConfig> Levels { get; init; } = new();
@@ -122,8 +125,19 @@ public sealed class WeaponConfig
         DataLoadException.Require(thrown.MaxRange > 0, file, $"{path}.thrown.maxRange", "must be greater than 0");
         DataLoadException.Require(thrown.Radius > 0, file, $"{path}.thrown.radius", "must be greater than 0");
 
-        DataLoadException.Require(Explosion is not null, file, $"{path}.explosion", "is required for this weapon type");
         DataLoadException.Require(
-            Explosion!.Radius > 0, file, $"{path}.explosion.radius", "must be greater than 0");
+            Explosion is not null || Fire is not null,
+            file, $"{path}.explosion", "a thrown weapon needs an explosion block, a fire block, or both");
+        if (Explosion is not null)
+        {
+            DataLoadException.Require(
+                Explosion.Radius > 0, file, $"{path}.explosion.radius", "must be greater than 0");
+        }
+
+        if (Fire is not null)
+        {
+            DataLoadException.Require(Fire.Radius > 0, file, $"{path}.fire.radius", "must be greater than 0");
+            DataLoadException.Require(Fire.Seconds > 0, file, $"{path}.fire.seconds", "must be greater than 0");
+        }
     }
 }

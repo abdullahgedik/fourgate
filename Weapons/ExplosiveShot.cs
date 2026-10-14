@@ -14,6 +14,10 @@ namespace Fourgate.Weapons;
 /// <param name="ClusterDistance">How far from the blast the mini-bombs land.</param>
 /// <param name="ClusterDamageMult">Mini-bomb damage as a share of this explosive's damage.</param>
 /// <param name="ClusterRadiusMult">Mini-bomb blast radius as a share of this explosive's blast radius.</param>
+/// <param name="FireRadius">Reach of the fire pool it leaves; 0 for none.</param>
+/// <param name="FireSeconds">How long the fire pool burns.</param>
+/// <param name="FireDamagePerSecond">Damage per second of the fire pool.</param>
+/// <param name="IgniteSeconds">How long enemies keep burning after the fire; 0 for not at all.</param>
 public readonly record struct ExplosiveShot(
     Vector2 Origin,
     Vector2 Target,
@@ -25,4 +29,8 @@ public readonly record struct ExplosiveShot(
     int ClusterCount = 0,
     float ClusterDistance = 0f,
     float ClusterDamageMult = 1f,
-    float ClusterRadiusMult = 1f);
+    float ClusterRadiusMult = 1f,
+    float FireRadius = 0f,
+    float FireSeconds = 0f,
+    float FireDamagePerSecond = 0f,
+    float IgniteSeconds = 0f);

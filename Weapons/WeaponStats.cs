@@ -29,7 +29,10 @@ public readonly record struct WeaponStats(
     float EmpoweredDamageMult,
     float OverdriveFireRateMult,
     float OverdriveSeconds,
-    bool Overkill)
+    bool Overkill,
+    float FireRadius,
+    float FireSeconds,
+    float IgniteSeconds)
 {
     /// <summary>
     /// Applies every level bonus up to <paramref name="level"/> to the weapon's base stats;
@@ -45,6 +48,8 @@ public readonly record struct WeaponStats(
         var reloadTime = config.Ammo.ReloadTime;
         var range = config.Projectile?.Range ?? config.Thrown?.MaxRange ?? 0f;
         var blastRadius = config.Explosion?.Radius ?? 0f;
+        var fireRadius = config.Fire?.Radius ?? 0f;
+        var fireSeconds = config.Fire?.Seconds ?? 0f;
         var reserveMaxBonus = 0;
         var spread = config.SpreadDegrees;
 
@@ -64,6 +69,8 @@ public readonly record struct WeaponStats(
             range *= bonus.RangeMult;
             spread *= bonus.SpreadMult;
             blastRadius *= bonus.BlastRadiusMult;
+            fireRadius *= bonus.BlastRadiusMult;
+            fireSeconds *= bonus.DurationMult;
             reserveMaxBonus += bonus.ReserveMaxBonus;
         }
 
@@ -82,11 +89,13 @@ public readonly record struct WeaponStats(
         var overdriveFireRateMult = 1f;
         var overdriveSeconds = 0f;
         var overkill = false;
+        var igniteSeconds = 0f;
         if (level >= WeaponConfig.MaxLevel && config.LevelTen is not null)
         {
             damage *= config.LevelTen.DamageMult;
             fireRate *= config.LevelTen.FireRateMult;
             magSize += config.LevelTen.MagSizeBonus;
+            fireSeconds *= config.LevelTen.DurationMult;
 
             var abilities = config.LevelTen.Abilities;
             for (var i = 0; i < abilities.Count; i++)
@@ -116,6 +125,10 @@ public readonly record struct WeaponStats(
                         empoweredDamageMult = abilities[i].DamageMult;
                         break;
 
+                    case WeaponAbility.SpreadFire:
+                        igniteSeconds = abilities[i].Seconds;
+                        break;
+
                     case WeaponAbility.Overkill:
                         overkill = true;
                         break;
@@ -139,7 +152,8 @@ public readonly record struct WeaponStats(
             damage, fireRate, magSize, reloadTime, range, spread, config.Pellets, automatic,
             pierce, ricochets, ricochetRadius, ricochetDamageMult, dualWield,
             blastRadius, reserveMaxBonus, clusterCount, clusterDistance, clusterDamageMult, clusterRadiusMult,
-            empoweredEvery, empoweredDamageMult, overdriveFireRateMult, overdriveSeconds, overkill);
+            empoweredEvery, empoweredDamageMult, overdriveFireRateMult, overdriveSeconds, overkill,
+            fireRadius, fireSeconds, igniteSeconds);
     }
 
     /// <summary>
@@ -175,7 +189,8 @@ public readonly record struct WeaponStats(
             AddPercent(lines, bonus.ReloadTimeMult, "reload time");
             AddPercent(lines, bonus.RangeMult, "range");
             AddPercent(lines, bonus.SpreadMult, "spread");
-            AddPercent(lines, bonus.BlastRadiusMult, "blast radius");
+            AddPercent(lines, bonus.BlastRadiusMult, config.Fire is not null ? "fire area" : "blast radius");
+            AddPercent(lines, bonus.DurationMult, "burn time");
             if (bonus.ReserveMaxBonus > 0)
             {
                 lines.Add($"+{bonus.ReserveMaxBonus} carried");

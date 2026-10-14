@@ -35,8 +35,17 @@ public sealed class ExplosiveSystem
     private readonly List<IHittable> _inBlast = new();
     private readonly List<ExplosiveShot> _landed = new();
 
-    public ExplosiveSystem(Arena arena, FriendlyFireConfig friendlyFire, GameRandom random, IAudioManager audio)
+    private readonly HazardSystem? _hazards;
+
+    /// <param name="arena">Keeps landings inside the walls.</param>
+    /// <param name="friendlyFire">Self and friendly damage shares.</param>
+    /// <param name="random">Cluster scatter.</param>
+    /// <param name="audio">Sound events.</param>
+    /// <param name="hazards">Receives the fire pools of fire weapons; without it they leave none.</param>
+    public ExplosiveSystem(
+        Arena arena, FriendlyFireConfig friendlyFire, GameRandom random, IAudioManager audio, HazardSystem? hazards = null)
     {
+        _hazards = hazards;
         _arena = arena;
         _friendlyFire = friendlyFire;
         _random = random;
@@ -86,7 +95,7 @@ public sealed class ExplosiveSystem
 
         for (var i = 0; i < _landed.Count; i++)
         {
-            Explode(_landed[i], players);
+            Land(_landed[i], players);
         }
 
         for (var i = _effects.Count - 1; i >= 0; i--)
@@ -113,6 +122,22 @@ public sealed class ExplosiveSystem
             var thrown = _thrown[i];
             renderer.FillCircle(thrown.Position, thrown.Shot.VisualRadius, ShadowColor);
             renderer.DrawVisual(thrown.Visual, thrown.Position, 0f);
+        }
+    }
+
+    private void Land(in ExplosiveShot shot, IReadOnlyList<Player> players)
+    {
+        if (shot.BlastRadius > 0f)
+        {
+            Explode(shot, players);
+        }
+
+        if (shot.FireRadius > 0f && shot.FireSeconds > 0f)
+        {
+            _hazards?.SpawnFire(
+                shot.Target, shot.FireRadius, shot.FireSeconds, shot.FireDamagePerSecond, shot.OwnerIndex,
+                shot.IgniteSeconds);
+            _audio.PlaySfx(SfxIds.FireStart);
         }
     }
 

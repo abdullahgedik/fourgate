@@ -21,7 +21,11 @@ public sealed class WeaponLevelConfig
     /// <summary>Below 1 tightens the spread.</summary>
     public float SpreadMult { get; init; } = 1f;
 
+    /// <summary>Grows the blast radius, and the fire radius of a fire weapon.</summary>
     public float BlastRadiusMult { get; init; } = 1f;
+
+    /// <summary>Lengthens how long a fire pool burns.</summary>
+    public float DurationMult { get; init; } = 1f;
 
     /// <summary>Extra reserve capacity (carry cap for count-based weapons).</summary>
     public int ReserveMaxBonus { get; init; }
@@ -39,6 +43,7 @@ public sealed class WeaponLevelConfig
         DataLoadException.Require(RangeMult > 0, file, $"{path}.rangeMult", "must be greater than 0");
         DataLoadException.Require(SpreadMult >= 0, file, $"{path}.spreadMult", "must not be negative");
         DataLoadException.Require(BlastRadiusMult > 0, file, $"{path}.blastRadiusMult", "must be greater than 0");
+        DataLoadException.Require(DurationMult > 0, file, $"{path}.durationMult", "must be greater than 0");
         DataLoadException.Require(ReserveMaxBonus >= 0, file, $"{path}.reserveMaxBonus", "must not be negative");
     }
 }

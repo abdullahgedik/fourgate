@@ -196,6 +196,36 @@
         "damageMult": 1.08,
         "abilities": [ { "id": "overkill" } ]
       }
+    },
+    {
+      "id": "molotov",
+      "displayName": "Molotov",
+      "category": "equipment",
+      "slot": 2,
+      "unlockWave": 8,
+      "type": "thrown",
+      "damage": 12,
+      "fireRate": 1.0,
+      "automatic": false,
+      "ammo": { "usesMagazine": false, "reserveMax": 8, "infiniteReserve": false },
+      "thrown": { "speed": 850, "maxRange": 600, "radius": 9 },
+      "fire": { "radius": 90, "seconds": 4 },
+      "levels": [
+        { "level": 2, "damageMult": 1.08, "fireRateMult": 1.10 },
+        { "level": 3, "damageMult": 1.08, "reserveMaxBonus": 1 },
+        { "level": 4, "damageMult": 1.08, "blastRadiusMult": 1.08 },
+        { "level": 5, "damageMult": 1.08, "durationMult": 1.10 },
+        { "level": 6, "damageMult": 1.08, "fireRateMult": 1.10 },
+        { "level": 7, "damageMult": 1.08, "reserveMaxBonus": 1 },
+        { "level": 8, "damageMult": 1.08, "blastRadiusMult": 1.08 },
+        { "level": 9, "damageMult": 1.08, "durationMult": 1.10 }
+      ],
+      "levelTen": {
+        "description": [ "Fire lasts twice as long", "Burning enemies spread fire", "+8% damage" ],
+        "damageMult": 1.08,
+        "durationMult": 2.0,
+        "abilities": [ { "id": "spreadFire", "seconds": 3 } ]
+      }
     }
   ]
 }
