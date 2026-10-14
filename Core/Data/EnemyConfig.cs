@@ -40,6 +40,9 @@ public sealed class EnemyConfig
     /// <summary>Placeholder body color as red, green, blue (0–255).</summary>
     public List<int> Color { get; init; } = new() { 90, 190, 100 };
 
+    /// <summary>Ranged attack; null for enemies that only hit by touch.</summary>
+    public EnemyAttackConfig? Attack { get; init; }
+
     /// <summary>Share of knockback it ignores (0–1); 0 (the default) takes the full push.</summary>
     public float KnockbackResist { get; init; }
 
@@ -65,5 +68,6 @@ public sealed class EnemyConfig
         DataLoadException.Require(
             Color is not null && Color.Count == 3 && Color.TrueForAll(c => c >= 0 && c <= 255),
             file, $"{path}.color", "must be three numbers from 0 to 255 (red, green, blue)");
+        Attack?.Validate(file, $"{path}.attack");
     }
 }

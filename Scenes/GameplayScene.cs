@@ -70,6 +70,7 @@ public sealed class GameplayScene
     private int _unlocksAppliedUpToWave;
     private readonly UpgradeScreen _upgradeScreen;
     private readonly WaveHud _waveHud = new();
+    private readonly EnemyShotSystem _fireballs = new();
     private string _debugNotice = string.Empty;
     private float _debugNoticeLeft;
     private readonly GameOverOverlay _gameOverOverlay = new();
@@ -90,7 +91,7 @@ public sealed class GameplayScene
         var config = data.Game;
         _random = new GameRandom(config.Debug.Seed ?? Environment.TickCount);
         _arena = new Arena(config.Arena);
-        _enemies = new EnemySystem(audio) { KnockbackDamping = config.Knockback.Damping };
+        _enemies = new EnemySystem(audio) { KnockbackDamping = config.Knockback.Damping, Fireballs = _fireballs };
         _shots = new ShotSystem(_arena);
         _shots.AddSource(_enemies);
         _xp = new XpSystem(config.Xp, audio);
@@ -171,6 +172,7 @@ public sealed class GameplayScene
         _waves?.Update(deltaSeconds);
         UnlockWeaponsForStartedWaves();
         _enemies.Update(deltaSeconds, _players, _arena);
+        _fireballs.Update(deltaSeconds, _players, _arena);
         RewardKills();
 
         for (var i = 0; i < _players.Count; i++)
@@ -181,6 +183,10 @@ public sealed class GameplayScene
             player.Input.Update(player.Position, camera);
             player.Update(deltaSeconds, _arena, _shotRouter);
             camera.Follow(player.Position, player.Input.AimScreen, deltaSeconds);
+            var view = camera.ViewRect;
+            player.SetView(
+                camera.ScreenToWorld(new Vector2(view.Left, view.Top)),
+                camera.ScreenToWorld(new Vector2(view.Right, view.Bottom)));
         }
 
         _shots.Update(deltaSeconds);
@@ -351,7 +357,9 @@ public sealed class GameplayScene
             }
 
             _drops.Draw(renderer);
+            _enemies.DrawTelegraphs(renderer);
             _enemies.Draw(renderer);
+            _fireballs.Draw(renderer);
             _shots.Draw(renderer);
             _flames.Draw(renderer);
             _explosives.Draw(renderer);

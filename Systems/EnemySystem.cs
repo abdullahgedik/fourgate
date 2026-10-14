@@ -19,6 +19,10 @@ public sealed class EnemySystem : IHittableSource
 
     // How close to touching counts as contact; absorbs float error in the stop distance.
     private const float TouchSlack = 1.5f;
+    private const float TelegraphGlowStart = 1.2f;
+    private const float TelegraphGlowEnd = 1.9f;
+
+    private static readonly Color TelegraphColor = new(255, 70, 50);
 
     private readonly IAudioManager _audio;
     private readonly Pool<Enemy> _enemies = new(InitialEnemies);
@@ -50,6 +54,9 @@ public sealed class EnemySystem : IHittableSource
         return enemy;
     }
 
+    /// <summary>Where ranged enemies' fireballs go; without it they wind up but throw nothing.</summary>
+    public EnemyShotSystem? Fireballs { get; set; }
+
     /// <summary>Share of an enemy's remaining knockback applied per second; 0 applies it at once.</summary>
     public float KnockbackDamping { get; set; }
 
@@ -66,7 +73,11 @@ public sealed class EnemySystem : IHittableSource
                 _audio.PlaySfx(SfxIds.EnemyHit);
             }
 
-            MoveTowardNearestPlayer(enemy, players, arena, deltaSeconds);
+            if (!UpdateRangedAttack(enemy, players, arena, deltaSeconds))
+            {
+                MoveTowardNearestPlayer(enemy, players, arena, deltaSeconds);
+            }
+
             enemy.Position += enemy.TakeKnockStep(
                 KnockbackDamping > 0f ? Math.Min(1f, KnockbackDamping * deltaSeconds) : 1f);
         }
@@ -85,6 +96,24 @@ public sealed class EnemySystem : IHittableSource
 
         // Second rebuild so shots fired this frame are tested against final positions.
         RebuildHash();
+    }
+
+    /// <summary>Glow of enemies winding up a ranged attack; drawn under the enemies.</summary>
+    public void DrawTelegraphs(IRenderer renderer)
+    {
+        for (var i = 0; i < _enemies.Count; i++)
+        {
+            var enemy = _enemies[i];
+            if (!enemy.IsWindingUp || enemy.Config.Attack is null)
+            {
+                continue;
+            }
+
+            // A red glow that swells and brightens as the throw nears.
+            var progress = enemy.WindUpProgress;
+            var radius = enemy.Radius * MathHelper.Lerp(TelegraphGlowStart, TelegraphGlowEnd, progress);
+            renderer.FillCircle(enemy.Position, radius, TelegraphColor * (0.3f + 0.5f * progress));
+        }
     }
 
     public void Draw(IRenderer renderer)
@@ -133,6 +162,79 @@ public sealed class EnemySystem : IHittableSource
             var enemy = _enemies[i];
             _hash.Insert(enemy, enemy.Position, enemy.Radius);
         }
+    }
+
+    // A ranged enemy stops to attack when its target is in range, in clear sight past the
+    // pillars, and able to see it (so nobody is shot from off-screen). Returns true while it
+    // holds still: winding up, or waiting out its cooldown in a good spot.
+    private bool UpdateRangedAttack(Enemy enemy, IReadOnlyList<Player> players, Arena arena, float deltaSeconds)
+    {
+        var attack = enemy.Config.Attack;
+        if (attack is null || !enemy.IsAlive)
+        {
+            return false;
+        }
+
+        if (enemy.IsWindingUp)
+        {
+            if (enemy.TickWindUp(deltaSeconds, attack.CooldownSeconds))
+            {
+                Fireballs?.Fire(enemy.Position + enemy.AimDirection * enemy.Radius, enemy.AimDirection, attack);
+                _audio.PlaySfx(SfxIds.EnemyFireball);
+            }
+
+            return true;
+        }
+
+        var target = NearestLivingPlayer(enemy.Position, players);
+        if (target is null)
+        {
+            return false;
+        }
+
+        var toTarget = target.Position - enemy.Position;
+        var distance = toTarget.Length();
+        if (distance > attack.Range || distance < 0.0001f || !target.CanSee(enemy.Position, enemy.Radius))
+        {
+            return false;
+        }
+
+        var direction = toTarget / distance;
+        if (arena.Raycast(enemy.Position, direction, out _) < distance)
+        {
+            return false;
+        }
+
+        enemy.Facing = MathF.Atan2(direction.Y, direction.X);
+        if (enemy.CanStartRangedAttack)
+        {
+            enemy.StartWindUp(direction, attack.TelegraphSeconds);
+            _audio.PlaySfx(SfxIds.EnemyTelegraph);
+        }
+
+        return true;
+    }
+
+    private static Player? NearestLivingPlayer(Vector2 position, IReadOnlyList<Player> players)
+    {
+        Player? nearest = null;
+        var bestDistanceSquared = float.MaxValue;
+        for (var i = 0; i < players.Count; i++)
+        {
+            if (!players[i].IsAlive)
+            {
+                continue;
+            }
+
+            var distanceSquared = Vector2.DistanceSquared(position, players[i].Position);
+            if (distanceSquared < bestDistanceSquared)
+            {
+                bestDistanceSquared = distanceSquared;
+                nearest = players[i];
+            }
+        }
+
+        return nearest;
     }
 
     private static void MoveTowardNearestPlayer(

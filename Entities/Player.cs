@@ -51,6 +51,27 @@ public sealed class Player
 
     public Vector2 Position { get; private set; }
 
+    // World area this player's view shows; set each frame by the scene. Unknown (tests) counts as all.
+    private Vector2 _viewMin;
+    private Vector2 _viewMax;
+    private bool _hasView;
+
+    /// <summary>Records the world area this player's camera shows this frame.</summary>
+    public void SetView(Vector2 min, Vector2 max)
+    {
+        _viewMin = min;
+        _viewMax = max;
+        _hasView = true;
+    }
+
+    /// <summary>True when a circle is fully inside this player's view, so they can see it.</summary>
+    public bool CanSee(Vector2 position, float radius)
+    {
+        return !_hasView
+            || (position.X - radius >= _viewMin.X && position.X + radius <= _viewMax.X
+                && position.Y - radius >= _viewMin.Y && position.Y + radius <= _viewMax.Y);
+    }
+
     /// <summary>Unit-length facing direction in world space.</summary>
     public Vector2 AimDirection { get; private set; } = Vector2.UnitX;
 

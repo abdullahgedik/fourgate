@@ -27,6 +27,9 @@ public sealed class Enemy : IHittable
     private bool _burnCanSpread;
     private float _scorchLeft;
     private Color _bodyColor;
+    private float _windUpLeft;
+    private float _windUpSeconds;
+    private float _rangedCooldownLeft;
 
     /// <summary>Unique per spawn; gives overlapping enemies a stable order.</summary>
     public int Id { get; private set; }
@@ -34,6 +37,18 @@ public sealed class Enemy : IHittable
     public EnemyConfig Config { get; private set; } = null!;
 
     public Vector2 Position { get; set; }
+
+    /// <summary>Direction of the attack being wound up; locked when the wind-up starts.</summary>
+    public Vector2 AimDirection { get; private set; }
+
+    /// <summary>True while it stands still, showing its aim line, before a ranged attack.</summary>
+    public bool IsWindingUp => _windUpLeft > 0f;
+
+    /// <summary>How far the wind-up has got, 0 to 1.</summary>
+    public float WindUpProgress => _windUpSeconds > 0f ? 1f - _windUpLeft / _windUpSeconds : 1f;
+
+    /// <summary>True when its ranged attack is off cooldown.</summary>
+    public bool CanStartRangedAttack => _rangedCooldownLeft <= 0f && !IsWindingUp;
 
     /// <summary>Angle (radians) of the way it last walked; turns a triangle body.</summary>
     public float Facing { get; set; }
@@ -73,6 +88,10 @@ public sealed class Enemy : IHittable
         Config = config;
         Position = position;
         Facing = 0f;
+        AimDirection = Vector2.Zero;
+        _windUpLeft = 0f;
+        _windUpSeconds = 0f;
+        _rangedCooldownLeft = 0f;
         _bodyColor = new Color(config.Color[0], config.Color[1], config.Color[2]);
         Hp = config.Hp;
         LastHitBy = 0;
@@ -99,6 +118,29 @@ public sealed class Enemy : IHittable
         var step = _knockLeft * share;
         _knockLeft -= step;
         return step;
+    }
+
+    /// <summary>Starts the telegraphed wind-up of a ranged attack along a locked direction.</summary>
+    public void StartWindUp(Vector2 direction, float seconds)
+    {
+        AimDirection = direction;
+        Facing = MathF.Atan2(direction.Y, direction.X);
+        _windUpSeconds = seconds;
+        _windUpLeft = seconds;
+    }
+
+    /// <summary>Advances the wind-up; true on the frame it ends and the attack goes off.</summary>
+    public bool TickWindUp(float deltaSeconds, float cooldownSeconds)
+    {
+        _windUpLeft -= deltaSeconds;
+        if (_windUpLeft > 0f)
+        {
+            return false;
+        }
+
+        _windUpLeft = 0f;
+        _rangedCooldownLeft = cooldownSeconds;
+        return true;
     }
 
     /// <summary>Starts the wait before the next contact attack.</summary>
@@ -171,6 +213,7 @@ public sealed class Enemy : IHittable
     {
         _flashLeft = Math.Max(0f, _flashLeft - deltaSeconds);
         _attackCooldownLeft = Math.Max(0f, _attackCooldownLeft - deltaSeconds);
+        _rangedCooldownLeft = Math.Max(0f, _rangedCooldownLeft - deltaSeconds);
         _scorchLeft = Math.Max(0f, _scorchLeft - deltaSeconds);
 
         if (IsBurning)

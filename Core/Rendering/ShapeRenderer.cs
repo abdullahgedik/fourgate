@@ -74,6 +74,14 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
                 FillRect(position - new Vector2(visual.Radius), new Vector2(visual.Radius * 2f), visual.Color);
                 break;
 
+            case ShapeKind.Diamond:
+                // A square of side r·√2 turned 45°, so its corners reach the radius.
+                var side = visual.Radius * MathF.Sqrt(2f);
+                _spriteBatch.Draw(
+                    _pixel, position, null, visual.Color, MathF.PI / 4f, new Vector2(0.5f), new Vector2(side),
+                    SpriteEffects.None, 0f);
+                break;
+
             case ShapeKind.Triangle:
                 var scale = visual.Radius * 2f / CircleTextureSize;
                 var origin = new Vector2(CircleTextureSize / 2f);

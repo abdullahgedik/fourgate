@@ -31,6 +31,26 @@
       "dropChance": 0.12,
       "shape": "triangle",
       "color": [ 235, 210, 60 ]
+    },
+    {
+      "id": "ranged",
+      "displayName": "Ranged Zombie",
+      "hp": 60,
+      "speed": 70,
+      "radius": 20,
+      "contactDamage": 0,
+      "contactCooldown": 0.8,
+      "attack": {
+        "type": "fireball", "damage": 10, "range": 450, "telegraphSeconds": 0.6, "cooldownSeconds": 1.6,
+        "projectileSpeed": 380, "projectileRadius": 12, "projectileRange": 700
+      },
+      "xp": 20,
+      "scoreValue": 20,
+      "cost": 2.5,
+      "unlockWave": 5,
+      "dropChance": 0.2,
+      "shape": "diamond",
+      "color": [ 240, 140, 50 ]
     }
   ]
 }

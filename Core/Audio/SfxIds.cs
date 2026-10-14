@@ -22,6 +22,8 @@ public static class SfxIds
     public const string WeaponLevelUp = "weapon_level_up";
     public const string EnemyHit = "enemy_hit";
     public const string EnemyDeath = "enemy_death";
+    public const string EnemyTelegraph = "enemy_telegraph";
+    public const string EnemyFireball = "enemy_fireball";
     public const string WeaponFire = "weapon_fire";
     public const string WeaponThrow = "weapon_throw";
     public const string Explosion = "explosion";
