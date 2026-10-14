@@ -53,4 +53,14 @@ public enum WeaponAbility
     /// after the first is shifted by up to <c>radius</c> in a random direction.
     /// </summary>
     MultiBlast,
+
+    /// <summary>Flames keep going after touching an enemy instead of stopping at it.</summary>
+    PassThrough,
+
+    /// <summary>
+    /// While firing, every <c>interval</c> seconds a flame leaves fire pools of <c>radius</c> along
+    /// its path, <c>spacing</c> apart, each burning for <c>seconds</c> at <c>damageMult</c> of the
+    /// weapon's damage per second.
+    /// </summary>
+    FireTrail,
 }

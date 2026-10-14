@@ -255,6 +255,36 @@
         "damageMult": 1.08,
         "abilities": [ { "id": "instantArm" }, { "id": "multiBlast", "count": 3, "seconds": 0.15, "radius": 30 } ]
       }
+    },
+    {
+      "id": "flamethrower",
+      "displayName": "Flamethrower",
+      "slot": 7,
+      "unlockWave": 12,
+      "type": "stream",
+      "damage": 40,
+      "fireRate": 30,
+      "automatic": true,
+      "spreadDegrees": 18,
+      "ammo": { "usesMagazine": false, "reserveMax": 400, "infiniteReserve": false },
+      "stream": { "speed": 700, "range": 400, "radiusStart": 10, "radiusEnd": 40, "passThrough": true },
+      "levels": [
+        { "level": 2, "damageMult": 1.08, "rangeMult": 1.06 },
+        { "level": 3, "damageMult": 1.08, "reserveMaxBonus": 50 },
+        { "level": 4, "damageMult": 1.08, "spreadMult": 1.10 },
+        { "level": 5, "damageMult": 1.08, "rangeMult": 1.06 },
+        { "level": 6, "damageMult": 1.08, "reserveMaxBonus": 50 },
+        { "level": 7, "damageMult": 1.08, "spreadMult": 1.10 },
+        { "level": 8, "damageMult": 1.08, "rangeMult": 1.06 },
+        { "level": 9, "damageMult": 1.08, "reserveMaxBonus": 50 }
+      ],
+      "levelTen": {
+        "description": [ "Leaves a trail of fire", "+8% damage" ],
+        "damageMult": 1.08,
+        "abilities": [
+          { "id": "fireTrail", "interval": 0.25, "seconds": 2, "radius": 40, "spacing": 80, "damageMult": 0.25 }
+        ]
+      }
     }
   ]
 }

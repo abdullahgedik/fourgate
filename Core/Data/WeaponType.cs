@@ -11,4 +11,7 @@ public enum WeaponType
 
     /// <summary>Put down at the player's feet; explodes when an enemy comes close.</summary>
     Placed,
+
+    /// <summary>Sprays short-lived flames while fire is held (flamethrower).</summary>
+    Stream,
 }

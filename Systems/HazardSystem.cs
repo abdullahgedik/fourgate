@@ -45,10 +45,17 @@ public sealed class HazardSystem
     /// <param name="damagePerSecond">Damage per second to everything inside.</param>
     /// <param name="ownerIndex">Index of the player who started it.</param>
     /// <param name="igniteSeconds">How long enemies keep burning after being caught; 0 for not at all.</param>
+    /// <param name="hurtsPlayers">False for fire that burns enemies only.</param>
     public void SpawnFire(
-        Vector2 position, float radius, float seconds, float damagePerSecond, int ownerIndex, float igniteSeconds)
+        Vector2 position,
+        float radius,
+        float seconds,
+        float damagePerSecond,
+        int ownerIndex,
+        float igniteSeconds,
+        bool hurtsPlayers = true)
     {
-        _pools.Rent().Start(position, radius, seconds, damagePerSecond, ownerIndex, igniteSeconds);
+        _pools.Rent().Start(position, radius, seconds, damagePerSecond, ownerIndex, igniteSeconds, hurtsPlayers);
     }
 
     public void Update(float deltaSeconds, IReadOnlyList<Player> players)
@@ -110,6 +117,11 @@ public sealed class HazardSystem
             {
                 _inFire[i].Ignite(pool.IgniteSeconds, pool.DamagePerSecond, pool.OwnerIndex);
             }
+        }
+
+        if (!pool.HurtsPlayers)
+        {
+            return;
         }
 
         // Players burn by the capped friendly-fire rules (see FriendlyFireRules).

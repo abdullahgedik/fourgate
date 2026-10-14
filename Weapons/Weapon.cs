@@ -32,6 +32,7 @@ public sealed class Weapon
     private float _clickBufferLeft;
     private int _shotsFired;
     private float _overdrive;
+    private float _trailCooldown;
 
     /// <param name="config">The weapon's data.</param>
     /// <param name="rules">Global reload rules.</param>
@@ -144,6 +145,7 @@ public sealed class Weapon
         _cooldown = _cooldown <= 0f ? 0f : _cooldown - deltaSeconds;
         _clickBufferLeft = Math.Max(0f, _clickBufferLeft - deltaSeconds);
         UpdateOverdrive(deltaSeconds, trigger.Held);
+        _trailCooldown = Math.Max(0f, _trailCooldown - deltaSeconds);
 
         if (IsReloading)
         {
@@ -228,6 +230,12 @@ public sealed class Weapon
             return;
         }
 
+        if (Config.Type == WeaponType.Stream)
+        {
+            EmitFlame(muzzle, direction, ownerIndex, shots);
+            return;
+        }
+
         if (Config.Type == WeaponType.Placed)
         {
             shots.PlaceMine(new MineShot(
@@ -282,6 +290,33 @@ public sealed class Weapon
         _shotsFired++;
         var empowered = Stats.EmpoweredEvery > 0 && _shotsFired % Stats.EmpoweredEvery == 0;
         return empowered ? Stats.Damage * Stats.EmpoweredDamageMult : Stats.Damage;
+    }
+
+    // One flame per shot; the weapon's damage per second is shared out over the flames fired
+    // each second. With a fire trail, one flame every interval leaves a pool where it dies out.
+    private void EmitFlame(Vector2 muzzle, Vector2 direction, int ownerIndex, IShotHandler shots)
+    {
+        var stream = Config.Stream!;
+        var leavesTrail = Stats.TrailInterval > 0f && _trailCooldown <= 0f;
+        if (leavesTrail)
+        {
+            _trailCooldown = Stats.TrailInterval;
+        }
+
+        shots.EmitFlame(new FlameShot(
+            muzzle,
+            Scatter(direction, 0, 1),
+            stream.Speed,
+            Stats.Range,
+            stream.RadiusStart,
+            stream.RadiusEnd,
+            Stats.Damage / CurrentFireRate,
+            ownerIndex,
+            Stats.PassThrough,
+            leavesTrail ? Stats.TrailRadius : 0f,
+            Stats.TrailSeconds,
+            Stats.Damage * Stats.TrailDamageMult,
+            Stats.TrailSpacing));
     }
 
     // Lands on the aim point, or at the weapon's reach when aiming farther (or with a stick).

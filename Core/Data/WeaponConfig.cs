@@ -59,6 +59,9 @@ public sealed class WeaponConfig
     /// <summary>Trigger values; required for <see cref="WeaponType.Placed"/> weapons.</summary>
     public PlacedConfig? Placed { get; init; }
 
+    /// <summary>Flame values; required for <see cref="WeaponType.Stream"/> weapons.</summary>
+    public StreamConfig? Stream { get; init; }
+
     /// <summary>Bonuses of levels 2 to 9. A level without an entry changes nothing.</summary>
     public List<WeaponLevelConfig> Levels { get; init; } = new();
 
@@ -114,7 +117,21 @@ public sealed class WeaponConfig
             case WeaponType.Placed:
                 ValidatePlaced(file, path);
                 break;
+
+            case WeaponType.Stream:
+                ValidateStream(file, path);
+                break;
         }
+    }
+
+    private void ValidateStream(string file, string path)
+    {
+        DataLoadException.Require(Stream is not null, file, $"{path}.stream", "is required for this weapon type");
+        var stream = Stream!;
+        DataLoadException.Require(stream.Speed > 0, file, $"{path}.stream.speed", "must be greater than 0");
+        DataLoadException.Require(stream.Range > 0, file, $"{path}.stream.range", "must be greater than 0");
+        DataLoadException.Require(stream.RadiusStart > 0, file, $"{path}.stream.radiusStart", "must be greater than 0");
+        DataLoadException.Require(stream.RadiusEnd > 0, file, $"{path}.stream.radiusEnd", "must be greater than 0");
     }
 
     private void ValidatePlaced(string file, string path)

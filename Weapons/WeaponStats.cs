@@ -39,7 +39,13 @@ public readonly record struct WeaponStats(
     bool ChainDetonation,
     int BlastCount,
     float BlastInterval,
-    float BlastSpread)
+    float BlastSpread,
+    bool PassThrough,
+    float TrailInterval,
+    float TrailSeconds,
+    float TrailRadius,
+    float TrailDamageMult,
+    float TrailSpacing)
 {
     /// <summary>
     /// Applies every level bonus up to <paramref name="level"/> to the weapon's base stats;
@@ -53,7 +59,7 @@ public readonly record struct WeaponStats(
         var fireRate = config.FireRate;
         var magSize = config.Ammo.MagSize;
         var reloadTime = config.Ammo.ReloadTime;
-        var range = config.Projectile?.Range ?? config.Thrown?.MaxRange ?? 0f;
+        var range = config.Projectile?.Range ?? config.Thrown?.MaxRange ?? config.Stream?.Range ?? 0f;
         var blastRadius = config.Explosion?.Radius ?? 0f;
         var fireRadius = config.Fire?.Radius ?? 0f;
         var fireSeconds = config.Fire?.Seconds ?? 0f;
@@ -103,11 +109,18 @@ public readonly record struct WeaponStats(
         var blastCount = 1;
         var blastInterval = 0f;
         var blastSpread = 0f;
+        var passThrough = config.Stream?.PassThrough ?? false;
+        var trailInterval = 0f;
+        var trailSeconds = 0f;
+        var trailRadius = 0f;
+        var trailDamageMult = 0f;
+        var trailSpacing = 0f;
         if (level >= WeaponConfig.MaxLevel && config.LevelTen is not null)
         {
             damage *= config.LevelTen.DamageMult;
             fireRate *= config.LevelTen.FireRateMult;
             magSize += config.LevelTen.MagSizeBonus;
+            range *= config.LevelTen.RangeMult;
             fireSeconds *= config.LevelTen.DurationMult;
             maxPlaced += config.LevelTen.MaxPlacedBonus;
 
@@ -147,6 +160,18 @@ public readonly record struct WeaponStats(
                         chainDetonation = true;
                         break;
 
+                    case WeaponAbility.PassThrough:
+                        passThrough = true;
+                        break;
+
+                    case WeaponAbility.FireTrail:
+                        trailInterval = abilities[i].Interval;
+                        trailSeconds = abilities[i].Seconds;
+                        trailRadius = abilities[i].Radius;
+                        trailSpacing = abilities[i].Spacing;
+                        trailDamageMult = abilities[i].DamageMult;
+                        break;
+
                     case WeaponAbility.MultiBlast:
                         blastCount = abilities[i].Count;
                         blastInterval = abilities[i].Seconds;
@@ -183,7 +208,8 @@ public readonly record struct WeaponStats(
             empoweredEvery, empoweredDamageMult, overdriveFireRateMult, overdriveSeconds, overkill,
             fireRadius, fireSeconds, igniteSeconds,
             config.Placed?.TriggerRadius ?? 0f, armSeconds, maxPlaced, chainDetonation,
-            blastCount, blastInterval, blastSpread);
+            blastCount, blastInterval, blastSpread,
+            passThrough, trailInterval, trailSeconds, trailRadius, trailDamageMult, trailSpacing);
     }
 
     /// <summary>

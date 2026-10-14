@@ -53,6 +53,7 @@ public sealed class GameplayScene
     private readonly ExplosiveSystem _explosives;
     private readonly HazardSystem _hazards;
     private readonly MineSystem _mines;
+    private readonly FlameSystem _flames;
     private readonly ShotRouter _shotRouter;
     private readonly EnemySystem _enemies;
     private readonly WaveSystem? _waves;
@@ -92,7 +93,10 @@ public sealed class GameplayScene
         _explosives.OneShotKills = config.Debug.OneShotKills;
         _mines = new MineSystem(_explosives, _random, audio);
         _mines.AddSource(_enemies);
-        _shotRouter = new ShotRouter(_shots, _explosives, _mines);
+        _flames = new FlameSystem(_arena, _hazards);
+        _flames.AddSource(_enemies);
+        _flames.OneShotKills = config.Debug.OneShotKills;
+        _shotRouter = new ShotRouter(_shots, _explosives, _mines, _flames);
         _unlocks = new WeaponUnlocks(config, audio, _random);
         _drops = new DropSystem(config.Crates, _random, audio, _unlocks);
         _upgrades = new UpgradeSystem(data.Upgrades, _unlocks, _random, audio);
@@ -162,6 +166,7 @@ public sealed class GameplayScene
         _explosives.Update(deltaSeconds, _players);
         _hazards.Update(deltaSeconds, _players);
         _mines.Update(deltaSeconds, _players);
+        _flames.Update(deltaSeconds);
         _drops.Update(deltaSeconds, _players);
 
         if (!AnyPlayerAlive())
@@ -272,6 +277,7 @@ public sealed class GameplayScene
     {
         _shots.OneShotKills = !_shots.OneShotKills;
         _explosives.OneShotKills = _shots.OneShotKills;
+        _flames.OneShotKills = _shots.OneShotKills;
     }
 
     /// <summary>Debug helper: drops one crate of each type in a row beside the first player.</summary>
@@ -319,6 +325,7 @@ public sealed class GameplayScene
             _drops.Draw(renderer);
             _enemies.Draw(renderer);
             _shots.Draw(renderer);
+            _flames.Draw(renderer);
             _explosives.Draw(renderer);
             DrawPlayers(renderer);
             renderer.End();
@@ -437,6 +444,8 @@ public sealed class GameplayScene
         _hazards.AddTarget(moving);
         _mines.AddTarget(still);
         _mines.AddTarget(moving);
+        _flames.AddTarget(still);
+        _flames.AddTarget(moving);
         _explosives.AddTarget(moving);
     }
 

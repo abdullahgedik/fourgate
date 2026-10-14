@@ -23,6 +23,8 @@ public sealed class WeaponLevelTenConfig
     /// <summary>More of a placed weapon allowed down at once.</summary>
     public int MaxPlacedBonus { get; init; }
 
+    public float RangeMult { get; init; } = 1f;
+
     /// <summary>Checks value ranges; <paramref name="path"/> locates this entry inside the file.</summary>
     public void Validate(string file, string path)
     {
@@ -34,6 +36,7 @@ public sealed class WeaponLevelTenConfig
         DataLoadException.Require(MagSizeBonus >= 0, file, $"{path}.magSizeBonus", "must not be negative");
         DataLoadException.Require(DurationMult > 0, file, $"{path}.durationMult", "must be greater than 0");
         DataLoadException.Require(MaxPlacedBonus >= 0, file, $"{path}.maxPlacedBonus", "must not be negative");
+        DataLoadException.Require(RangeMult > 0, file, $"{path}.rangeMult", "must be greater than 0");
 
         for (var i = 0; i < Abilities!.Count; i++)
         {
@@ -50,6 +53,10 @@ public sealed class WeaponLevelTenConfig
                 Abilities[i].FireRateMult > 0, file, $"{path}.abilities[{i}].fireRateMult", "must be greater than 0");
             DataLoadException.Require(
                 Abilities[i].Seconds >= 0, file, $"{path}.abilities[{i}].seconds", "must not be negative");
+            DataLoadException.Require(
+                Abilities[i].Interval >= 0, file, $"{path}.abilities[{i}].interval", "must not be negative");
+            DataLoadException.Require(
+                Abilities[i].Spacing >= 0, file, $"{path}.abilities[{i}].spacing", "must not be negative");
         }
     }
 }

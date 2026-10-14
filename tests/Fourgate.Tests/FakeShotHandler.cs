@@ -25,6 +25,9 @@ public sealed class FakeShotHandler : IShotHandler
 
     public bool LastOverkill { get; private set; }
 
+    /// <summary>Every flame sprayed, in order.</summary>
+    public List<FlameShot> Flames { get; } = new();
+
     /// <summary>Every mine placed, in order.</summary>
     public List<MineShot> Mines { get; } = new();
 
@@ -67,5 +70,10 @@ public sealed class FakeShotHandler : IShotHandler
     public void PlaceMine(in MineShot shot)
     {
         Mines.Add(shot);
+    }
+
+    public void EmitFlame(in FlameShot shot)
+    {
+        Flames.Add(shot);
     }
 }

@@ -36,4 +36,7 @@ public interface IShotHandler
 
     /// <summary>Puts a mine down.</summary>
     void PlaceMine(in MineShot shot);
+
+    /// <summary>Sprays one flame.</summary>
+    void EmitFlame(in FlameShot shot);
 }

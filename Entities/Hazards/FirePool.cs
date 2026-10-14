@@ -30,6 +30,9 @@ public sealed class FirePool
 
     public float SecondsLeft { get; private set; }
 
+    /// <summary>False for fire that burns enemies only (the flamethrower's trail).</summary>
+    public bool HurtsPlayers { get; private set; }
+
     public bool IsFinished => SecondsLeft <= 0f;
 
     /// <summary>The wide, dim outer glow of the pool.</summary>
@@ -48,8 +51,15 @@ public sealed class FirePool
     private float Fade => Math.Clamp(SecondsLeft / FadeSeconds, 0f, 1f);
 
     public void Start(
-        Vector2 position, float radius, float seconds, float damagePerSecond, int ownerIndex, float igniteSeconds)
+        Vector2 position,
+        float radius,
+        float seconds,
+        float damagePerSecond,
+        int ownerIndex,
+        float igniteSeconds,
+        bool hurtsPlayers)
     {
+        HurtsPlayers = hurtsPlayers;
         Position = position;
         Radius = radius;
         SecondsLeft = seconds;

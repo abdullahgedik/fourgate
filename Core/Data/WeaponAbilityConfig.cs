@@ -22,4 +22,10 @@ public sealed class WeaponAbilityConfig
 
     /// <summary>Time the ability takes, in seconds (overdrive: to ramp up fully).</summary>
     public float Seconds { get; init; }
+
+    /// <summary>Seconds between repeats of the ability (fire trail: between the flames that leave pools).</summary>
+    public float Interval { get; init; }
+
+    /// <summary>Distance between things the ability leaves along a path (fire trail: between its pools).</summary>
+    public float Spacing { get; init; }
 }
