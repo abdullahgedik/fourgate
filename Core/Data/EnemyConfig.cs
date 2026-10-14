@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using Fourgate.Core.Rendering;
+
 namespace Fourgate.Core.Data;
 
 /// <summary>One enemy entry from <c>enemies.json</c>.</summary>
@@ -31,6 +34,12 @@ public sealed class EnemyConfig
     /// <summary>Chance (0–1) to drop a crate when killed.</summary>
     public required float DropChance { get; init; }
 
+    /// <summary>Placeholder body shape until sprites exist; a triangle points where it walks.</summary>
+    public ShapeKind Shape { get; init; } = ShapeKind.Circle;
+
+    /// <summary>Placeholder body color as red, green, blue (0–255).</summary>
+    public List<int> Color { get; init; } = new() { 90, 190, 100 };
+
     /// <summary>Share of knockback it ignores (0–1); 0 (the default) takes the full push.</summary>
     public float KnockbackResist { get; init; }
 
@@ -53,5 +62,8 @@ public sealed class EnemyConfig
             DropChance >= 0 && DropChance <= 1, file, $"{path}.dropChance", "must be between 0 and 1");
         DataLoadException.Require(
             KnockbackResist >= 0 && KnockbackResist <= 1, file, $"{path}.knockbackResist", "must be between 0 and 1");
+        DataLoadException.Require(
+            Color is not null && Color.Count == 3 && Color.TrueForAll(c => c >= 0 && c <= 255),
+            file, $"{path}.color", "must be three numbers from 0 to 255 (red, green, blue)");
     }
 }

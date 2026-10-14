@@ -92,7 +92,7 @@ public sealed class EnemySystem : IHittableSource
         for (var i = 0; i < _enemies.Count; i++)
         {
             var enemy = _enemies[i];
-            renderer.DrawVisual(enemy.Visual, enemy.Position, 0f);
+            renderer.DrawVisual(enemy.Visual, enemy.Position, enemy.Facing);
         }
     }
 
@@ -168,6 +168,7 @@ public sealed class EnemySystem : IHittableSource
             var cornerDistance = toCorner.Length();
             if (cornerDistance > 0.0001f)
             {
+                enemy.Facing = MathF.Atan2(toCorner.Y, toCorner.X);
                 enemy.Position += toCorner / cornerDistance * Math.Min(enemy.Config.Speed * deltaSeconds, cornerDistance);
             }
 
@@ -183,6 +184,7 @@ public sealed class EnemySystem : IHittableSource
         }
 
         var step = Math.Min(enemy.Config.Speed * deltaSeconds, gap);
+        enemy.Facing = MathF.Atan2(target.Position.Y - enemy.Position.Y, target.Position.X - enemy.Position.X);
         enemy.Position += (target.Position - enemy.Position) / distance * step;
     }
 

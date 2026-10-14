@@ -34,6 +34,9 @@ public sealed class GameplayScene
     private const float EdgeIndicatorInset = 40f;
     private const float EdgeIndicatorRadius = 18f;
     private const float WeaponCrateSpacing = 70f;
+    private const float DebugNoticeSeconds = 2f;
+    private const float DebugNoticeY = 140f;
+    private const float DebugNoticeSize = 28f;
 
     private static readonly Color WallColor = new(70, 74, 92);
     private static readonly Color FloorColor = new(34, 36, 46);
@@ -46,6 +49,7 @@ public sealed class GameplayScene
     private static readonly Color CrosshairColor = new(240, 240, 240);
     private static readonly Color ReloadBarBackColor = new(12, 13, 18);
     private static readonly Color ReloadBarFillColor = new(255, 225, 120);
+    private static readonly Color DebugNoticeColor = new(255, 225, 120);
 
     private readonly GameData _data;
     private readonly float _floorCellSize;
@@ -66,6 +70,8 @@ public sealed class GameplayScene
     private int _unlocksAppliedUpToWave;
     private readonly UpgradeScreen _upgradeScreen;
     private readonly WaveHud _waveHud = new();
+    private string _debugNotice = string.Empty;
+    private float _debugNoticeLeft;
     private readonly GameOverOverlay _gameOverOverlay = new();
     private readonly IAudioManager _audio;
     private float _elapsedSeconds;
@@ -140,6 +146,7 @@ public sealed class GameplayScene
 
     public void Update(float deltaSeconds)
     {
+        _debugNoticeLeft = Math.Max(0f, _debugNoticeLeft - deltaSeconds);
         if (IsGameOver)
         {
             UpdateGameOver();
@@ -294,6 +301,13 @@ public sealed class GameplayScene
         _flames.OneShotKills = _shots.OneShotKills;
     }
 
+    /// <summary>Debug helper: shows a short message under the wave title for a moment.</summary>
+    public void ShowDebugNotice(string text)
+    {
+        _debugNotice = text;
+        _debugNoticeLeft = DebugNoticeSeconds;
+    }
+
     /// <summary>Debug helper: drops one crate of each type in a row beside the first player.</summary>
     public void DebugDropCrates()
     {
@@ -356,6 +370,13 @@ public sealed class GameplayScene
         if (_waves is not null)
         {
             _waveHud.Draw(renderer, _waves, _data.Game.VirtualWidth);
+        }
+
+        if (_debugNoticeLeft > 0f)
+        {
+            renderer.DrawText(
+                _debugNotice, new Vector2(_data.Game.VirtualWidth / 2f, DebugNoticeY), DebugNoticeSize,
+                DebugNoticeColor * Math.Min(1f, _debugNoticeLeft), TextAlign.Center);
         }
 
         if (_upgrades.AnyOfferOpen && !IsGameOver)

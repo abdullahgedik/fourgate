@@ -19,6 +19,7 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
     private readonly SpriteBatch _spriteBatch;
     private readonly Texture2D _pixel;
     private readonly Texture2D _circle;
+    private readonly Texture2D _triangle;
     private readonly FontSystem _fonts = new();
 
     /// <param name="device">Graphics device to create textures on.</param>
@@ -35,6 +36,7 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
         _pixel.SetData(new[] { Color.White });
 
         _circle = CreateCircleTexture(device, CircleTextureSize);
+        _triangle = CreateTriangleTexture(device, CircleTextureSize);
     }
 
     public void BeginScreen()
@@ -70,6 +72,12 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
 
             case ShapeKind.Square:
                 FillRect(position - new Vector2(visual.Radius), new Vector2(visual.Radius * 2f), visual.Color);
+                break;
+
+            case ShapeKind.Triangle:
+                var scale = visual.Radius * 2f / CircleTextureSize;
+                var origin = new Vector2(CircleTextureSize / 2f);
+                _spriteBatch.Draw(_triangle, position, null, visual.Color, rotation, origin, scale, SpriteEffects.None, 0f);
                 break;
         }
     }
@@ -111,6 +119,59 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
         _fonts.Dispose();
         _pixel.Dispose();
         _circle.Dispose();
+        _triangle.Dispose();
+    }
+
+    // A triangle filling the circle of the texture, its tip pointing to +X. Each pixel is
+    // sampled 4x4 times for a soft edge; premultiplied alpha like the circle.
+    private static Texture2D CreateTriangleTexture(GraphicsDevice device, int size)
+    {
+        const int Samples = 4;
+        var data = new Color[size * size];
+        var radius = size / 2f;
+        var tip = new Vector2(radius, 0f);
+        var top = new Vector2(-radius * 0.75f, -radius * 0.87f);
+        var bottom = new Vector2(-radius * 0.75f, radius * 0.87f);
+
+        for (var y = 0; y < size; y++)
+        {
+            for (var x = 0; x < size; x++)
+            {
+                var inside = 0;
+                for (var sy = 0; sy < Samples; sy++)
+                {
+                    for (var sx = 0; sx < Samples; sx++)
+                    {
+                        var point = new Vector2(
+                            x + (sx + 0.5f) / Samples - radius,
+                            y + (sy + 0.5f) / Samples - radius);
+                        if (IsInsideTriangle(point, tip, top, bottom))
+                        {
+                            inside++;
+                        }
+                    }
+                }
+
+                data[y * size + x] = Color.White * ((float)inside / (Samples * Samples));
+            }
+        }
+
+        var texture = new Texture2D(device, size, size);
+        texture.SetData(data);
+        return texture;
+    }
+
+    private static bool IsInsideTriangle(Vector2 point, Vector2 a, Vector2 b, Vector2 c)
+    {
+        var ab = Cross(b - a, point - a);
+        var bc = Cross(c - b, point - b);
+        var ca = Cross(a - c, point - c);
+        return (ab >= 0f && bc >= 0f && ca >= 0f) || (ab <= 0f && bc <= 0f && ca <= 0f);
+    }
+
+    private static float Cross(Vector2 a, Vector2 b)
+    {
+        return a.X * b.Y - a.Y * b.X;
     }
 
     private static Texture2D CreateCircleTexture(GraphicsDevice device, int size)

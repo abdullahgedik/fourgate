@@ -12,7 +12,25 @@
       "scoreValue": 10,
       "cost": 1,
       "unlockWave": 1,
-      "dropChance": 0.12
+      "dropChance": 0.12,
+      "shape": "circle",
+      "color": [ 90, 190, 100 ]
+    },
+    {
+      "id": "fast",
+      "displayName": "Fast Zombie",
+      "hp": 40,
+      "speed": 220,
+      "radius": 16,
+      "contactDamage": 10,
+      "contactCooldown": 0.8,
+      "xp": 12,
+      "scoreValue": 15,
+      "cost": 1.5,
+      "unlockWave": 3,
+      "dropChance": 0.12,
+      "shape": "triangle",
+      "color": [ 235, 210, 60 ]
     }
   ]
 }

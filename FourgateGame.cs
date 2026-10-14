@@ -25,6 +25,7 @@ public sealed class FourgateGame : Game
     private readonly DisplayManager _display;
     private readonly WindowHotkeys _hotkeys = new();
     private readonly DebugHotkeys _debugHotkeys = new();
+    private int _debugEnemyIndex;
     private readonly IAudioManager _audio = new NullAudioManager();
     private readonly GameData _data;
 
@@ -102,7 +103,13 @@ public sealed class FourgateGame : Game
     {
         _debugHotkeys.Update();
 
-        var enemyId = _data.Enemies[0].Id;
+        if (_debugHotkeys.NextEnemyPressed)
+        {
+            _debugEnemyIndex = (_debugEnemyIndex + 1) % _data.Enemies.Count;
+            _scene?.ShowDebugNotice($"F1/F2 spawn: {_data.Enemies[_debugEnemyIndex].DisplayName}");
+        }
+
+        var enemyId = _data.Enemies[_debugEnemyIndex].Id;
         if (_debugHotkeys.SpawnOnePressed)
         {
             _scene?.DebugSpawnEnemies(enemyId, 1);

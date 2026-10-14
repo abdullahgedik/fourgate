@@ -10,7 +10,6 @@ public sealed class Enemy : IHittable
 {
     private const float FlashSeconds = 0.12f;
 
-    private static readonly Color BodyColor = new(90, 190, 100);
     private static readonly Color HitColor = new(255, 50, 50);
     private static readonly Color BurnColor = new(255, 140, 40);
 
@@ -27,6 +26,7 @@ public sealed class Enemy : IHittable
     private int _burnOwner;
     private bool _burnCanSpread;
     private float _scorchLeft;
+    private Color _bodyColor;
 
     /// <summary>Unique per spawn; gives overlapping enemies a stable order.</summary>
     public int Id { get; private set; }
@@ -34,6 +34,9 @@ public sealed class Enemy : IHittable
     public EnemyConfig Config { get; private set; } = null!;
 
     public Vector2 Position { get; set; }
+
+    /// <summary>Angle (radians) of the way it last walked; turns a triangle body.</summary>
+    public float Facing { get; set; }
 
     public float Hp { get; private set; }
 
@@ -59,8 +62,8 @@ public sealed class Enemy : IHittable
     {
         get
         {
-            var body = IsBurning || _scorchLeft > 0f ? Color.Lerp(BodyColor, BurnColor, 0.6f) : BodyColor;
-            return new VisualDescriptor(ShapeKind.Circle, Radius, Color.Lerp(body, HitColor, _flashLeft / FlashSeconds));
+            var body = IsBurning || _scorchLeft > 0f ? Color.Lerp(_bodyColor, BurnColor, 0.6f) : _bodyColor;
+            return new VisualDescriptor(Config.Shape, Radius, Color.Lerp(body, HitColor, _flashLeft / FlashSeconds));
         }
     }
 
@@ -69,6 +72,8 @@ public sealed class Enemy : IHittable
         Id = id;
         Config = config;
         Position = position;
+        Facing = 0f;
+        _bodyColor = new Color(config.Color[0], config.Color[1], config.Color[2]);
         Hp = config.Hp;
         LastHitBy = 0;
         _flashLeft = 0f;

@@ -12,6 +12,7 @@ public sealed class DebugHotkeys
     private const Keys GrantWeaponsKey = Keys.F5;
     private const Keys OneShotKillsKey = Keys.F6;
     private const Keys LevelUpWeaponKey = Keys.F7;
+    private const Keys NextEnemyKey = Keys.F8;
 
     private KeyboardState _previous;
 
@@ -36,6 +37,9 @@ public sealed class DebugHotkeys
     /// <summary>Raise the level of every player's gun in hand and active equipment by one.</summary>
     public bool LevelUpWeaponPressed { get; private set; }
 
+    /// <summary>Switch which enemy type F1/F2 spawn.</summary>
+    public bool NextEnemyPressed { get; private set; }
+
     public void Update()
     {
         var current = Keyboard.GetState();
@@ -46,6 +50,7 @@ public sealed class DebugHotkeys
         GrantWeaponsPressed = current.IsKeyDown(GrantWeaponsKey) && _previous.IsKeyUp(GrantWeaponsKey);
         OneShotKillsPressed = current.IsKeyDown(OneShotKillsKey) && _previous.IsKeyUp(OneShotKillsKey);
         LevelUpWeaponPressed = current.IsKeyDown(LevelUpWeaponKey) && _previous.IsKeyUp(LevelUpWeaponKey);
+        NextEnemyPressed = current.IsKeyDown(NextEnemyKey) && _previous.IsKeyUp(NextEnemyKey);
         _previous = current;
     }
 }
