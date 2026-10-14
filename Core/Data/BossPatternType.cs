@@ -23,4 +23,10 @@ public enum BossPatternType
 
     /// <summary>Breathes a long stream of fire that sweeps round while it lasts.</summary>
     FireStream,
+
+    /// <summary>Speeds up for a while.</summary>
+    Haste,
+
+    /// <summary>Throws bursts of fireballs fanned out at the player, aimed when the warning starts.</summary>
+    FireballVolley,
 }

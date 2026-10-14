@@ -59,6 +59,12 @@ public sealed class BossConfig
 
     public required List<BossPatternConfig> Patterns { get; init; }
 
+    /// <summary>Random (weighted) or the listed sequence.</summary>
+    public BossPatternOrder PatternOrder { get; init; } = BossPatternOrder.Random;
+
+    /// <summary>Enemies it bursts into when it dies; null for none.</summary>
+    public BossDeathSpawnConfig? DeathSpawn { get; init; }
+
     /// <summary>
     /// The boss's body as an enemy, so every weapon, the spatial hash and the wave count treat
     /// it like any other enemy. <see cref="EnemyConfig.IsBoss"/> hands its movement to the boss system.
@@ -117,6 +123,7 @@ public sealed class BossConfig
         DataLoadException.Require(
             Color is not null && Color.Count == 3 && Color.TrueForAll(c => c >= 0 && c <= 255),
             file, $"{path}.color", "must be three numbers from 0 to 255 (red, green, blue)");
+        DeathSpawn?.Validate(file, $"{path}.deathSpawn");
         DataLoadException.Require(Patterns is { Count: > 0 }, file, $"{path}.patterns", "must list at least one pattern");
         for (var i = 0; i < Patterns!.Count; i++)
         {

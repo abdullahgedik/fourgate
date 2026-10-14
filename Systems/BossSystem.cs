@@ -25,6 +25,7 @@ public sealed class BossSystem
     private static readonly Color FireColor = new(255, 120, 30);
     private static readonly Color FireCoreColor = new(255, 220, 120);
     private static readonly Color ArmorColor = new(200, 205, 215);
+    private static readonly Color HasteColor = new(255, 230, 80);
 
     // A turning boss only charges at a target this close to straight ahead (degrees either side).
     private const float ChargeAheadDegrees = 30f;
@@ -51,6 +52,12 @@ public sealed class BossSystem
     private float _elapsed;
     private Vector2 _teleportTo;
     private float _streamLength;
+    private BossPatternConfig? _queuedFollowUp;
+    private int _nextInSequence;
+    private readonly List<BossPatternConfig> _round = new();
+    private BossPatternConfig? _lastFromRound;
+    private float _hasteLeft;
+    private float _hasteMultiplier = 1f;
 
     public BossSystem(EnemySystem enemies, GameData data, GameRandom random, IAudioManager audio)
     {
@@ -73,7 +80,7 @@ public sealed class BossSystem
     /// <summary>Where fireball patterns throw; without it they warn but throw nothing.</summary>
     public EnemyShotSystem? Fireballs { get; set; }
 
-    /// <summary>Summons stop while this many enemies are already in the arena.</summary>
+    /// <summary>Summons bring in no more enemies once this many are in the arena.</summary>
     public int MaxAliveEnemies { get; set; } = int.MaxValue;
 
     /// <summary>The boss in the arena, or null.</summary>
@@ -95,6 +102,7 @@ public sealed class BossSystem
         }
 
         var boss = Boss!;
+        _hasteLeft = Math.Max(0f, _hasteLeft - deltaSeconds);
         var target = NearestLivingPlayer(boss.Position, players);
         if (target is null)
         {
@@ -104,10 +112,17 @@ public sealed class BossSystem
         switch (_state)
         {
             case State.Walking:
-                Walk(boss, target, arena, deltaSeconds);
+                Walk(boss, target, arena, deltaSeconds, _hasteLeft > 0f ? _hasteMultiplier : 1f);
                 TurnToward(boss, target.Position, deltaSeconds);
                 _stateLeft -= deltaSeconds;
-                if (_stateLeft <= 0f && target.CanSee(boss.Position, boss.Radius))
+                if (_queuedFollowUp is not null)
+                {
+                    // The attack that goes with the last pattern comes straight away.
+                    var followUp = _queuedFollowUp;
+                    _queuedFollowUp = null;
+                    StartPattern(boss, target, arena, followUp);
+                }
+                else if (_stateLeft <= 0f && target.CanSee(boss.Position, boss.Radius))
                 {
                     TryStartPattern(boss, target, arena);
                 }
@@ -177,6 +192,25 @@ public sealed class BossSystem
 
                 break;
 
+            case BossPatternType.Haste:
+                // A pulsing glow: it is about to speed up.
+                renderer.FillCircle(_origin, Boss.Radius * (1.1f + 0.5f * progress), HasteColor * (0.2f + 0.4f * progress));
+                break;
+
+            case BossPatternType.FireballVolley:
+                // A swelling glow, with a dot where each fireball of the fan will leave.
+                renderer.FillCircle(_origin, Boss.Radius * (1.2f + 0.6f * progress), MarkerColor * (0.25f + 0.4f * progress));
+                var aim = MathF.Atan2(_direction.Y, _direction.X);
+                var spread = MathHelper.ToRadians(_pattern.SpreadDegrees);
+                for (var i = 0; i < _pattern.Count; i++)
+                {
+                    var angle = _pattern.Count > 1 ? aim + MathHelper.Lerp(-spread, spread, i / (_pattern.Count - 1f)) : aim;
+                    var dot = _origin + Direction(angle) * (Boss.Radius + SpoutDistance);
+                    renderer.FillCircle(dot, SpoutSize * (0.5f + 0.5f * progress), MarkerColor);
+                }
+
+                break;
+
             case BossPatternType.FireStream:
                 // The reach it can sweep, and the lane where the fire starts.
                 renderer.FillCircle(_origin, _pattern.Distance, MarkerColor * 0.1f);
@@ -224,6 +258,29 @@ public sealed class BossSystem
             renderer.DrawLine(previous, point, _pattern.RingWidth, ShockwaveColor * 0.75f);
             previous = point;
         }
+    }
+
+    /// <summary>
+    /// A boss that died bursts into its brood, if it has one, spread evenly around where it fell.
+    /// </summary>
+    public void OnBossDied(in EnemyDeath death, Arena arena)
+    {
+        var config = FindConfig(death.Config);
+        var spawn = config?.DeathSpawn;
+        if (spawn is null)
+        {
+            return;
+        }
+
+        var enemy = _data.GetEnemy(spawn.EnemyId);
+        for (var i = 0; i < spawn.Count; i++)
+        {
+            var angle = MathHelper.TwoPi * i / spawn.Count;
+            var point = death.Position + Direction(angle) * spawn.SpawnRadius;
+            _enemies.Spawn(enemy, arena.ResolveMovement(point, enemy.Radius));
+        }
+
+        _audio.PlaySfx(SfxIds.BossAttack);
     }
 
     // A plate across the armored front, so players can see which side to avoid. Its inner edge
@@ -278,6 +335,11 @@ public sealed class BossSystem
         Config = FindConfig(found.Config);
         found.ScaleHp(HpMultiplier);
         _state = State.Walking;
+        _queuedFollowUp = null;
+        _hasteLeft = 0f;
+        _nextInSequence = 0;
+        _round.Clear();
+        _lastFromRound = null;
         _stateLeft = Config?.IdleSeconds ?? 0f;
         return Config is not null;
     }
@@ -312,7 +374,7 @@ public sealed class BossSystem
         boss.Facing = MathHelper.WrapAngle(boss.Facing + Math.Clamp(difference, -most, most));
     }
 
-    private static void Walk(Enemy boss, Player target, Arena arena, float deltaSeconds)
+    private static void Walk(Enemy boss, Player target, Arena arena, float deltaSeconds, float speedMultiplier)
     {
         var waypoint = arena.NextWaypoint(boss.Position, target.Position, boss.Radius);
         var toWaypoint = waypoint - boss.Position;
@@ -323,7 +385,7 @@ public sealed class BossSystem
             return;
         }
 
-        var step = Math.Min(boss.Config.Speed * deltaSeconds, distance - stopAt);
+        var step = Math.Min(boss.Config.Speed * speedMultiplier * deltaSeconds, distance - stopAt);
         boss.Position += toWaypoint / distance * step;
     }
 
@@ -347,11 +409,14 @@ public sealed class BossSystem
                 BossPatternType.LineCharge => clearAhead >= distance && distance <= pattern.Distance + target.Radius
                     && IsAhead(boss, direction),
                 BossPatternType.GroundSlamRing => distance <= pattern.Radius,
-                BossPatternType.Summon => _enemies.Count + pattern.Count <= MaxAliveEnemies,
+                // At the enemy cap a summon still happens (and its follow-up); it brings in only what fits.
+                BossPatternType.Summon => true,
                 BossPatternType.FireballRing => distance <= pattern.ProjectileRange,
                 BossPatternType.FireballSpiral => distance <= pattern.ProjectileRange,
                 BossPatternType.Teleport => arena.Doors.Count > 1,
                 BossPatternType.FireStream => distance <= pattern.Distance,
+                BossPatternType.Haste => true,
+                BossPatternType.FireballVolley => distance <= pattern.ProjectileRange,
                 _ => false,
             };
 
@@ -362,30 +427,92 @@ public sealed class BossSystem
             }
         }
 
+        if (Config.PatternOrder == BossPatternOrder.Shuffled)
+        {
+            if (_round.Count == 0)
+            {
+                DealRound(patterns);
+            }
+
+            // The next one of this round; it waits (walking) until it makes sense from here.
+            var drawn = _round[^1];
+            if (_usable.Contains(drawn))
+            {
+                _round.RemoveAt(_round.Count - 1);
+                _lastFromRound = drawn;
+                StartPattern(boss, target, arena, drawn);
+            }
+
+            return;
+        }
+
+        if (Config.PatternOrder == BossPatternOrder.Sequence)
+        {
+            // The next one in the list; it waits (walking) until it makes sense from here.
+            var next = patterns[_nextInSequence % patterns.Count];
+            if (_usable.Contains(next))
+            {
+                _nextInSequence++;
+                StartPattern(boss, target, arena, next);
+            }
+
+            return;
+        }
+
         if (_usable.Count == 0)
         {
             return;
         }
 
         var roll = _random.Range(0f, totalWeight);
-        _pattern = _usable[^1];
+        var picked = _usable[^1];
         for (var i = 0; i < _usable.Count; i++)
         {
             roll -= _usable[i].Weight;
             if (roll < 0f)
             {
-                _pattern = _usable[i];
+                picked = _usable[i];
                 break;
             }
         }
 
+        StartPattern(boss, target, arena, picked);
+    }
+
+    // Every pattern once, shuffled; drawn from the end. The first one drawn is never the one
+    // that ended the last round.
+    private void DealRound(IReadOnlyList<BossPatternConfig> patterns)
+    {
+        _round.Clear();
+        _round.AddRange(patterns);
+        for (var i = _round.Count - 1; i > 0; i--)
+        {
+            var j = _random.NextIndex(i + 1);
+            (_round[i], _round[j]) = (_round[j], _round[i]);
+        }
+
+        if (_round.Count > 1 && ReferenceEquals(_round[^1], _lastFromRound))
+        {
+            (_round[^1], _round[0]) = (_round[0], _round[^1]);
+        }
+    }
+
+    // Shows the pattern's warning; it is carried out when the warning has run.
+    private void StartPattern(Enemy boss, Player target, Arena arena, BossPatternConfig pattern)
+    {
+        var toTarget = target.Position - boss.Position;
+        var distance = toTarget.Length();
+        var direction = distance > 0.001f ? toTarget / distance : Vector2.UnitX;
+        var clearAhead = arena.Raycast(boss.Position, direction, out _);
+
+        _pattern = pattern;
         _state = State.Telegraph;
         _stateLeft = _pattern.TelegraphSeconds;
         _origin = boss.Position;
         _direction = direction;
 
         // A fire stream starts where a slow turner is facing; everything else is aimed at the target.
-        if (_pattern.Type == BossPatternType.FireStream && Config.TurnDegreesPerSecond > 0f)
+        if (_pattern.Type == BossPatternType.FireStream && Config!.TurnDegreesPerSecond > 0f)
         {
             _direction = new Vector2(MathF.Cos(boss.Facing), MathF.Sin(boss.Facing));
         }
@@ -491,7 +618,7 @@ public sealed class BossSystem
 
             case BossPatternType.Summon:
                 var config = _data.GetEnemy(pattern.EnemyId);
-                for (var i = 0; i < _summonPoints.Count; i++)
+                for (var i = 0; i < _summonPoints.Count && _enemies.Count < MaxAliveEnemies; i++)
                 {
                     _enemies.Spawn(config, _summonPoints[i]);
                 }
@@ -532,6 +659,24 @@ public sealed class BossSystem
                 done = true;
                 break;
 
+            case BossPatternType.Haste:
+                _hasteLeft = pattern.Seconds;
+                _hasteMultiplier = pattern.SpeedMultiplier;
+                done = true;
+                break;
+
+            case BossPatternType.FireballVolley:
+                _nextThrowIn -= deltaSeconds;
+                if (_nextThrowIn <= 0f)
+                {
+                    ThrowFan(boss, pattern);
+                    _burstsLeft--;
+                    _nextThrowIn = pattern.Interval;
+                }
+
+                done = _burstsLeft <= 0;
+                break;
+
             case BossPatternType.FireStream:
                 // Sweeps round from where it started; pillars and walls cut it short.
                 _elapsed += deltaSeconds;
@@ -549,6 +694,7 @@ public sealed class BossSystem
         {
             _state = State.Walking;
             _stateLeft = Config!.IdleSeconds;
+            _queuedFollowUp = pattern.FollowUp;
         }
     }
 
@@ -583,6 +729,28 @@ public sealed class BossSystem
         {
             var angle = firstAngle + MathHelper.TwoPi * i / pattern.Count;
             var direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+            Fireballs.Fire(
+                boss.Position + direction * boss.Radius, direction, pattern.ProjectileSpeed, pattern.ProjectileRadius,
+                pattern.Damage, pattern.ProjectileRange);
+        }
+
+        _audio.PlaySfx(SfxIds.EnemyFireball);
+    }
+
+    // Count fireballs fanned evenly across the spread around the locked aim.
+    private void ThrowFan(Enemy boss, BossPatternConfig pattern)
+    {
+        if (Fireballs is null)
+        {
+            return;
+        }
+
+        var aim = MathF.Atan2(_direction.Y, _direction.X);
+        var spread = MathHelper.ToRadians(pattern.SpreadDegrees);
+        for (var i = 0; i < pattern.Count; i++)
+        {
+            var angle = pattern.Count > 1 ? aim + MathHelper.Lerp(-spread, spread, i / (pattern.Count - 1f)) : aim;
+            var direction = Direction(angle);
             Fireballs.Fire(
                 boss.Position + direction * boss.Radius, direction, pattern.ProjectileSpeed, pattern.ProjectileRadius,
                 pattern.Damage, pattern.ProjectileRange);

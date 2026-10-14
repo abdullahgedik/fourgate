@@ -44,11 +44,22 @@ public sealed class GameData
             for (var p = 0; p < boss.Patterns.Count; p++)
             {
                 var pattern = boss.Patterns[p];
-                DataLoadException.Require(
-                    pattern.Type != BossPatternType.Summon || _enemiesById.ContainsKey(pattern.EnemyId),
-                    DataLoader.BossesFileName, $"bosses[{i}].patterns[{p}].enemyId",
-                    $"'{pattern.EnemyId}' is not an enemy id in {DataLoader.EnemiesFileName}");
+                var patternPath = $"bosses[{i}].patterns[{p}]";
+                while (pattern is not null)
+                {
+                    DataLoadException.Require(
+                        pattern.Type != BossPatternType.Summon || _enemiesById.ContainsKey(pattern.EnemyId),
+                        DataLoader.BossesFileName, $"{patternPath}.enemyId",
+                        $"'{pattern.EnemyId}' is not an enemy id in {DataLoader.EnemiesFileName}");
+                    pattern = pattern.FollowUp;
+                    patternPath += ".followUp";
+                }
             }
+
+            DataLoadException.Require(
+                boss.DeathSpawn is null || _enemiesById.ContainsKey(boss.DeathSpawn.EnemyId),
+                DataLoader.BossesFileName, $"bosses[{i}].deathSpawn.enemyId",
+                $"'{boss.DeathSpawn?.EnemyId}' is not an enemy id in {DataLoader.EnemiesFileName}");
         }
 
         for (var i = 0; i < Bosses.Count; i++)

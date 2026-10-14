@@ -338,9 +338,16 @@ public sealed class EnemySystem : IHittableSource
     }
 
     // Each overlapping pair is seen once from each side and each side moves half the
-    // overlap, so together they end up just touching.
+    // overlap, so together they end up just touching. Against a boss the other side moves
+    // the whole overlap.
     private void Separate(Enemy enemy)
     {
+        // A crowd never shoves a boss around; the zombies make way instead.
+        if (enemy.Config.IsBoss)
+        {
+            return;
+        }
+
         _nearby.Clear();
         _hash.Query(enemy.Position, enemy.Radius, _nearby);
 
@@ -365,7 +372,7 @@ public sealed class EnemySystem : IHittableSource
             var direction = distance > 0.001f
                 ? away / distance
                 : (enemy.Id < other.Id ? Vector2.UnitX : -Vector2.UnitX);
-            push += direction * (overlap * 0.5f);
+            push += direction * (overlap * (other.Config.IsBoss ? 1f : 0.5f));
         }
 
         enemy.Position += push;

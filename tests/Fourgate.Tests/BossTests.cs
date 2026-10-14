@@ -400,6 +400,207 @@ public class BossTests
         Assert.Equal(100f, farAway.Hp);
     }
 
+    [Fact]
+    public void ShippedSwarmMother_LeadsWaveForty_SpawningEveryKindOfZombie_AndSplittingOnDeath()
+    {
+        var swarm = DataLoader.LoadAll(DataLoader.DefaultDirectory).GetBossForWave(40);
+
+        Assert.NotNull(swarm);
+        Assert.Equal(10000f, swarm!.Hp);
+        foreach (var kind in new[] { "fast", "normal", "ranged", "tank", "elite" })
+        {
+            Assert.Contains(swarm.Patterns, p => p.Type == BossPatternType.Summon && p.EnemyId == kind);
+        }
+
+        // Each brood brings its own attack: fast → haste, ranged → ring, tank → charge, elite → volley.
+        BossPatternType? FollowUpOf(string kind) => swarm.Patterns.Find(p => p.EnemyId == kind)!.FollowUp?.Type;
+        Assert.Null(FollowUpOf("normal"));
+        Assert.Equal(BossPatternType.Haste, FollowUpOf("fast"));
+        Assert.Equal(BossPatternType.FireballRing, FollowUpOf("ranged"));
+        Assert.Equal(BossPatternType.LineCharge, FollowUpOf("tank"));
+        Assert.Equal(BossPatternType.FireballVolley, FollowUpOf("elite"));
+        Assert.NotNull(swarm.DeathSpawn);
+        Assert.Equal("fast", swarm.DeathSpawn!.EnemyId);
+        Assert.True(swarm.DeathSpawn.Count >= 8);
+    }
+
+    [Fact]
+    public void BossWithADeathSpawn_BurstsIntoItsBrood_WhenItDies()
+    {
+        var data = DataLoader.LoadAll(DataLoader.DefaultDirectory);
+        var swarm = data.GetBossForWave(40)!;
+        var arena = new Arena(data.Game.Arena);
+        var enemies = new EnemySystem(new NullAudioManager());
+        var bosses = new BossSystem(enemies, data, new GameRandom(1), new NullAudioManager());
+        var mother = enemies.Spawn(swarm.AsEnemy, new Vector2(1500, 1500));
+
+        mother.Hit(float.MaxValue, 0);
+        enemies.Update(Step, new List<Player>(), arena);
+        for (var i = 0; i < enemies.Deaths.Count; i++)
+        {
+            bosses.OnBossDied(enemies.Deaths[i], arena);
+        }
+
+        Assert.Equal(swarm.DeathSpawn!.Count, enemies.Count);
+        Assert.Null(enemies.FindBoss());
+    }
+
+    [Fact]
+    public void DeathSpawn_OfAnUnknownEnemy_IsRejected()
+    {
+        var swarm = new BossConfig
+        {
+            Id = "b", DisplayName = "B", Wave = 40, Hp = 100, Speed = 0, Radius = 50, ContactDamage = 0, ContactCooldown = 1,
+            Xp = 1, ScoreValue = 1, AddsBudgetFraction = 0.3f, IdleSeconds = 1,
+            Patterns = new List<BossPatternConfig> { Pattern(BossPatternType.Summon) },
+            DeathSpawn = new BossDeathSpawnConfig { EnemyId = "nobody", Count = 3, SpawnRadius = 50 },
+        };
+
+        var error = Assert.Throws<DataLoadException>(() => new GameData(
+            TestData.Game(), new[] { TestData.Pistol() }, new[] { TestData.Zombie() }, TestData.Waves(), TestData.Upgrades(),
+            new[] { swarm }));
+
+        Assert.Equal("bosses[0].deathSpawn.enemyId", error.Field);
+    }
+
+    [Fact]
+    public void Summon_IsFollowedRightAway_ByTheAttackThatGoesWithIt()
+    {
+        var summon = new BossPatternConfig
+        {
+            Type = BossPatternType.Summon, TelegraphSeconds = 0.8f, EnemyId = "normal", Count = 2, SpawnRadius = 140,
+            FollowUp = new BossPatternConfig
+            {
+                Type = BossPatternType.FireballVolley, TelegraphSeconds = 0.7f, Damage = 10, Count = 5, SpreadDegrees = 25,
+                Bursts = 3, Interval = 0.3f, ProjectileSpeed = 420, ProjectileRadius = 12, ProjectileRange = 900,
+            },
+        };
+        var world = new World(summon);
+        world.AddPlayer(new Vector2(1600, 1000));
+        world.SpawnBoss(new Vector2(1000, 1000));
+
+        // 1 s walk + 0.8 s summon warning; the volley's warning starts at once, with no idle walk.
+        world.Run(1.95f);
+        Assert.Equal(3, world.Enemies.Count);
+        Assert.True(world.Bosses.IsTelegraphing);
+        Assert.Equal(BossPatternType.FireballVolley, world.Bosses.CurrentPattern);
+
+        world.Run(1.4f);
+        Assert.Equal(15, world.Fireballs.FireballCount);
+    }
+
+    [Fact]
+    public void Haste_MakesTheBossWalkFaster_ForAWhile()
+    {
+        var haste = new BossPatternConfig
+        {
+            Type = BossPatternType.Haste, TelegraphSeconds = 0.5f, SpeedMultiplier = 3f, Seconds = 2f,
+        };
+        var world = new World(haste, speed: 50f);
+        world.AddPlayer(new Vector2(2500, 1000));
+        var boss = world.SpawnBoss(new Vector2(500, 1000));
+
+        // 1 s at 50, then a 0.5 s warning standing still: 50 units.
+        world.Run(1.5f);
+        var before = boss.Position.X;
+
+        world.Run(1f);
+        Assert.InRange(boss.Position.X - before, 140f, 160f);
+    }
+
+    [Fact]
+    public void SequenceOrder_UsesThePatternsOneAfterAnother()
+    {
+        BossPatternConfig Summon(int count) => new()
+        {
+            Type = BossPatternType.Summon, TelegraphSeconds = 0.8f, EnemyId = "normal", Count = count, SpawnRadius = 140,
+        };
+        var patterns = new List<BossPatternConfig> { Summon(1), Summon(2), Summon(3) };
+        var world = new World(patterns[0], patterns: patterns, order: BossPatternOrder.Sequence);
+        world.AddPlayer(new Vector2(1600, 1000));
+        world.SpawnBoss(new Vector2(1000, 1000));
+
+        // Each summon takes 1 s of walking plus a 0.8 s warning; look once per 2 s.
+        var counts = new List<int>();
+        for (var i = 0; i < 4; i++)
+        {
+            world.Run(2f);
+            counts.Add(world.Enemies.Count - 1);
+        }
+
+        Assert.Equal(new[] { 1, 3, 6, 7 }, counts);
+    }
+
+    [Fact]
+    public void ShuffledOrder_UsesEveryPatternOncePerRound_InAChangingOrder()
+    {
+        BossPatternConfig Summon(int count) => new()
+        {
+            Type = BossPatternType.Summon, TelegraphSeconds = 0.8f, EnemyId = "normal", Count = count, SpawnRadius = 140,
+        };
+        var patterns = new List<BossPatternConfig> { Summon(1), Summon(2), Summon(4), Summon(8) };
+        var world = new World(patterns[0], patterns: patterns, order: BossPatternOrder.Shuffled);
+        var player = world.AddPlayer(new Vector2(1600, 1000));
+        world.SpawnBoss(new Vector2(1000, 1000));
+
+        // Read each summon's size from how many enemies it added; 4 rounds of 4. The summoned
+        // zombies would kill the player, which stops the boss, so the player is kept topped up.
+        var sizes = new List<int>();
+        var before = 0;
+        for (var frame = 0; frame < 60 * 60 && sizes.Count < 16; frame++)
+        {
+            player.HealToFull();
+            world.Run(Step);
+            var now = world.Enemies.Count - 1;
+            if (now != before)
+            {
+                sizes.Add(now - before);
+                before = now;
+            }
+        }
+
+        Assert.Equal(16, sizes.Count);
+        var orders = new HashSet<string>();
+        for (var round = 0; round < 4; round++)
+        {
+            var slice = sizes.GetRange(round * 4, 4);
+            Assert.Equal(new[] { 1, 2, 4, 8 }, slice.OrderBy(x => x));
+            orders.Add(string.Join(",", slice));
+        }
+
+        for (var i = 1; i < sizes.Count; i++)
+        {
+            Assert.NotEqual(sizes[i - 1], sizes[i]);
+        }
+
+        Assert.True(orders.Count > 1);
+    }
+
+    [Fact]
+    public void Crowd_CannotShoveTheBoss_TheZombiesMakeWayInstead()
+    {
+        var enemies = new EnemySystem(new NullAudioManager());
+        var arena = new Arena(TestData.Arena());
+        var boss = new World(Pattern(BossPatternType.Summon)).SpawnBossInto(enemies, new Vector2(1500, 1500));
+        var zombies = new List<Enemy>();
+        for (var i = 0; i < 12; i++)
+        {
+            var angle = MathHelper.TwoPi * i / 12;
+            zombies.Add(enemies.Spawn(TestData.Zombie(), boss.Position + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * 40f));
+        }
+
+        for (var i = 0; i < 10; i++)
+        {
+            enemies.Update(Step, new List<Player>(), arena);
+        }
+
+        Assert.Equal(new Vector2(1500, 1500), boss.Position);
+        foreach (var zombie in zombies)
+        {
+            Assert.True(Vector2.Distance(zombie.Position, boss.Position) >= boss.Radius + zombie.Radius - 1f);
+        }
+    }
+
     private static int StartWave(GameData shipped, int wave)
     {
         var config = TestData.Game(startWave: wave);
@@ -441,15 +642,18 @@ public class BossTests
         private readonly List<Player> _players = new();
         private readonly BossConfig _boss;
 
-        public World(BossPatternConfig pattern, float turnDegreesPerSecond = 0f, float armorGap = 0f, float armorThickness = 0f)
+        public World(
+            BossPatternConfig pattern, float turnDegreesPerSecond = 0f, float armorGap = 0f, float armorThickness = 0f,
+            float speed = 0f, List<BossPatternConfig>? patterns = null, BossPatternOrder order = BossPatternOrder.Random)
         {
             _boss = new BossConfig
             {
-                Id = "boss", DisplayName = "Boss", Wave = 10, Hp = 100, Speed = 0, Radius = 50, ContactDamage = 0,
+                Id = "boss", DisplayName = "Boss", Wave = 10, Hp = 100, Speed = speed, Radius = 50, ContactDamage = 0,
                 ContactCooldown = 1, Xp = 1, ScoreValue = 1, AddsBudgetFraction = 0.3f, IdleSeconds = 1,
                 TurnDegreesPerSecond = turnDegreesPerSecond, FrontArmorArcDegrees = 90, FrontArmorDamageMult = 0.2f,
                 FrontArmorGap = armorGap, FrontArmorThickness = armorThickness,
-                Patterns = new List<BossPatternConfig> { pattern },
+                Patterns = patterns ?? new List<BossPatternConfig> { pattern },
+                PatternOrder = order,
             };
             var data = new GameData(
                 TestData.Game(), new[] { TestData.Pistol() }, new[] { TestData.Zombie() }, TestData.Waves(), TestData.Upgrades(),
@@ -480,6 +684,11 @@ public class BossTests
         public Enemy SpawnBoss(Vector2 position)
         {
             return Enemies.Spawn(_boss.AsEnemy, position);
+        }
+
+        public Enemy SpawnBossInto(EnemySystem enemies, Vector2 position)
+        {
+            return enemies.Spawn(_boss.AsEnemy, position);
         }
 
         public void Run(float seconds)

@@ -428,6 +428,7 @@ public sealed class GameplayScene : IScene
             if (deaths[i].Config.IsBoss)
             {
                 DropBossReward(deaths[i].Position);
+                _bosses.OnBossDied(deaths[i], _arena);
             }
         }
     }
@@ -518,6 +519,18 @@ public sealed class GameplayScene : IScene
     public void DebugSpawnEnemies(string enemyId, int count)
     {
         var config = _data.GetEnemy(enemyId);
+        if (config.IsBoss)
+        {
+            // The boss system drives one boss at a time.
+            if (_enemies.FindBoss() is not null)
+            {
+                ShowDebugNotice("A boss is already in the arena");
+                return;
+            }
+
+            count = 1;
+        }
+
         for (var i = 0; i < count; i++)
         {
             var door = _arena.Doors[_random.NextIndex(_arena.Doors.Count)];

@@ -43,17 +43,29 @@ public sealed class BossPatternConfig
     /// <summary>Summon: how far from the boss they appear.</summary>
     public float SpawnRadius { get; init; }
 
-    /// <summary>Ring: bursts thrown, each turned half a gap from the one before.</summary>
+    /// <summary>Ring: bursts thrown, each turned half a gap from the one before. Volley: bursts thrown.</summary>
     public int Bursts { get; init; } = 1;
 
     /// <summary>Ring: seconds between bursts. Spiral: seconds between throws.</summary>
     public float Interval { get; init; }
 
-    /// <summary>Spiral: how long it keeps throwing. Fire stream: how long it breathes fire.</summary>
+    /// <summary>Spiral: how long it keeps throwing. Fire stream: how long it breathes fire. Haste: how long it lasts.</summary>
     public float Seconds { get; init; }
 
     /// <summary>Spiral, fire stream: how fast it turns, in degrees per second (negative turns the other way).</summary>
     public float SpinDegreesPerSecond { get; init; }
+
+    /// <summary>Haste: how much faster it walks while it lasts.</summary>
+    public float SpeedMultiplier { get; init; } = 1f;
+
+    /// <summary>Volley: angle (degrees) to each side of the aim the outer fireballs fly.</summary>
+    public float SpreadDegrees { get; init; }
+
+    /// <summary>
+    /// A pattern carried out right after this one (e.g. the attack that goes with a summoned
+    /// brood); it does not wait for a good spot. Null for none.
+    /// </summary>
+    public BossPatternConfig? FollowUp { get; init; }
 
     /// <summary>Fire stream: thickness of the fire.</summary>
     public float Width { get; init; }
@@ -70,6 +82,7 @@ public sealed class BossPatternConfig
     public void Validate(string file, string path)
     {
         DataLoadException.Require(Weight > 0, file, $"{path}.weight", "must be greater than 0");
+        ValidateFollowUp(file, path);
         switch (Type)
         {
             case BossPatternType.LineCharge:
@@ -114,6 +127,22 @@ public sealed class BossPatternConfig
                 DataLoadException.Require(TelegraphSeconds > 0, file, $"{path}.telegraphSeconds", "must be greater than 0");
                 break;
 
+            case BossPatternType.Haste:
+                DataLoadException.Require(TelegraphSeconds > 0, file, $"{path}.telegraphSeconds", "must be greater than 0");
+                DataLoadException.Require(SpeedMultiplier > 0, file, $"{path}.speedMultiplier", "must be greater than 0");
+                DataLoadException.Require(Seconds > 0, file, $"{path}.seconds", "must be greater than 0");
+                break;
+
+            case BossPatternType.FireballVolley:
+                RequireProjectileTelegraph(file, path);
+                RequireFireballs(file, path);
+                DataLoadException.Require(Count >= 1, file, $"{path}.count", "must be 1 or greater");
+                DataLoadException.Require(Bursts >= 1, file, $"{path}.bursts", "must be 1 or greater");
+                DataLoadException.Require(Interval >= 0, file, $"{path}.interval", "must not be negative");
+                DataLoadException.Require(
+                    SpreadDegrees >= 0 && SpreadDegrees < 90, file, $"{path}.spreadDegrees", "must be from 0 up to 90");
+                break;
+
             case BossPatternType.FireStream:
                 RequireAreaTelegraph(file, path);
                 DataLoadException.Require(Damage > 0, file, $"{path}.damage", "must be greater than 0 (per second)");
@@ -122,6 +151,12 @@ public sealed class BossPatternConfig
                 DataLoadException.Require(Seconds > 0, file, $"{path}.seconds", "must be greater than 0");
                 break;
         }
+    }
+
+    // Called at the end of Validate for every pattern.
+    private void ValidateFollowUp(string file, string path)
+    {
+        FollowUp?.Validate(file, $"{path}.followUp");
     }
 
     private void RequireProjectileTelegraph(string file, string path)
