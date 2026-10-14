@@ -17,6 +17,8 @@ namespace Fourgate.Systems;
 public sealed class BossSystem
 {
     private const int RingSegments = 48;
+    private const float SpoutDistance = 22f;
+    private const float SpoutSize = 7f;
 
     private static readonly Color MarkerColor = new(255, 60, 40);
     private static readonly Color ShockwaveColor = new(255, 200, 120);
@@ -37,6 +39,10 @@ public sealed class BossSystem
     private float _reach;
     private float _travelled;
     private float _ringRadius;
+    private int _burstsLeft;
+    private float _nextThrowIn;
+    private float _elapsed;
+    private Vector2 _teleportTo;
 
     public BossSystem(EnemySystem enemies, GameData data, GameRandom random, IAudioManager audio)
     {
@@ -55,6 +61,9 @@ public sealed class BossSystem
 
     /// <summary>Multiplies a boss's HP when it appears (co-op scaling); 1 for one player.</summary>
     public float HpMultiplier { get; set; } = 1f;
+
+    /// <summary>Where fireball patterns throw; without it they warn but throw nothing.</summary>
+    public EnemyShotSystem? Fireballs { get; set; }
 
     /// <summary>Summons stop while this many enemies are already in the arena.</summary>
     public int MaxAliveEnemies { get; set; } = int.MaxValue;
@@ -142,6 +151,27 @@ public sealed class BossSystem
                     renderer.FillCircle(_summonPoints[i], size * progress, MarkerColor * 0.45f);
                 }
 
+                break;
+
+            case BossPatternType.FireballRing:
+            case BossPatternType.FireballSpiral:
+                // A swelling glow, with a dot where each fireball (or spiral arm) will leave.
+                renderer.FillCircle(_origin, Boss.Radius * (1.2f + 0.6f * progress), MarkerColor * (0.25f + 0.4f * progress));
+                var spouts = _pattern.Count;
+                var start = MathF.Atan2(_direction.Y, _direction.X);
+                for (var i = 0; i < spouts; i++)
+                {
+                    var angle = start + MathHelper.TwoPi * i / spouts;
+                    var dot = _origin + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * (Boss.Radius + SpoutDistance);
+                    renderer.FillCircle(dot, SpoutSize * (0.5f + 0.5f * progress), MarkerColor);
+                }
+
+                break;
+
+            case BossPatternType.Teleport:
+                renderer.FillCircle(_origin, Boss.Radius * (1.5f - 0.5f * progress), MarkerColor * 0.2f);
+                renderer.FillCircle(_teleportTo, Boss.Radius, MarkerColor * 0.2f);
+                renderer.FillCircle(_teleportTo, Boss.Radius * progress, MarkerColor * 0.45f);
                 break;
         }
     }
@@ -243,6 +273,9 @@ public sealed class BossSystem
                 BossPatternType.LineCharge => clearAhead >= distance && distance <= pattern.Distance + target.Radius,
                 BossPatternType.GroundSlamRing => distance <= pattern.Radius,
                 BossPatternType.Summon => _enemies.Count + pattern.Count <= MaxAliveEnemies,
+                BossPatternType.FireballRing => distance <= pattern.ProjectileRange,
+                BossPatternType.FireballSpiral => distance <= pattern.ProjectileRange,
+                BossPatternType.Teleport => arena.Doors.Count > 1,
                 _ => false,
             };
 
@@ -289,7 +322,37 @@ public sealed class BossSystem
             }
         }
 
+        if (_pattern.Type == BossPatternType.Teleport)
+        {
+            _teleportTo = PickTeleportSpot(boss, arena);
+        }
+
         _audio.PlaySfx(SfxIds.BossTelegraph);
+    }
+
+    // Just inside a random door other than the one the boss is nearest to.
+    private Vector2 PickTeleportSpot(Enemy boss, Arena arena)
+    {
+        var doors = arena.Doors;
+        var nearest = 0;
+        for (var i = 1; i < doors.Count; i++)
+        {
+            if (Vector2.DistanceSquared(doors[i].Center, boss.Position)
+                < Vector2.DistanceSquared(doors[nearest].Center, boss.Position))
+            {
+                nearest = i;
+            }
+        }
+
+        var pick = _random.NextIndex(doors.Count - 1);
+        if (pick >= nearest)
+        {
+            pick++;
+        }
+
+        // Far enough in that the whole body is on the floor.
+        var door = doors[pick];
+        return arena.PlaceOnFloor(arena.GetDoorSpawnPoint(door, boss.Radius, 0f) + door.Inward * boss.Radius, boss.Radius);
     }
 
     private void StartActing(Enemy boss)
@@ -298,6 +361,9 @@ public sealed class BossSystem
         _travelled = 0f;
         _ringRadius = boss.Radius;
         _origin = boss.Position;
+        _burstsLeft = _pattern!.Bursts;
+        _nextThrowIn = 0f;
+        _elapsed = 0f;
         _hitThisAttack.Clear();
         _audio.PlaySfx(SfxIds.BossAttack);
     }
@@ -335,6 +401,39 @@ public sealed class BossSystem
 
                 done = true;
                 break;
+
+            case BossPatternType.FireballRing:
+                _nextThrowIn -= deltaSeconds;
+                if (_nextThrowIn <= 0f)
+                {
+                    // Each burst is turned half a gap, so standing in a gap of the last one is not safe.
+                    var burst = pattern.Bursts - _burstsLeft;
+                    var gap = MathHelper.TwoPi / pattern.Count;
+                    ThrowSpread(boss, pattern, MathF.Atan2(_direction.Y, _direction.X) + gap * 0.5f * burst);
+                    _burstsLeft--;
+                    _nextThrowIn = pattern.Interval;
+                }
+
+                done = _burstsLeft <= 0;
+                break;
+
+            case BossPatternType.FireballSpiral:
+                _elapsed += deltaSeconds;
+                _nextThrowIn -= deltaSeconds;
+                if (_nextThrowIn <= 0f)
+                {
+                    var spin = MathHelper.ToRadians(pattern.SpinDegreesPerSecond) * _elapsed;
+                    ThrowSpread(boss, pattern, MathF.Atan2(_direction.Y, _direction.X) + spin);
+                    _nextThrowIn += pattern.Interval;
+                }
+
+                done = _elapsed >= pattern.Seconds;
+                break;
+
+            case BossPatternType.Teleport:
+                boss.Position = _teleportTo;
+                done = true;
+                break;
         }
 
         if (done)
@@ -342,6 +441,26 @@ public sealed class BossSystem
             _state = State.Walking;
             _stateLeft = Config!.IdleSeconds;
         }
+    }
+
+    // Count fireballs spread evenly all the way round, the first along the given angle.
+    private void ThrowSpread(Enemy boss, BossPatternConfig pattern, float firstAngle)
+    {
+        if (Fireballs is null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < pattern.Count; i++)
+        {
+            var angle = firstAngle + MathHelper.TwoPi * i / pattern.Count;
+            var direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+            Fireballs.Fire(
+                boss.Position + direction * boss.Radius, direction, pattern.ProjectileSpeed, pattern.ProjectileRadius,
+                pattern.Damage, pattern.ProjectileRange);
+        }
+
+        _audio.PlaySfx(SfxIds.EnemyFireball);
     }
 
     // A dashing player is not hit and can still be caught later in the same attack.

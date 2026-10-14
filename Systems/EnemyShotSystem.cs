@@ -24,8 +24,13 @@ public sealed class EnemyShotSystem
     /// <summary>Throws one fireball along a unit direction.</summary>
     public void Fire(Vector2 origin, Vector2 direction, EnemyAttackConfig attack)
     {
-        _fireballs.Rent().Launch(
-            origin, direction * attack.ProjectileSpeed, attack.ProjectileRadius, attack.Damage, attack.ProjectileRange);
+        Fire(origin, direction, attack.ProjectileSpeed, attack.ProjectileRadius, attack.Damage, attack.ProjectileRange);
+    }
+
+    /// <summary>Throws one fireball along a unit direction with the given flight values.</summary>
+    public void Fire(Vector2 origin, Vector2 direction, float speed, float radius, float damage, float range)
+    {
+        _fireballs.Rent().Launch(origin, direction * speed, radius, damage, range);
     }
 
     /// <summary>

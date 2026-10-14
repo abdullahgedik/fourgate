@@ -121,7 +121,11 @@ public sealed class GameplayScene : IScene
         _random = new GameRandom(config.Debug.Seed ?? Environment.TickCount);
         _arena = new Arena(config.Arena);
         _enemies = new EnemySystem(audio) { KnockbackDamping = config.Knockback.Damping, Fireballs = _fireballs };
-        _bosses = new BossSystem(_enemies, data, _random, audio) { MaxAliveEnemies = config.MaxAliveEnemies };
+        _bosses = new BossSystem(_enemies, data, _random, audio)
+        {
+            MaxAliveEnemies = config.MaxAliveEnemies,
+            Fireballs = _fireballs,
+        };
         _shots = new ShotSystem(_arena);
         _shots.AddSource(_enemies);
         _xp = new XpSystem(config.Xp, audio);

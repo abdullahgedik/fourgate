@@ -11,4 +11,13 @@ public enum BossPatternType
 
     /// <summary>Calls in a group of enemies around itself.</summary>
     Summon,
+
+    /// <summary>Throws fireballs in every direction at once, in one or more bursts.</summary>
+    FireballRing,
+
+    /// <summary>Spins on the spot throwing fireballs from rotating arms for a while.</summary>
+    FireballSpiral,
+
+    /// <summary>Vanishes and reappears just inside another door.</summary>
+    Teleport,
 }

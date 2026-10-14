@@ -21,6 +21,35 @@
         { "type": "groundSlamRing", "telegraphSeconds": 0.9, "weight": 2, "damage": 30, "radius": 380, "ringSpeed": 650, "ringWidth": 40 },
         { "type": "summon", "telegraphSeconds": 0.8, "weight": 1, "enemyId": "normal", "count": 6, "spawnRadius": 140 }
       ]
+    },
+    {
+      "id": "pyreWitch",
+      "displayName": "Pyre Witch",
+      "wave": 20,
+      "hp": 5000,
+      "speed": 70,
+      "radius": 44,
+      "contactDamage": 20,
+      "contactCooldown": 1.0,
+      "xp": 800,
+      "scoreValue": 2000,
+      "addsBudgetFraction": 0.3,
+      "idleSeconds": 1.4,
+      "knockbackResist": 0.9,
+      "shape": "diamond",
+      "color": [ 235, 85, 35 ],
+      "patterns": [
+        {
+          "type": "fireballRing", "telegraphSeconds": 0.7, "weight": 2, "damage": 12, "count": 16, "bursts": 3,
+          "interval": 0.35, "projectileSpeed": 320, "projectileRadius": 12, "projectileRange": 900
+        },
+        {
+          "type": "fireballSpiral", "telegraphSeconds": 0.7, "weight": 2, "damage": 10, "count": 3, "seconds": 2.5,
+          "interval": 0.12, "spinDegreesPerSecond": 140, "projectileSpeed": 300, "projectileRadius": 12, "projectileRange": 900
+        },
+        { "type": "teleport", "telegraphSeconds": 0.8, "weight": 1 },
+        { "type": "summon", "telegraphSeconds": 0.8, "weight": 1, "enemyId": "ranged", "count": 3, "spawnRadius": 150 }
+      ]
     }
   ]
 }

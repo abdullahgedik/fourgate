@@ -108,6 +108,93 @@ public class BossTests
     }
 
     // Starts a wave and returns its enemy count; on a boss wave, also checks the boss comes in.
+    [Fact]
+    public void ShippedPyreWitch_LeadsWaveTwenty_WithFireballsTeleportAndRangedSummons()
+    {
+        var witch = DataLoader.LoadAll(DataLoader.DefaultDirectory).GetBossForWave(20);
+
+        Assert.NotNull(witch);
+        Assert.Equal(5000f, witch!.Hp);
+        Assert.Contains(witch.Patterns, p => p.Type == BossPatternType.FireballRing && p.TelegraphSeconds >= 0.6f);
+        Assert.Contains(witch.Patterns, p => p.Type == BossPatternType.FireballSpiral && p.TelegraphSeconds >= 0.6f);
+        Assert.Contains(witch.Patterns, p => p.Type == BossPatternType.Teleport);
+        Assert.Contains(witch.Patterns, p => p.Type == BossPatternType.Summon && p.EnemyId == "ranged");
+    }
+
+    [Fact]
+    public void FireballAttack_WithAShortWarning_IsRejected()
+    {
+        const string json = """
+            { "bosses": [ { "id": "b", "displayName": "B", "wave": 10, "hp": 100, "speed": 1, "radius": 40,
+              "contactDamage": 0, "contactCooldown": 1, "xp": 1, "scoreValue": 1, "addsBudgetFraction": 0.3,
+              "idleSeconds": 1, "patterns": [ { "type": "fireballRing", "telegraphSeconds": 0.4, "damage": 10,
+              "count": 8, "projectileSpeed": 300, "projectileRadius": 12, "projectileRange": 900 } ] } ] }
+            """;
+
+        var error = Assert.Throws<DataLoadException>(() => DataLoader.ParseBosses(json, "bosses.json"));
+
+        Assert.Equal("bosses[0].patterns[0].telegraphSeconds", error.Field);
+    }
+
+    [Fact]
+    public void FireballRing_ThrowsEveryBurst_AllTheWayRound()
+    {
+        var pattern = new BossPatternConfig
+        {
+            Type = BossPatternType.FireballRing, TelegraphSeconds = 0.7f, Damage = 10, Count = 8, Bursts = 2, Interval = 0.3f,
+            ProjectileSpeed = 300, ProjectileRadius = 12, ProjectileRange = 900,
+        };
+        var world = new World(pattern);
+        world.AddPlayer(new Vector2(1500, 1000));
+        world.SpawnBoss(new Vector2(1000, 1000));
+
+        // 1 s walking + 0.7 s warning: nothing yet.
+        world.Run(1.65f);
+        Assert.Equal(0, world.Fireballs.FireballCount);
+
+        world.Run(0.5f);
+        Assert.Equal(16, world.Fireballs.FireballCount);
+    }
+
+    [Fact]
+    public void FireballSpiral_KeepsThrowingFromItsArms_ForItsDuration()
+    {
+        var pattern = new BossPatternConfig
+        {
+            Type = BossPatternType.FireballSpiral, TelegraphSeconds = 0.7f, Damage = 10, Count = 2, Seconds = 1f,
+            Interval = 0.25f, SpinDegreesPerSecond = 120, ProjectileSpeed = 300, ProjectileRadius = 12, ProjectileRange = 900,
+        };
+        var world = new World(pattern);
+        world.AddPlayer(new Vector2(1500, 1000));
+        world.SpawnBoss(new Vector2(1000, 1000));
+
+        world.Run(2.8f);
+
+        Assert.InRange(world.Fireballs.FireballCount, 8, 10);
+        Assert.False(world.Bosses.IsTelegraphing);
+    }
+
+    [Fact]
+    public void Teleport_MovesTheBoss_InsideAnotherDoor()
+    {
+        var world = new World(new BossPatternConfig { Type = BossPatternType.Teleport, TelegraphSeconds = 0.8f });
+        world.AddPlayer(new Vector2(1500, 600));
+        var boss = world.SpawnBoss(new Vector2(1500, 300));
+
+        world.Run(1.9f);
+
+        // It started next to the top door; it ends up just inside one of the other three.
+        var arena = new Arena(TestData.Arena());
+        Assert.True(boss.Position.Y > 600f || boss.Position.X < 400f || boss.Position.X > 2600f);
+        var nearDoor = false;
+        foreach (var door in arena.Doors)
+        {
+            nearDoor |= Vector2.Distance(door.Center, boss.Position) < 200f;
+        }
+
+        Assert.True(nearDoor);
+    }
+
     private static int StartWave(GameData shipped, int wave)
     {
         var config = TestData.Game(startWave: wave);
@@ -162,8 +249,10 @@ public class BossTests
                 new[] { _boss });
             _arena = new Arena(TestData.Arena());
             Enemies = new EnemySystem(new NullAudioManager());
-            Bosses = new BossSystem(Enemies, data, new GameRandom(1), new NullAudioManager());
+            Bosses = new BossSystem(Enemies, data, new GameRandom(1), new NullAudioManager()) { Fireballs = Fireballs };
         }
+
+        public EnemyShotSystem Fireballs { get; } = new();
 
         public EnemySystem Enemies { get; }
 
