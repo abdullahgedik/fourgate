@@ -38,10 +38,12 @@ local co-op and menus are still to come.
 - A score (a team score in co-op, multiplied by the mode) and a game over screen with the score,
   wave reached, kills and time
 - Local high scores: a top 10 per mode with initials, saved in `%APPDATA%/Fourgate/scores.json`
+- A main menu and a settings screen (window mode, window size, master / music / effects volume),
+  saved in `%APPDATA%/Fourgate/settings.json`
 
 ## Planned
 
-- A main menu, pause and settings
+- A pause menu and a 50-waves-survived screen
 - Visual polish: particles, hit feedback, fire and explosion animations
 - Sound and sprite art (the game currently draws geometric shapes and is silent)
 - Later: a 3D look in the style of Boxhead 2Play, with the same 2D gameplay
@@ -80,7 +82,7 @@ dotnet test tests/Fourgate.Tests
 | Use equipment (grenade) | G | Left trigger |
 | Next equipment | T | D-pad left / right |
 | Choose an upgrade card | Click, or A / D then Enter | Left / right, then A |
-| Start screen | Arrows / WASD to move, Enter to start (on a card) or switch a mode toggle, or click | D-pad or left stick, A |
+| Menus | Arrows / WASD to move, Enter to pick (or start on a player card, switch a mode toggle), Esc to go back, or click | D-pad or left stick, A, B to go back |
 | Back to the start screen after game over | Enter | A or Start |
 | Borderless fullscreen | F11 | |
 | Cycle window size | F9 | |

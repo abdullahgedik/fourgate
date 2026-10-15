@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -31,6 +32,45 @@ public sealed class DisplayManager
     public WindowMode Mode { get; private set; } = WindowMode.Windowed;
 
     public Point WindowedResolution => WindowedResolutions[_resolutionIndex];
+
+    /// <summary>The windowed sizes on offer that fit the desktop.</summary>
+    public IReadOnlyList<Point> AvailableResolutions
+    {
+        get
+        {
+            var desktop = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+            var fitting = new List<Point>();
+            foreach (var candidate in WindowedResolutions)
+            {
+                if (candidate.X <= desktop.Width && candidate.Y <= desktop.Height)
+                {
+                    fitting.Add(candidate);
+                }
+            }
+
+            return fitting;
+        }
+    }
+
+    /// <summary>
+    /// Applies saved settings: the window mode, and the saved windowed size if it is one of the
+    /// sizes on offer and fits the desktop (otherwise the current one stays).
+    /// </summary>
+    public void Apply(WindowMode mode, Point windowedResolution)
+    {
+        var desktop = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+        for (var i = 0; i < WindowedResolutions.Length; i++)
+        {
+            var candidate = WindowedResolutions[i];
+            if (candidate == windowedResolution && candidate.X <= desktop.Width && candidate.Y <= desktop.Height)
+            {
+                _resolutionIndex = i;
+            }
+        }
+
+        Mode = mode;
+        Apply();
+    }
 
     public void ToggleWindowMode()
     {

@@ -42,6 +42,8 @@ public sealed class FourgateGame : Game
     private RunMode _lastMode;
     private HighScoreStore? _highScoreStore;
     private HighScoreTable _highScores = new();
+    private readonly SettingsStore _settingsStore = new(SettingsStore.DefaultPath);
+    private GameSettings _settings = new();
 
     // The run in progress, for the debug hotkeys; null on the start screen.
     private GameplayScene? CurrentRun => _scene as GameplayScene;
@@ -79,7 +81,9 @@ public sealed class FourgateGame : Game
         _coopInputs = new[] { keyboardMouse, playerTwo };
         _highScoreStore = new HighScoreStore(HighScoreStore.DefaultPath);
         _highScores = _highScoreStore.Load();
-        _scene = new ModeSelectScene(_playerOneInput, _data.Game);
+        _settings = _settingsStore.Load();
+        ApplyDisplay(_settings);
+        _scene = new MainMenuScene(_playerOneInput, _data.Game);
     }
 
     protected override void UnloadContent()
@@ -98,11 +102,13 @@ public sealed class FourgateGame : Game
             if (_hotkeys.ToggleWindowModePressed)
             {
                 _display.ToggleWindowMode();
+                RememberDisplay();
             }
 
             if (_hotkeys.CycleResolutionPressed)
             {
                 _display.CycleWindowedResolution();
+                RememberDisplay();
             }
 
             if (_data.Game.Debug.Hotkeys)
@@ -117,11 +123,51 @@ public sealed class FourgateGame : Game
         base.Update(gameTime);
     }
 
-    // The start screen leads into a run; a finished run goes back to the start screen.
+    // Main menu → players and modes → a run → back to players and modes; the main menu also
+    // leads to the high scores and the settings.
     private void SwitchScene()
     {
         if (_playerOneInput is null)
         {
+            return;
+        }
+
+        if (_scene is MainMenuScene { Choice: { } choice })
+        {
+            switch (choice)
+            {
+                case MainMenuChoice.Play:
+                    _scene = new ModeSelectScene(_playerOneInput, _data.Game, _lastChosenPlayers, _lastMode);
+                    break;
+
+                case MainMenuChoice.HighScores:
+                    _scene = new HighScoresScene(_playerOneInput, _highScores, _data.Game);
+                    break;
+
+                case MainMenuChoice.Settings:
+                    _scene = new SettingsScene(
+                        _playerOneInput, _data.Game, _settings, _display.AvailableResolutions, ApplyDisplay);
+                    break;
+
+                case MainMenuChoice.Quit:
+                    Exit();
+                    break;
+            }
+
+            return;
+        }
+
+        if (_scene is SettingsScene { IsDone: true })
+        {
+            _settingsStore.Save(_settings);
+            _scene = new MainMenuScene(_playerOneInput, _data.Game, MainMenuChoice.Settings);
+            return;
+        }
+
+        if (_scene is ModeSelectScene { BackRequested: true } back)
+        {
+            _lastMode = back.Mode;
+            _scene = new MainMenuScene(_playerOneInput, _data.Game);
             return;
         }
 
@@ -132,19 +178,28 @@ public sealed class FourgateGame : Game
             _scene = new GameplayScene(
                 _data, players == 2 ? _coopInputs : _singleInputs, _audio, _lastMode, _highScores, _highScoreStore);
         }
-        else if (_scene is ModeSelectScene { ShowHighScores: true } menu)
-        {
-            _lastMode = menu.Mode;
-            _scene = new HighScoresScene(_playerOneInput, _highScores, _data.Game);
-        }
         else if (_scene is HighScoresScene { IsDone: true })
         {
-            _scene = new ModeSelectScene(_playerOneInput, _data.Game, _lastChosenPlayers, _lastMode);
+            _scene = new MainMenuScene(_playerOneInput, _data.Game, MainMenuChoice.HighScores);
         }
         else if (_scene is GameplayScene { RestartRequested: true })
         {
             _scene = new ModeSelectScene(_playerOneInput, _data.Game, _lastChosenPlayers, _lastMode);
         }
+    }
+
+    private void ApplyDisplay(GameSettings settings)
+    {
+        _display.Apply(settings.WindowMode, new Point(settings.ResolutionWidth, settings.ResolutionHeight));
+    }
+
+    // F9 / F11 change the display outside the settings screen; keep the saved settings in step.
+    private void RememberDisplay()
+    {
+        _settings.WindowMode = _display.Mode;
+        _settings.ResolutionWidth = _display.WindowedResolution.X;
+        _settings.ResolutionHeight = _display.WindowedResolution.Y;
+        _settingsStore.Save(_settings);
     }
 
     private void UpdateDebugHotkeys()

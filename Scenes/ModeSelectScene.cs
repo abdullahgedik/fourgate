@@ -28,8 +28,8 @@ public sealed class ModeSelectScene : IScene
 
     private const int CardsRow = 0;
     private const int TogglesRow = 1;
-    private const int HighScoresRow = 2;
-    private const float HighScoresTop = 0.79f;
+    private const int BackRow = 2;
+    private const float BackTop = 0.79f;
     private const float ButtonWidth = 360f;
 
     private static readonly Color BackgroundColor = new(20, 21, 28);
@@ -92,8 +92,8 @@ public sealed class ModeSelectScene : IScene
     /// <summary>Number of players chosen; null until a choice is confirmed.</summary>
     public int? ChosenPlayers { get; private set; }
 
-    /// <summary>True when the player asked for the high-score lists.</summary>
-    public bool ShowHighScores { get; private set; }
+    /// <summary>True when the player went back to the main menu.</summary>
+    public bool BackRequested { get; private set; }
 
     /// <summary>The toggles as they are set now.</summary>
     public RunMode Mode => new(_fast, _nightmare);
@@ -101,6 +101,12 @@ public sealed class ModeSelectScene : IScene
     public void Update(float deltaSeconds)
     {
         _input.Update(_camera.ViewCenter, _camera);
+        if (_input.BackPressed)
+        {
+            BackRequested = true;
+            return;
+        }
+
         if (_input.MenuUpPressed)
         {
             _row = System.Math.Max(CardsRow, _row - 1);
@@ -108,7 +114,7 @@ public sealed class ModeSelectScene : IScene
 
         if (_input.MenuDownPressed)
         {
-            _row = System.Math.Min(HighScoresRow, _row + 1);
+            _row = System.Math.Min(BackRow, _row + 1);
         }
 
         if (_input.MenuLeftPressed)
@@ -144,12 +150,12 @@ public sealed class ModeSelectScene : IScene
                     Flip(toggle);
                 }
             }
-            else if (IsOnHighScoresButton(_input.AimScreen))
+            else if (IsOnBackButton(_input.AimScreen))
             {
-                _row = HighScoresRow;
+                _row = BackRow;
                 if (_input.FirePressed)
                 {
-                    ShowHighScores = true;
+                    BackRequested = true;
                     return;
                 }
             }
@@ -167,7 +173,7 @@ public sealed class ModeSelectScene : IScene
             }
             else
             {
-                ShowHighScores = true;
+                BackRequested = true;
             }
         }
     }
@@ -199,7 +205,7 @@ public sealed class ModeSelectScene : IScene
             line, new Vector2(center, _screenHeight * TogglesTop + ToggleHeight + 22f), OptionTextSize, NoteColor,
             TextAlign.Center);
 
-        DrawHighScoresButton(renderer);
+        DrawBackButton(renderer);
 
         var hint = _input.HasPointer
             ? "Arrows / WASD to move  ·  Enter: start on a card, switch on a toggle  ·  or click"
@@ -297,24 +303,24 @@ public sealed class ModeSelectScene : IScene
         return new Vector2(left, _screenHeight * topShare);
     }
 
-    private Vector2 HighScoresButtonTopLeft => new((_screenWidth - ButtonWidth) / 2f, _screenHeight * HighScoresTop);
+    private Vector2 BackButtonTopLeft => new((_screenWidth - ButtonWidth) / 2f, _screenHeight * BackTop);
 
-    private bool IsOnHighScoresButton(Vector2 screen)
+    private bool IsOnBackButton(Vector2 screen)
     {
-        var topLeft = HighScoresButtonTopLeft;
+        var topLeft = BackButtonTopLeft;
         return screen.X >= topLeft.X && screen.X <= topLeft.X + ButtonWidth
             && screen.Y >= topLeft.Y && screen.Y <= topLeft.Y + ToggleHeight;
     }
 
-    private void DrawHighScoresButton(IRenderer renderer)
+    private void DrawBackButton(IRenderer renderer)
     {
-        var selected = _row == HighScoresRow;
-        var topLeft = HighScoresButtonTopLeft;
+        var selected = _row == BackRow;
+        var topLeft = BackButtonTopLeft;
         var size = new Vector2(ButtonWidth, ToggleHeight);
         renderer.FillRect(topLeft, size, selected ? BorderSelectedColor : BorderColor);
         renderer.FillRect(topLeft + new Vector2(Border), size - new Vector2(Border * 2f), selected ? CardSelectedColor : CardColor);
         renderer.DrawText(
-            "HIGH SCORES", new Vector2(topLeft.X + ButtonWidth / 2f, topLeft.Y + 20f), ToggleTextSize, TextColor,
+            "BACK", new Vector2(topLeft.X + ButtonWidth / 2f, topLeft.Y + 20f), ToggleTextSize, TextColor,
             TextAlign.Center);
     }
 

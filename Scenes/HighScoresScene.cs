@@ -49,7 +49,7 @@ public sealed class HighScoresScene : IScene
     public void Update(float deltaSeconds)
     {
         _input.Update(_camera.ViewCenter, _camera);
-        if (_input.ConfirmPressed || (_input.HasPointer && _input.FirePressed))
+        if (_input.ConfirmPressed || _input.BackPressed || (_input.HasPointer && _input.FirePressed))
         {
             IsDone = true;
         }
@@ -71,7 +71,7 @@ public sealed class HighScoresScene : IScene
         }
 
         renderer.DrawText(
-            "Enter or click to go back", new Vector2(_screenWidth / 2f, _screenHeight - 50f), HintSize, HintColor,
+            "Enter, Esc or click to go back", new Vector2(_screenWidth / 2f, _screenHeight - 50f), HintSize, HintColor,
             TextAlign.Center);
         renderer.End();
     }

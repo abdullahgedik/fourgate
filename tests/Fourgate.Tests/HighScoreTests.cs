@@ -145,22 +145,6 @@ public sealed class HighScoreTests : IDisposable
         Assert.True(scene.RestartRequested);
     }
 
-    [Fact]
-    public void StartScreen_OpensTheHighScores_FromItsThirdRow()
-    {
-        var input = new FakeInput { MenuDownPressed = true };
-        var scene = new ModeSelectScene(input, TestData.Game());
-        scene.Update(Step);
-        scene.Update(Step);
-
-        input.MenuDownPressed = false;
-        input.ConfirmPressed = true;
-        scene.Update(Step);
-
-        Assert.True(scene.ShowHighScores);
-        Assert.Null(scene.ChosenPlayers);
-    }
-
     private static void Press(InitialsEntry entry, FakeInput input, Action<FakeInput> set)
     {
         set(input);

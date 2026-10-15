@@ -59,6 +59,8 @@ public sealed class KeyboardMouseInput : IPlayerInput
 
     public bool MenuRightPressed { get; private set; }
 
+    public bool BackPressed { get; private set; }
+
     public bool MenuUpPressed { get; private set; }
 
     public bool MenuDownPressed { get; private set; }
@@ -141,6 +143,7 @@ public sealed class KeyboardMouseInput : IPlayerInput
         MenuLeftPressed = WasPressed(keyboard, Keys.A) || WasPressed(keyboard, Keys.Left);
         MenuRightPressed = WasPressed(keyboard, Keys.D) || WasPressed(keyboard, Keys.Right);
         MenuUpPressed = WasPressed(keyboard, Keys.W) || WasPressed(keyboard, Keys.Up);
+        BackPressed = WasPressed(keyboard, Keys.Escape);
         MenuDownPressed = WasPressed(keyboard, Keys.S) || WasPressed(keyboard, Keys.Down);
 
         HasActivity = move != Vector2.Zero

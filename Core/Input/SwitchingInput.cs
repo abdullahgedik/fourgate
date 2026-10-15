@@ -54,6 +54,8 @@ public sealed class SwitchingInput : IPlayerInput
 
     public bool MenuRightPressed => _current.MenuRightPressed;
 
+    public bool BackPressed => _current.BackPressed;
+
     public bool MenuUpPressed => _current.MenuUpPressed;
 
     public bool MenuDownPressed => _current.MenuDownPressed;
