@@ -3,6 +3,7 @@ using System.IO;
 using Fourgate.Core.Audio;
 using Fourgate.Core.Data;
 using Fourgate.Core.Input;
+using Fourgate.Core.Persistence;
 using Fourgate.Core.Rendering;
 using Fourgate.Scenes;
 using Fourgate.Systems;
@@ -39,6 +40,8 @@ public sealed class FourgateGame : Game
     private IPlayerInput[] _coopInputs = Array.Empty<IPlayerInput>();
     private int _lastChosenPlayers = 1;
     private RunMode _lastMode;
+    private HighScoreStore? _highScoreStore;
+    private HighScoreTable _highScores = new();
 
     // The run in progress, for the debug hotkeys; null on the start screen.
     private GameplayScene? CurrentRun => _scene as GameplayScene;
@@ -74,6 +77,8 @@ public sealed class FourgateGame : Game
             ? new SwitchingInput(gamepad, new DebugKeyboardInput())
             : gamepad;
         _coopInputs = new[] { keyboardMouse, playerTwo };
+        _highScoreStore = new HighScoreStore(HighScoreStore.DefaultPath);
+        _highScores = _highScoreStore.Load();
         _scene = new ModeSelectScene(_playerOneInput, _data.Game);
     }
 
@@ -124,7 +129,17 @@ public sealed class FourgateGame : Game
         {
             _lastChosenPlayers = players;
             _lastMode = select.Mode;
-            _scene = new GameplayScene(_data, players == 2 ? _coopInputs : _singleInputs, _audio, _lastMode);
+            _scene = new GameplayScene(
+                _data, players == 2 ? _coopInputs : _singleInputs, _audio, _lastMode, _highScores, _highScoreStore);
+        }
+        else if (_scene is ModeSelectScene { ShowHighScores: true } menu)
+        {
+            _lastMode = menu.Mode;
+            _scene = new HighScoresScene(_playerOneInput, _highScores, _data.Game);
+        }
+        else if (_scene is HighScoresScene { IsDone: true })
+        {
+            _scene = new ModeSelectScene(_playerOneInput, _data.Game, _lastChosenPlayers, _lastMode);
         }
         else if (_scene is GameplayScene { RestartRequested: true })
         {

@@ -5,6 +5,15 @@ namespace Fourgate.Systems;
 /// <param name="Nightmare">Everything from the start and much harder waves.</param>
 public readonly record struct RunMode(bool Fast, bool Nightmare)
 {
+    /// <summary>Key of this mode's high-score list.</summary>
+    public string Key => (Fast, Nightmare) switch
+    {
+        (false, false) => "normal",
+        (true, false) => "fast",
+        (false, true) => "nightmare",
+        _ => "nightmareFast",
+    };
+
     /// <summary>Short label for the HUD and high-score lists.</summary>
     public string Name => (Fast, Nightmare) switch
     {

@@ -37,10 +37,11 @@ local co-op and menus are still to come.
   gamepad), with Fast and Nightmare mode toggles
 - A score (a team score in co-op, multiplied by the mode) and a game over screen with the score,
   wave reached, kills and time
+- Local high scores: a top 10 per mode with initials, saved in `%APPDATA%/Fourgate/scores.json`
 
 ## Planned
 
-- Local high scores, a main menu, pause and settings
+- A main menu, pause and settings
 - Visual polish: particles, hit feedback, fire and explosion animations
 - Sound and sprite art (the game currently draws geometric shapes and is silent)
 - Later: a 3D look in the style of Boxhead 2Play, with the same 2D gameplay

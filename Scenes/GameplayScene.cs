@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Fourgate.Core.Audio;
 using Fourgate.Core.Data;
 using Fourgate.Core.Input;
+using Fourgate.Core.Persistence;
 using Fourgate.Core.Rendering;
 using Fourgate.Core.Rng;
 using Fourgate.Entities;
@@ -91,6 +93,10 @@ public sealed class GameplayScene : IScene
     private readonly string _modeLabel;
     private readonly ScoreSystem _score;
     private readonly ScoreHud _scoreHud = new();
+    private readonly HighScoreTable? _highScores;
+    private readonly HighScoreStore? _highScoreStore;
+    private InitialsEntry? _initials;
+    private int _newEntryPlace = -1;
     private string _debugNotice = string.Empty;
     private float _debugNoticeLeft;
     private string _disconnectedNotice = string.Empty;
@@ -117,7 +123,11 @@ public sealed class GameplayScene : IScene
     /// <param name="inputs">One input per player: one for single-player, two for co-op.</param>
     /// <param name="audio">Audio events.</param>
     /// <param name="mode">Fast / Nightmare toggles; Normal when left out.</param>
-    public GameplayScene(GameData data, IReadOnlyList<IPlayerInput> inputs, IAudioManager audio, RunMode mode = default)
+    /// <param name="highScores">The local high scores, or null to keep none (tests).</param>
+    /// <param name="highScoreStore">Where to save them after a new entry, or null.</param>
+    public GameplayScene(
+        GameData data, IReadOnlyList<IPlayerInput> inputs, IAudioManager audio, RunMode mode = default,
+        HighScoreTable? highScores = null, HighScoreStore? highScoreStore = null)
     {
         _data = data;
         _floorCellSize = FloorCellSize(data);
@@ -161,6 +171,8 @@ public sealed class GameplayScene : IScene
         _drops = new DropSystem(config.Crates, _random, audio, _unlocks);
         _upgrades = new UpgradeSystem(data.Upgrades, _unlocks, _random, audio);
         _upgradeScreen = new UpgradeScreen(_upgrades);
+        _highScores = highScores;
+        _highScoreStore = highScoreStore;
         _rules = new ModeRules(data.Modes, mode);
         _score = new ScoreSystem(config.Score, _rules.ScoreMultiplier);
         _modeLabel = mode == default ? string.Empty : mode.Name;
@@ -282,6 +294,11 @@ public sealed class GameplayScene : IScene
         {
             IsGameOver = true;
             _gameOverOverlay.SetStats(_waves?.Wave ?? 0, _enemies.KillCount, _elapsedSeconds, _score.Total, _rules.Mode.Name);
+            if (_highScores is not null && _highScores.Qualifies(_rules.Mode.Key, _score.Total))
+            {
+                _initials = new InitialsEntry();
+            }
+
             _audio.PlaySfx(SfxIds.GameOver);
         }
     }
@@ -316,6 +333,20 @@ public sealed class GameplayScene : IScene
 
     private void UpdateGameOver()
     {
+        // A new high score: player 1 enters the initials first (for the team in co-op).
+        if (_initials is { IsDone: false })
+        {
+            var playerOne = _players[0];
+            playerOne.Input.Update(playerOne.Position, _cameras[0]);
+            _initials.Update(playerOne.Input);
+            if (_initials.IsDone)
+            {
+                RecordHighScore(_initials.Initials);
+            }
+
+            return;
+        }
+
         for (var i = 0; i < _players.Count; i++)
         {
             var input = _players[i].Input;
@@ -393,6 +424,22 @@ public sealed class GameplayScene : IScene
         }
 
         return null;
+    }
+
+    private void RecordHighScore(string initials)
+    {
+        var seconds = (int)_elapsedSeconds;
+        _newEntryPlace = _highScores!.Insert(_rules.Mode.Key, new HighScoreEntry
+        {
+            Score = _score.Total,
+            Wave = _waves?.Wave ?? 0,
+            Kills = _enemies.KillCount,
+            Seconds = seconds,
+            Players = _players.Count,
+            Date = DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            Initials = initials,
+        });
+        _highScoreStore?.Save(_highScores);
     }
 
     private bool AnyPlayerAlive()
@@ -504,6 +551,9 @@ public sealed class GameplayScene : IScene
         _explosives.OneShotKills = _shots.OneShotKills;
         _flames.OneShotKills = _shots.OneShotKills;
     }
+
+    /// <summary>True while a new high score's initials are being entered.</summary>
+    public bool IsEnteringInitials => _initials is { IsDone: false };
 
     /// <summary>The run's score so far (a team score in co-op).</summary>
     public int Score => _score.Total;
@@ -664,7 +714,9 @@ public sealed class GameplayScene : IScene
 
         if (IsGameOver)
         {
-            _gameOverOverlay.Draw(renderer, _data.Game.VirtualWidth, _data.Game.VirtualHeight);
+            _gameOverOverlay.Draw(
+                renderer, _data.Game.VirtualWidth, _data.Game.VirtualHeight, _initials,
+                _highScores?.Get(_rules.Mode.Key), _highScores?.Version ?? 0, _newEntryPlace);
         }
         else if (DisconnectedPlayer >= 0)
         {

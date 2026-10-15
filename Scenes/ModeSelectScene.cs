@@ -28,6 +28,9 @@ public sealed class ModeSelectScene : IScene
 
     private const int CardsRow = 0;
     private const int TogglesRow = 1;
+    private const int HighScoresRow = 2;
+    private const float HighScoresTop = 0.79f;
+    private const float ButtonWidth = 360f;
 
     private static readonly Color BackgroundColor = new(20, 21, 28);
     private static readonly Color TitleColor = new(240, 240, 245);
@@ -59,6 +62,7 @@ public sealed class ModeSelectScene : IScene
     private int _selectedToggle;
     private bool _fast;
     private bool _nightmare;
+    private string _modeLine = string.Empty;
 
     /// <param name="input">Player 1's input; drives the menu.</param>
     /// <param name="config">Game settings (screen size, camera).</param>
@@ -88,6 +92,9 @@ public sealed class ModeSelectScene : IScene
     /// <summary>Number of players chosen; null until a choice is confirmed.</summary>
     public int? ChosenPlayers { get; private set; }
 
+    /// <summary>True when the player asked for the high-score lists.</summary>
+    public bool ShowHighScores { get; private set; }
+
     /// <summary>The toggles as they are set now.</summary>
     public RunMode Mode => new(_fast, _nightmare);
 
@@ -96,12 +103,12 @@ public sealed class ModeSelectScene : IScene
         _input.Update(_camera.ViewCenter, _camera);
         if (_input.MenuUpPressed)
         {
-            _row = CardsRow;
+            _row = System.Math.Max(CardsRow, _row - 1);
         }
 
         if (_input.MenuDownPressed)
         {
-            _row = TogglesRow;
+            _row = System.Math.Min(HighScoresRow, _row + 1);
         }
 
         if (_input.MenuLeftPressed)
@@ -137,6 +144,15 @@ public sealed class ModeSelectScene : IScene
                     Flip(toggle);
                 }
             }
+            else if (IsOnHighScoresButton(_input.AimScreen))
+            {
+                _row = HighScoresRow;
+                if (_input.FirePressed)
+                {
+                    ShowHighScores = true;
+                    return;
+                }
+            }
         }
 
         if (_input.ConfirmPressed)
@@ -145,9 +161,13 @@ public sealed class ModeSelectScene : IScene
             {
                 ChosenPlayers = _options[_selectedCard].Players;
             }
-            else
+            else if (_row == TogglesRow)
             {
                 Flip(_selectedToggle);
+            }
+            else
+            {
+                ShowHighScores = true;
             }
         }
     }
@@ -174,15 +194,17 @@ public sealed class ModeSelectScene : IScene
         }
 
         // Explains the highlighted toggle; on the cards row, the mode that will be played.
-        var line = _row == TogglesRow ? Toggles[_selectedToggle].Description : $"Mode: {Mode.Name}";
+        var line = _row == TogglesRow ? Toggles[_selectedToggle].Description : _modeLine;
         renderer.DrawText(
-            line, new Vector2(center, _screenHeight * TogglesTop + ToggleHeight + 30f), OptionTextSize, NoteColor,
+            line, new Vector2(center, _screenHeight * TogglesTop + ToggleHeight + 22f), OptionTextSize, NoteColor,
             TextAlign.Center);
+
+        DrawHighScoresButton(renderer);
 
         var hint = _input.HasPointer
             ? "Arrows / WASD to move  ·  Enter: start on a card, switch on a toggle  ·  or click"
             : "D-pad to move  ·  A: start on a card, switch on a toggle";
-        renderer.DrawText(hint, new Vector2(center, _screenHeight * 0.9f), HintSize, HintColor, TextAlign.Center);
+        renderer.DrawText(hint, new Vector2(center, _screenHeight * 0.93f), HintSize, HintColor, TextAlign.Center);
 
         if (_input.HasPointer)
         {
@@ -224,6 +246,7 @@ public sealed class ModeSelectScene : IScene
     {
         _toggleLabels[0] = $"{Toggles[0].Name}: {(_fast ? "ON" : "OFF")}";
         _toggleLabels[1] = $"{Toggles[1].Name}: {(_nightmare ? "ON" : "OFF")}";
+        _modeLine = $"Mode: {Mode.Name}";
     }
 
     private bool IsOn(int toggle)
@@ -272,6 +295,27 @@ public sealed class ModeSelectScene : IScene
         var totalWidth = 2 * CardWidth + CardGap;
         var left = (_screenWidth - totalWidth) / 2f + index * (CardWidth + CardGap);
         return new Vector2(left, _screenHeight * topShare);
+    }
+
+    private Vector2 HighScoresButtonTopLeft => new((_screenWidth - ButtonWidth) / 2f, _screenHeight * HighScoresTop);
+
+    private bool IsOnHighScoresButton(Vector2 screen)
+    {
+        var topLeft = HighScoresButtonTopLeft;
+        return screen.X >= topLeft.X && screen.X <= topLeft.X + ButtonWidth
+            && screen.Y >= topLeft.Y && screen.Y <= topLeft.Y + ToggleHeight;
+    }
+
+    private void DrawHighScoresButton(IRenderer renderer)
+    {
+        var selected = _row == HighScoresRow;
+        var topLeft = HighScoresButtonTopLeft;
+        var size = new Vector2(ButtonWidth, ToggleHeight);
+        renderer.FillRect(topLeft, size, selected ? BorderSelectedColor : BorderColor);
+        renderer.FillRect(topLeft + new Vector2(Border), size - new Vector2(Border * 2f), selected ? CardSelectedColor : CardColor);
+        renderer.DrawText(
+            "HIGH SCORES", new Vector2(topLeft.X + ButtonWidth / 2f, topLeft.Y + 20f), ToggleTextSize, TextColor,
+            TextAlign.Center);
     }
 
     private int CardAt(Vector2 screen)
