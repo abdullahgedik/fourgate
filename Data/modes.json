@@ -6,5 +6,6 @@
     "enemySpeedMultiplier": 1.15,
     "healthCrateChanceMultiplier": 0.6,
     "allWeaponsAtStart": true
-  }
+  },
+  "scoreMultipliers": { "normal": 1.0, "fast": 1.25, "nightmare": 1.5, "nightmareFast": 1.9 }
 }

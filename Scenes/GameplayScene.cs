@@ -35,8 +35,6 @@ public sealed class GameplayScene : IScene
     private const float EdgeIndicatorRadius = 18f;
     private const float WeaponCrateSpacing = 70f;
     private const float DebugNoticeSeconds = 2f;
-    private const float ModeLabelY = 8f;
-    private const float ModeLabelSize = 22f;
     private const float PlayerSpawnSpacing = 90f;
     private const float BossCrateSpacing = 70f;
     private const float BossIndicatorRadius = 24f;
@@ -60,7 +58,6 @@ public sealed class GameplayScene : IScene
     private static readonly Color ReloadBarBackColor = new(12, 13, 18);
     private static readonly Color ReloadBarFillColor = new(255, 225, 120);
     private static readonly Color DebugNoticeColor = new(255, 225, 120);
-    private static readonly Color ModeLabelColor = new(255, 140, 110);
     private static readonly Color SplitLineColor = new(10, 10, 14);
     private static readonly Color DownedNoticeColor = new(255, 120, 100);
     private static readonly Color BossIndicatorColor = new(230, 50, 45);
@@ -92,6 +89,8 @@ public sealed class GameplayScene : IScene
     private readonly BossSystem _bosses;
     private readonly ModeRules _rules;
     private readonly string _modeLabel;
+    private readonly ScoreSystem _score;
+    private readonly ScoreHud _scoreHud = new();
     private string _debugNotice = string.Empty;
     private float _debugNoticeLeft;
     private string _disconnectedNotice = string.Empty;
@@ -163,6 +162,7 @@ public sealed class GameplayScene : IScene
         _upgrades = new UpgradeSystem(data.Upgrades, _unlocks, _random, audio);
         _upgradeScreen = new UpgradeScreen(_upgrades);
         _rules = new ModeRules(data.Modes, mode);
+        _score = new ScoreSystem(config.Score, _rules.ScoreMultiplier);
         _modeLabel = mode == default ? string.Empty : mode.Name;
         _enemies.SpeedMultiplier = _rules.EnemySpeedMultiplier;
         _drops.HealthChanceMultiplier = _rules.HealthCrateChanceMultiplier;
@@ -235,6 +235,7 @@ public sealed class GameplayScene : IScene
         }
 
         _elapsedSeconds += deltaSeconds;
+        _score.AddTime(deltaSeconds);
 
         for (var i = 0; i < _practiceTargets.Count; i++)
         {
@@ -244,6 +245,7 @@ public sealed class GameplayScene : IScene
         _waves?.Update(deltaSeconds);
         if (_lastWavePhase == WavePhase.Active && _waves?.Phase == WavePhase.Rest)
         {
+            _score.AddClearedWave();
             ReviveDownedPlayers();
         }
 
@@ -279,7 +281,7 @@ public sealed class GameplayScene : IScene
         if (!AnyPlayerAlive())
         {
             IsGameOver = true;
-            _gameOverOverlay.SetStats(_waves?.Wave ?? 0, _enemies.KillCount, _elapsedSeconds);
+            _gameOverOverlay.SetStats(_waves?.Wave ?? 0, _enemies.KillCount, _elapsedSeconds, _score.Total, _rules.Mode.Name);
             _audio.PlaySfx(SfxIds.GameOver);
         }
     }
@@ -439,6 +441,7 @@ public sealed class GameplayScene : IScene
         for (var i = 0; i < deaths.Count; i++)
         {
             _xp.Award(deaths[i].Config.Xp, deaths[i].KilledBy, _players);
+            _score.AddKill(deaths[i].Config.ScoreValue);
             _drops.OnEnemyKilled(deaths[i], _players);
             if (deaths[i].Config.IsBoss)
             {
@@ -501,6 +504,9 @@ public sealed class GameplayScene : IScene
         _explosives.OneShotKills = _shots.OneShotKills;
         _flames.OneShotKills = _shots.OneShotKills;
     }
+
+    /// <summary>The run's score so far (a team score in co-op).</summary>
+    public int Score => _score.Total;
 
     /// <summary>The players of this run, in order (player 1 first).</summary>
     public IReadOnlyList<Player> Players => _players;
@@ -632,12 +638,7 @@ public sealed class GameplayScene : IScene
             _bossHud.Draw(renderer, bossConfig.DisplayName, boss, _data.Game.VirtualWidth);
         }
 
-        if (_modeLabel.Length > 0)
-        {
-            renderer.DrawText(
-                _modeLabel, new Vector2(_data.Game.VirtualWidth / 2f, ModeLabelY), ModeLabelSize, ModeLabelColor,
-                TextAlign.Center);
-        }
+        _scoreHud.Draw(renderer, _score.Total, _modeLabel, _data.Game.VirtualWidth);
 
         if (_debugNoticeLeft > 0f)
         {

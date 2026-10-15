@@ -35,11 +35,12 @@ local co-op and menus are still to come.
 - Health, ammo, upgrade and weapon crates
 - A start screen to choose 1 player or 2-player local co-op (vertical split-screen; player 2 on a
   gamepad), with Fast and Nightmare mode toggles
-- A game over screen with wave reached, kills and time
+- A score (a team score in co-op, multiplied by the mode) and a game over screen with the score,
+  wave reached, kills and time
 
 ## Planned
 
-- A score, local high scores, a main menu, pause and settings
+- Local high scores, a main menu, pause and settings
 - Visual polish: particles, hit feedback, fire and explosion animations
 - Sound and sprite art (the game currently draws geometric shapes and is silent)
 - Later: a 3D look in the style of Boxhead 2Play, with the same 2D gameplay

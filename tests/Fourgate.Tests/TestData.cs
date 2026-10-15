@@ -22,6 +22,7 @@ public static class TestData
             VirtualWidth = 1920,
             VirtualHeight = 1080,
             Arena = Arena(),
+            Score = new ScoreConfig { WaveClearBonus = 250, PointsPerSecond = 1f },
             Coop = new CoopConfig { ReviveHpFraction = 0.5f, EnemyBudgetMultiplier = 1.6f, BossHpMultiplier = 1.5f },
             Camera = new CameraConfig
             {

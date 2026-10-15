@@ -22,6 +22,15 @@ public sealed class ModeRules
         EnemySpeedMultiplier = mode.Nightmare ? nightmare.EnemySpeedMultiplier : 1f;
         HealthCrateChanceMultiplier = mode.Nightmare ? nightmare.HealthCrateChanceMultiplier : 1f;
         AllWeaponsAtStart = mode.Nightmare && nightmare.AllWeaponsAtStart;
+
+        var scores = config.ScoreMultipliers;
+        ScoreMultiplier = (mode.Fast, mode.Nightmare) switch
+        {
+            (false, false) => scores.Normal,
+            (true, false) => scores.Fast,
+            (false, true) => scores.Nightmare,
+            _ => scores.NightmareFast,
+        };
     }
 
     public RunMode Mode { get; }
@@ -39,6 +48,9 @@ public sealed class ModeRules
     public float HealthCrateChanceMultiplier { get; }
 
     public bool AllWeaponsAtStart { get; }
+
+    /// <summary>The run's score is multiplied by this.</summary>
+    public float ScoreMultiplier { get; }
 
     /// <summary>The wave something unlocks at in this mode (rounded up, never before wave 1).</summary>
     public int UnlockWave(int unlockWave)

@@ -22,6 +22,7 @@ public class ModeTests
             DifficultyWaveOffset = 14, BudgetMultiplier = 1.3f, EnemySpeedMultiplier = 1.15f,
             HealthCrateChanceMultiplier = 0.6f, AllWeaponsAtStart = true,
         },
+        ScoreMultipliers = new ScoreMultipliersConfig { Normal = 1f, Fast = 1.25f, Nightmare = 1.5f, NightmareFast = 1.9f },
     };
 
     [Theory]
@@ -149,7 +150,8 @@ public class ModeTests
         const string json = """
             { "fast": { "unlockWaveMultiplier": 0, "budgetMultiplier": 1.5, "spawnIntervalMultiplier": 0.75 },
               "nightmare": { "difficultyWaveOffset": 14, "budgetMultiplier": 1.3, "enemySpeedMultiplier": 1.15,
-                "healthCrateChanceMultiplier": 0.6, "allWeaponsAtStart": true } }
+                "healthCrateChanceMultiplier": 0.6, "allWeaponsAtStart": true },
+              "scoreMultipliers": { "normal": 1, "fast": 1.25, "nightmare": 1.5, "nightmareFast": 1.9 } }
             """;
 
         var error = Assert.Throws<DataLoadException>(() => DataLoader.ParseModes(json, "modes.json"));

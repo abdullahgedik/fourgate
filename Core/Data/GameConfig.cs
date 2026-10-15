@@ -21,6 +21,8 @@ public sealed class GameConfig
 
     public required CoopConfig Coop { get; init; }
 
+    public required ScoreConfig Score { get; init; }
+
     public DebugConfig Debug { get; init; } = new();
 
     /// <summary>How hits push enemies back; no knockback when left out.</summary>
@@ -55,6 +57,9 @@ public sealed class GameConfig
 
         DataLoadException.Require(Knockback is not null, file, "knockback", "must not be null");
         Knockback!.Validate(file);
+
+        DataLoadException.Require(Score is not null, file, "score", "is required");
+        Score!.Validate(file);
 
         DataLoadException.Require(Coop is not null, file, "coop", "is required");
         Coop!.Validate(file);

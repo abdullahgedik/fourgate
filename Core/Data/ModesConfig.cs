@@ -12,17 +12,22 @@ public sealed class ModesConfig
             DifficultyWaveOffset = 0, BudgetMultiplier = 1f, EnemySpeedMultiplier = 1f,
             HealthCrateChanceMultiplier = 1f, AllWeaponsAtStart = false,
         },
+        ScoreMultipliers = new ScoreMultipliersConfig { Normal = 1f, Fast = 1f, Nightmare = 1f, NightmareFast = 1f },
     };
 
     public required FastModeConfig Fast { get; init; }
 
     public required NightmareModeConfig Nightmare { get; init; }
 
+    public required ScoreMultipliersConfig ScoreMultipliers { get; init; }
+
     public void Validate(string file)
     {
         DataLoadException.Require(Fast is not null, file, "fast", "is required");
         DataLoadException.Require(Nightmare is not null, file, "nightmare", "is required");
+        DataLoadException.Require(ScoreMultipliers is not null, file, "scoreMultipliers", "is required");
         Fast!.Validate(file);
         Nightmare!.Validate(file);
+        ScoreMultipliers!.Validate(file);
     }
 }

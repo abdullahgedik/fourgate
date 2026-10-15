@@ -21,6 +21,7 @@
     "ammoPrimaryFraction": 0.35, "ammoOthersFraction": 0.08
   },
   "knockback": { "explosion": 70, "damping": 14 },
+  "score": { "waveClearBonus": 250, "pointsPerSecond": 1 },
   "coop": { "reviveHpFraction": 0.5, "enemyBudgetMultiplier": 1.6, "bossHpMultiplier": 1.5 },
   "friendlyFire": {
     "enabled": true, "damageToOther": 0.5, "selfExplosiveDamage": 0.5,
