@@ -28,6 +28,9 @@ public sealed class GameConfig
     /// <summary>How hits push enemies back; no knockback when left out.</summary>
     public KnockbackConfig Knockback { get; init; } = new();
 
+    /// <summary>How bosses pick their target in co-op; null makes them chase the nearest player.</summary>
+    public BossAggroConfig? BossAggro { get; init; }
+
     /// <summary>Most enemies allowed in the arena at once; further spawns wait at the doors.</summary>
     public required int MaxAliveEnemies { get; init; }
 
@@ -60,6 +63,7 @@ public sealed class GameConfig
         DataLoadException.Require(Xp.Exponent >= 0, file, "xp.exponent", "must not be negative");
 
         DataLoadException.Require(Knockback is not null, file, "knockback", "must not be null");
+        BossAggro?.Validate(file, "bossAggro");
         Knockback!.Validate(file);
 
         DataLoadException.Require(Score is not null, file, "score", "is required");

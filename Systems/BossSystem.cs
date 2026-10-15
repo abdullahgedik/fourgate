@@ -21,6 +21,15 @@ public sealed class BossSystem
     private const float SpoutSize = 7f;
 
     private static readonly Color MarkerColor = new(255, 60, 40);
+
+    // A lethal attack's warning: crimson, stronger, throbbing.
+    private static readonly Color LethalColor = new(235, 0, 85);
+    private const float LethalBoost = 1.5f;
+    private const float LethalPulseSpeed = 14f;
+    private const float LethalBeamMarkDistance = 260f;
+
+    // How long a player usually stays in a sweeping fire stream when crossing it.
+    private const float FireCrossingSeconds = 0.15f;
     private static readonly Color ShockwaveColor = new(255, 200, 120);
     private static readonly Color FireColor = new(255, 120, 30);
     private static readonly Color FireCoreColor = new(255, 220, 120);
@@ -61,6 +70,13 @@ public sealed class BossSystem
     private readonly IAudioManager _audio;
     private readonly List<BossPatternConfig> _usable = new();
     private readonly List<Player> _hitThisAttack = new();
+    private readonly List<float> _threat = new();
+    private int _targetIndex = -1;
+    private float _targetLeft;
+    private Player? _aimedAt;
+    private IReadOnlyList<Player>? _players;
+    private Color _markerColor = MarkerColor;
+    private float _time;
     private readonly List<Vector2> _summonPoints = new();
 
     private State _state;
@@ -144,12 +160,14 @@ public sealed class BossSystem
         }
 
         var boss = Boss!;
+        _time += deltaSeconds;
+        UpdateLethalWarning(players);
         _hasteLeft = Math.Max(0f, _hasteLeft - deltaSeconds);
         if (_state != State.ChangingPhase && TryEnterNextPhase(boss))
         {
             return;
         }
-        var target = NearestLivingPlayer(boss.Position, players);
+        var target = UpdateAggro(boss, players, deltaSeconds);
         if (target is null)
         {
             return;
@@ -221,20 +239,25 @@ public sealed class BossSystem
             return;
         }
 
+        // A warning for a hit that would kill turns a throbbing crimson.
+        _markerColor = IsLethalWarning
+            ? LethalColor * (LethalBoost * (0.75f + 0.25f * MathF.Sin(_time * LethalPulseSpeed)))
+            : MarkerColor;
+
         var progress = inFlight ? 1f : 1f - Math.Clamp(_stateLeft / _pattern.TelegraphSeconds, 0f, 1f);
         switch (_pattern.Type)
         {
             case BossPatternType.LineCharge:
                 var end = _origin + _direction * _reach;
                 var width = Boss.Radius * 2f;
-                renderer.DrawLine(_origin, end, width, MarkerColor * 0.22f);
-                renderer.DrawLine(_origin, Vector2.Lerp(_origin, end, progress), width, MarkerColor * 0.4f);
+                renderer.DrawLine(_origin, end, width, _markerColor * 0.22f);
+                renderer.DrawLine(_origin, Vector2.Lerp(_origin, end, progress), width, _markerColor * 0.4f);
                 DrawLaneWalls(renderer, _origin, end, width, progress);
                 break;
 
             case BossPatternType.GroundSlamRing:
-                renderer.FillCircle(_origin, _pattern.Radius, MarkerColor * 0.16f);
-                renderer.FillCircle(_origin, _pattern.Radius * progress, MarkerColor * 0.28f);
+                renderer.FillCircle(_origin, _pattern.Radius, _markerColor * 0.16f);
+                renderer.FillCircle(_origin, _pattern.Radius * progress, _markerColor * 0.28f);
                 DrawRingWall(renderer, _origin, _pattern.Radius, progress);
                 break;
 
@@ -242,8 +265,8 @@ public sealed class BossSystem
                 var size = _data.GetEnemy(_pattern.EnemyId).Radius;
                 for (var i = 0; i < _summonPoints.Count; i++)
                 {
-                    renderer.FillCircle(_summonPoints[i], size, MarkerColor * 0.2f);
-                    renderer.FillCircle(_summonPoints[i], size * progress, MarkerColor * 0.45f);
+                    renderer.FillCircle(_summonPoints[i], size, _markerColor * 0.2f);
+                    renderer.FillCircle(_summonPoints[i], size * progress, _markerColor * 0.45f);
                     DrawRingWall(renderer, _summonPoints[i], size, progress);
                 }
 
@@ -252,29 +275,29 @@ public sealed class BossSystem
             case BossPatternType.FireballRing:
             case BossPatternType.FireballSpiral:
                 // A swelling glow, with a dot where each fireball (or spiral arm) will leave.
-                renderer.FillCircleRaised(_origin, BossMiddle, Boss.Radius * (1.2f + 0.6f * progress), MarkerColor * (0.25f + 0.4f * progress));
+                renderer.FillCircleRaised(_origin, BossMiddle, Boss.Radius * (1.2f + 0.6f * progress), _markerColor * (0.25f + 0.4f * progress));
                 var spouts = _pattern.Count;
                 var start = MathF.Atan2(_direction.Y, _direction.X);
                 for (var i = 0; i < spouts; i++)
                 {
                     var angle = start + MathHelper.TwoPi * i / spouts;
                     var dot = _origin + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * (Boss.Radius + SpoutDistance);
-                    renderer.FillCircleRaised(dot, Boss.Radius * BeamHeightPerRadius, SpoutSize * (0.5f + 0.5f * progress), MarkerColor);
+                    renderer.FillCircleRaised(dot, Boss.Radius * BeamHeightPerRadius, SpoutSize * (0.5f + 0.5f * progress), _markerColor);
                 }
 
                 break;
 
             case BossPatternType.LeapSlam:
-                renderer.FillCircle(_leapTo, _pattern.Radius, MarkerColor * 0.16f);
-                renderer.FillCircle(_leapTo, _pattern.Radius * progress, MarkerColor * 0.3f);
+                renderer.FillCircle(_leapTo, _pattern.Radius, _markerColor * 0.16f);
+                renderer.FillCircle(_leapTo, _pattern.Radius * progress, _markerColor * 0.3f);
                 DrawRingWall(renderer, _leapTo, _pattern.Radius, progress);
                 break;
 
             case BossPatternType.MissileRain:
                 for (var i = 0; i < _missileTargets.Count; i++)
                 {
-                    renderer.FillCircle(_missileTargets[i], _pattern.Radius, MarkerColor * 0.18f);
-                    renderer.FillCircle(_missileTargets[i], _pattern.Radius * progress, MarkerColor * 0.32f);
+                    renderer.FillCircle(_missileTargets[i], _pattern.Radius, _markerColor * 0.18f);
+                    renderer.FillCircle(_missileTargets[i], _pattern.Radius * progress, _markerColor * 0.32f);
                     DrawRingWall(renderer, _missileTargets[i], _pattern.Radius, progress);
                 }
 
@@ -282,10 +305,10 @@ public sealed class BossSystem
 
             case BossPatternType.FireballStream:
                 // A swelling glow and a single dot where the stream will leave.
-                renderer.FillCircleRaised(_origin, BossMiddle, Boss.Radius * (1.2f + 0.6f * progress), MarkerColor * (0.25f + 0.4f * progress));
+                renderer.FillCircleRaised(_origin, BossMiddle, Boss.Radius * (1.2f + 0.6f * progress), _markerColor * (0.25f + 0.4f * progress));
                 renderer.FillCircleRaised(
                     _origin + _direction * (Boss.Radius + SpoutDistance), Boss.Radius * BeamHeightPerRadius,
-                    SpoutSize * (0.5f + 0.5f * progress), MarkerColor);
+                    SpoutSize * (0.5f + 0.5f * progress), _markerColor);
                 break;
 
             case BossPatternType.Haste:
@@ -295,14 +318,14 @@ public sealed class BossSystem
 
             case BossPatternType.FireballVolley:
                 // A swelling glow, with a dot where each fireball of the fan will leave.
-                renderer.FillCircleRaised(_origin, BossMiddle, Boss.Radius * (1.2f + 0.6f * progress), MarkerColor * (0.25f + 0.4f * progress));
+                renderer.FillCircleRaised(_origin, BossMiddle, Boss.Radius * (1.2f + 0.6f * progress), _markerColor * (0.25f + 0.4f * progress));
                 var aim = MathF.Atan2(_direction.Y, _direction.X);
                 var spread = MathHelper.ToRadians(_pattern.SpreadDegrees);
                 for (var i = 0; i < _pattern.Count; i++)
                 {
                     var angle = _pattern.Count > 1 ? aim + MathHelper.Lerp(-spread, spread, i / (_pattern.Count - 1f)) : aim;
                     var dot = _origin + Direction(angle) * (Boss.Radius + SpoutDistance);
-                    renderer.FillCircleRaised(dot, Boss.Radius * BeamHeightPerRadius, SpoutSize * (0.5f + 0.5f * progress), MarkerColor);
+                    renderer.FillCircleRaised(dot, Boss.Radius * BeamHeightPerRadius, SpoutSize * (0.5f + 0.5f * progress), _markerColor);
                 }
 
                 break;
@@ -314,30 +337,30 @@ public sealed class BossSystem
                 for (var i = 0; i <= 8; i++)
                 {
                     var edge = _origin + Direction(first + sweep * i / 8f) * _pattern.Distance;
-                    renderer.DrawLine(_origin, edge, i == 0 || i == 8 ? 6f : 2f, MarkerColor * (i == 0 || i == 8 ? 0.45f : 0.18f));
+                    renderer.DrawLine(_origin, edge, i == 0 || i == 8 ? 6f : 2f, _markerColor * (i == 0 || i == 8 ? 0.45f : 0.18f));
                 }
 
                 var laserEnd = _origin + _direction * _streamLength;
-                renderer.DrawLine(_origin, Vector2.Lerp(_origin, laserEnd, progress), _pattern.Width, MarkerColor * 0.5f);
+                renderer.DrawLine(_origin, Vector2.Lerp(_origin, laserEnd, progress), _pattern.Width, _markerColor * 0.5f);
                 var wallHeight = WarningWallHeight * (0.3f + 0.7f * progress);
-                renderer.DrawGlowWall(_origin, _origin + Direction(first) * _pattern.Distance, wallHeight, MarkerColor * 0.6f);
-                renderer.DrawGlowWall(_origin, _origin + Direction(first + sweep) * _pattern.Distance, wallHeight, MarkerColor * 0.6f);
+                renderer.DrawGlowWall(_origin, _origin + Direction(first) * _pattern.Distance, wallHeight, _markerColor * 0.6f);
+                renderer.DrawGlowWall(_origin, _origin + Direction(first + sweep) * _pattern.Distance, wallHeight, _markerColor * 0.6f);
                 break;
 
             case BossPatternType.FireStream:
                 // The reach it can sweep, and the lane where the fire starts.
-                renderer.FillCircle(_origin, _pattern.Distance, MarkerColor * 0.1f);
+                renderer.FillCircle(_origin, _pattern.Distance, _markerColor * 0.1f);
                 var streamEnd = _origin + _direction * _streamLength;
-                renderer.DrawLine(_origin, streamEnd, _pattern.Width, MarkerColor * 0.25f);
-                renderer.DrawLine(_origin, Vector2.Lerp(_origin, streamEnd, progress), _pattern.Width, MarkerColor * 0.45f);
+                renderer.DrawLine(_origin, streamEnd, _pattern.Width, _markerColor * 0.25f);
+                renderer.DrawLine(_origin, Vector2.Lerp(_origin, streamEnd, progress), _pattern.Width, _markerColor * 0.45f);
                 DrawLaneWalls(renderer, _origin, streamEnd, _pattern.Width, progress);
                 DrawRingWall(renderer, _origin, _pattern.Distance, progress * 0.5f);
                 break;
 
             case BossPatternType.Teleport:
-                renderer.FillCircleRaised(_origin, BossMiddle, Boss.Radius * (1.5f - 0.5f * progress), MarkerColor * 0.2f);
-                renderer.FillCircle(_teleportTo, Boss.Radius, MarkerColor * 0.2f);
-                renderer.FillCircle(_teleportTo, Boss.Radius * progress, MarkerColor * 0.45f);
+                renderer.FillCircleRaised(_origin, BossMiddle, Boss.Radius * (1.5f - 0.5f * progress), _markerColor * 0.2f);
+                renderer.FillCircle(_teleportTo, Boss.Radius, _markerColor * 0.2f);
+                renderer.FillCircle(_teleportTo, Boss.Radius * progress, _markerColor * 0.45f);
                 DrawRingWall(renderer, _teleportTo, Boss.Radius, progress);
                 break;
         }
@@ -356,7 +379,7 @@ public sealed class BossSystem
     }
 
     // The two long sides and the far end of a warning lane, rising as the attack nears (3D only).
-    private static void DrawLaneWalls(IRenderer renderer, Vector2 from, Vector2 to, float width, float progress)
+    private void DrawLaneWalls(IRenderer renderer, Vector2 from, Vector2 to, float width, float progress)
     {
         var along = to - from;
         if (along.LengthSquared() < 0.0001f)
@@ -366,17 +389,17 @@ public sealed class BossSystem
 
         var side = Vector2.Normalize(new Vector2(-along.Y, along.X)) * (width / 2f);
         var height = WarningWallHeight * (0.3f + 0.7f * progress);
-        var color = MarkerColor * 0.6f;
+        var color = _markerColor * 0.6f;
         renderer.DrawGlowWall(from - side, to - side, height, color);
         renderer.DrawGlowWall(from + side, to + side, height, color);
         renderer.DrawGlowWall(to - side, to + side, height, color);
     }
 
     // The rim of a round warning, rising as the attack nears (3D only).
-    private static void DrawRingWall(IRenderer renderer, Vector2 center, float radius, float progress)
+    private void DrawRingWall(IRenderer renderer, Vector2 center, float radius, float progress)
     {
         var height = WarningWallHeight * (0.3f + 0.7f * progress);
-        var color = MarkerColor * 0.6f;
+        var color = _markerColor * 0.6f;
         var previous = center + new Vector2(radius, 0f);
         for (var i = 1; i <= WarningRingSegments; i++)
         {
@@ -385,6 +408,182 @@ public sealed class BossSystem
             renderer.DrawGlowWall(previous, point, height, color);
             previous = point;
         }
+    }
+
+    /// <summary>Index of the player the boss is after, or -1.</summary>
+    public int TargetIndex => _targetIndex;
+
+    /// <summary>A player's current threat on the boss (0 when unknown).</summary>
+    public float GetThreat(int playerIndex)
+    {
+        return playerIndex >= 0 && playerIndex < _threat.Count ? _threat[playerIndex] : 0f;
+    }
+
+    private void ResetAggro()
+    {
+        _threat.Clear();
+        _targetIndex = -1;
+        _targetLeft = 0f;
+        _aimedAt = null;
+    }
+
+    // Threat builds from damage dealt and from staying close, and fades. The boss commits to a
+    // target for a while, then turns to whoever has clearly more threat. No announcement:
+    // players should stay ready for an attack at any time.
+    private Player? UpdateAggro(Enemy boss, IReadOnlyList<Player> players, float deltaSeconds)
+    {
+        _players = players;
+        var aggro = _data.Game.BossAggro;
+        if (aggro is null)
+        {
+            var nearest = NearestLivingPlayer(boss.Position, players);
+            _targetIndex = nearest is null ? -1 : IndexOf(players, nearest);
+            return nearest;
+        }
+
+        while (_threat.Count < players.Count)
+        {
+            _threat.Add(0f);
+        }
+
+        var keep = Math.Max(0f, 1f - aggro.ThreatDecayPerSecond * deltaSeconds);
+        for (var i = 0; i < players.Count; i++)
+        {
+            var dealt = boss.TakeDamageDealtBy(i);
+            if (!players[i].IsAlive)
+            {
+                _threat[i] = 0f;
+                continue;
+            }
+
+            var closeness = Math.Clamp(1f - Vector2.Distance(players[i].Position, boss.Position) / aggro.ProximityRange, 0f, 1f);
+            _threat[i] = _threat[i] * keep + dealt * aggro.ThreatPerDamage
+                + closeness * aggro.ProximityThreatPerSecond * deltaSeconds;
+        }
+
+        _targetLeft -= deltaSeconds;
+        var targetLost = _targetIndex < 0 || _targetIndex >= players.Count || !players[_targetIndex].IsAlive;
+        if (targetLost)
+        {
+            // A fresh start (or the target died): the nearest player, then threat takes over.
+            var nearest = NearestLivingPlayer(boss.Position, players);
+            _targetIndex = nearest is null ? -1 : IndexOf(players, nearest);
+            _targetLeft = _random.Range(aggro.MinTargetSeconds, aggro.MaxTargetSeconds);
+        }
+        else if (_targetLeft <= 0f && _state == State.Walking)
+        {
+            var top = _targetIndex;
+            for (var i = 0; i < players.Count; i++)
+            {
+                if (players[i].IsAlive && _threat[i] > _threat[top])
+                {
+                    top = i;
+                }
+            }
+
+            if (top != _targetIndex && _threat[top] > _threat[_targetIndex] * aggro.SwitchMargin)
+            {
+                _targetIndex = top;
+            }
+
+            _targetLeft = _random.Range(aggro.MinTargetSeconds, aggro.MaxTargetSeconds);
+        }
+
+        return _targetIndex >= 0 ? players[_targetIndex] : null;
+    }
+
+    private static int IndexOf(IReadOnlyList<Player> players, Player player)
+    {
+        for (var i = 0; i < players.Count; i++)
+        {
+            if (ReferenceEquals(players[i], player))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private static Player? FarthestLivingPlayer(Vector2 position, IReadOnlyList<Player> players)
+    {
+        Player? farthest = null;
+        var best = -1f;
+        for (var i = 0; i < players.Count; i++)
+        {
+            var distance = Vector2.DistanceSquared(position, players[i].Position);
+            if (players[i].IsAlive && distance > best)
+            {
+                best = distance;
+                farthest = players[i];
+            }
+        }
+
+        return farthest;
+    }
+
+    /// <summary>
+    /// True while the coming attack would kill a player it hits (its hit is at least the lowest
+    /// HP among living players): its warning turns crimson and the views mark it as lethal.
+    /// </summary>
+    public bool IsLethalWarning { get; private set; }
+
+    /// <summary>Where the lethal attack will land, for the skull drawn over it.</summary>
+    public Vector2 LethalPoint { get; private set; }
+
+    /// <summary>Seconds since the boss appeared, for pulsing warnings.</summary>
+    public float Time => _time;
+
+    private void UpdateLethalWarning(IReadOnlyList<Player> players)
+    {
+        var warned = IsLethalWarning;
+        var showing = _pattern is not null
+            && (_state == State.Telegraph
+                || (_state == State.Acting && _pattern.Type is BossPatternType.LeapSlam or BossPatternType.MissileRain));
+        IsLethalWarning = showing && HitDamage(_pattern!) >= LowestLivingHp(players);
+        if (!IsLethalWarning)
+        {
+            return;
+        }
+
+        LethalPoint = _pattern!.Type switch
+        {
+            BossPatternType.LineCharge => _origin + _direction * (_reach * 0.5f),
+            BossPatternType.LeapSlam => _leapTo,
+            BossPatternType.MissileRain when _missileTargets.Count > 0 => _missileTargets[0],
+            BossPatternType.LaserSweep or BossPatternType.FireStream => _origin + _direction * LethalBeamMarkDistance,
+            _ => Boss!.Position,
+        };
+
+        if (!warned)
+        {
+            _audio.PlaySfx(SfxIds.BossLethalWarning);
+        }
+    }
+
+    // What one hit of a pattern takes; fire counts what a quick crossing would burn.
+    private static float HitDamage(BossPatternConfig pattern)
+    {
+        return pattern.Type switch
+        {
+            BossPatternType.Summon or BossPatternType.Teleport or BossPatternType.Haste => 0f,
+            BossPatternType.FireStream => pattern.Damage * FireCrossingSeconds,
+            _ => pattern.Damage,
+        };
+    }
+
+    private static float LowestLivingHp(IReadOnlyList<Player> players)
+    {
+        var lowest = float.MaxValue;
+        for (var i = 0; i < players.Count; i++)
+        {
+            if (players[i].IsAlive)
+            {
+                lowest = Math.Min(lowest, players[i].Hp);
+            }
+        }
+
+        return lowest;
     }
 
     // Halfway up the boss's body: where its glows sit in the 3D view.
@@ -523,6 +722,7 @@ public sealed class BossSystem
         }
 
         Boss = found;
+        ResetAggro();
         _audio.PlaySfx(SfxIds.BossAppear);
         _audio.PlayMusic(MusicIds.Boss);
         Config = FindConfig(found.Config);
@@ -732,6 +932,12 @@ public sealed class BossSystem
     // Shows the pattern's warning; it is carried out when the warning has run.
     private void StartPattern(Enemy boss, Player target, Arena arena, BossPatternConfig pattern)
     {
+        if (pattern.Target == BossTargetChoice.Farthest && _players is not null)
+        {
+            target = FarthestLivingPlayer(boss.Position, _players) ?? target;
+        }
+
+        _aimedAt = target;
         var toTarget = target.Position - boss.Position;
         var distance = toTarget.Length();
         var direction = distance > 0.001f ? toTarget / distance : Vector2.UnitX;
@@ -958,9 +1164,9 @@ public sealed class BossSystem
 
             case BossPatternType.FireballStream:
                 {
-                    // Follows the nearest player, but only as fast as it can turn.
+                    // Follows whom it was aimed at, but only as fast as it can turn.
                     _elapsed += deltaSeconds;
-                    var chased = NearestLivingPlayer(boss.Position, players);
+                    var chased = _aimedAt is { IsAlive: true } ? _aimedAt : NearestLivingPlayer(boss.Position, players);
                     if (chased is not null)
                     {
                         var aim = MathF.Atan2(chased.Position.Y - boss.Position.Y, chased.Position.X - boss.Position.X);
@@ -1060,10 +1266,24 @@ public sealed class BossSystem
 
             var along = Math.Clamp(Vector2.Dot(player.Position - boss.Position, _direction), 0f, _streamLength);
             var reach = pattern.Width / 2f + player.Radius;
-            if (Vector2.DistanceSquared(boss.Position + _direction * along, player.Position) <= reach * reach)
+            if (Vector2.DistanceSquared(boss.Position + _direction * along, player.Position) > reach * reach)
             {
-                player.TakeDamage(pattern.Damage * deltaSeconds, silent: true);
+                continue;
             }
+
+            // The laser cuts: one heavy hit per sweep (a sweep crosses a player in a blink, so
+            // damage per second would barely scratch). Fire burns for as long as you stand in it.
+            if (pattern.Type == BossPatternType.LaserSweep)
+            {
+                if (!_hitThisAttack.Contains(player) && player.TakeDamage(pattern.Damage))
+                {
+                    _hitThisAttack.Add(player);
+                }
+
+                continue;
+            }
+
+            player.TakeDamage(pattern.Damage * deltaSeconds, silent: true);
         }
     }
 

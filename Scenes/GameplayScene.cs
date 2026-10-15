@@ -51,6 +51,18 @@ public sealed class GameplayScene : IScene
     // Once its enemies are out, a door's warning fades over this long instead of vanishing.
     private const float DoorFadeSeconds = 0.4f;
 
+    // The lethal-attack warning on screen.
+    private const float LethalPulseSpeed = 14f;
+    private const float LethalEdgeOpacity = 0.35f;
+    private const float LethalEdgeThickness = 26f;
+    private const float SkullRadius = 26f;
+    private const float SkullLift = 90f;
+    private const float SkullMargin = 50f;
+    private const float LethalTextSize = 30f;
+    private static readonly Color LethalEdgeColor = new(235, 0, 85);
+    private static readonly Color LethalSkullColor = new(255, 60, 110);
+    private static readonly Color SkullHoleColor = new(20, 0, 8);
+
     // After the last player dies: "YOU DIED" grows in over a red tint, the world carries on, and
     // the results screen fades in a little later (its choices are read once it is in).
     private const float DeathScreenDelay = 2.2f;
@@ -1062,6 +1074,7 @@ public sealed class GameplayScene : IScene
             DrawBossIndicator(renderer, _cameras[i]);
             DrawWeaponCrateIndicators(renderer, _cameras[i]);
             DrawHurtFlash(renderer, i);
+            DrawLethalWarning(renderer, i);
             _playerHuds[i].Draw(renderer, _players[i], _cameras[i].ViewRect);
         }
 
@@ -1404,6 +1417,51 @@ public sealed class GameplayScene : IScene
         var across = new Vector2(-door.Inward.Y, door.Inward.X) * width;
         from = edge - across;
         to = edge + across;
+    }
+
+    // A lethal boss attack is coming: the view's edges throb crimson and a skull marked LETHAL
+    // floats over where it will land (kept inside the view when that is off screen).
+    private void DrawLethalWarning(IRenderer renderer, int index)
+    {
+        if (!_bosses.IsLethalWarning || !_players[index].IsAlive)
+        {
+            return;
+        }
+
+        var camera = _cameras[index];
+        var view = camera.ViewRect;
+        var pulse = 0.6f + 0.4f * MathF.Sin(_bosses.Time * LethalPulseSpeed);
+        var edge = LethalEdgeColor * (LethalEdgeOpacity * pulse);
+        var thick = LethalEdgeThickness;
+        renderer.FillRect(new Vector2(view.Left, view.Top), new Vector2(view.Width, thick), edge);
+        renderer.FillRect(new Vector2(view.Left, view.Bottom - thick), new Vector2(view.Width, thick), edge);
+        renderer.FillRect(new Vector2(view.Left, view.Top + thick), new Vector2(thick, view.Height - 2f * thick), edge);
+        renderer.FillRect(new Vector2(view.Right - thick, view.Top + thick), new Vector2(thick, view.Height - 2f * thick), edge);
+
+        var at = camera.WorldToScreen(_bosses.LethalPoint) - new Vector2(0f, SkullLift);
+        at = new Vector2(
+            Math.Clamp(at.X, view.Left + SkullMargin, view.Right - SkullMargin),
+            Math.Clamp(at.Y, view.Top + SkullMargin, view.Bottom - SkullMargin - LethalTextSize));
+        DrawSkull(renderer, at, SkullRadius * (0.92f + 0.08f * pulse), LethalSkullColor);
+        renderer.DrawTextCentered(
+            "LETHAL", at + new Vector2(0f, SkullRadius * 1.9f), LethalTextSize, LethalSkullColor * (0.7f + 0.3f * pulse));
+    }
+
+    // A simple skull: a round head, a narrower jaw with teeth gaps, two dark eyes and a nose.
+    private static void DrawSkull(IRenderer renderer, Vector2 center, float radius, Color color)
+    {
+        renderer.FillCircle(center, radius, color);
+        var jawSize = new Vector2(radius * 1.1f, radius * 0.55f);
+        var jawTopLeft = center + new Vector2(-jawSize.X / 2f, radius * 0.55f);
+        renderer.FillRect(jawTopLeft, jawSize, color);
+        renderer.FillCircle(center + new Vector2(-radius * 0.38f, radius * 0.05f), radius * 0.27f, SkullHoleColor);
+        renderer.FillCircle(center + new Vector2(radius * 0.38f, radius * 0.05f), radius * 0.27f, SkullHoleColor);
+        renderer.FillCircle(center + new Vector2(0f, radius * 0.45f), radius * 0.1f, SkullHoleColor);
+        for (var i = 1; i < 4; i++)
+        {
+            var x = jawTopLeft.X + jawSize.X * i / 4f;
+            renderer.FillRect(new Vector2(x - 1.5f, jawTopLeft.Y + jawSize.Y * 0.35f), new Vector2(3f, jawSize.Y * 0.65f), SkullHoleColor);
+        }
     }
 
     // Red bands along the edges of a view, fading out, when its player was just hurt.

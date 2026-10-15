@@ -16,10 +16,12 @@ public static class TestData
         bool dashIFrames = true,
         int maxAlive = 60,
         int startWave = 1,
-        int campaignWaves = 50)
+        int campaignWaves = 50,
+        BossAggroConfig? bossAggro = null)
     {
         return new GameConfig
         {
+            BossAggro = bossAggro,
             VirtualWidth = 1920,
             VirtualHeight = 1080,
             Arena = Arena(),

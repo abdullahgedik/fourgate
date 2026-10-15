@@ -6,7 +6,7 @@
       "hp": 80,
       "speed": 110,
       "radius": 20,
-      "contactDamage": 10,
+      "contactDamage": 20,
       "contactCooldown": 0.8,
       "xp": 10,
       "scoreValue": 10,
@@ -22,7 +22,7 @@
       "hp": 40,
       "speed": 220,
       "radius": 16,
-      "contactDamage": 10,
+      "contactDamage": 15,
       "contactCooldown": 0.8,
       "xp": 12,
       "scoreValue": 15,
@@ -41,7 +41,7 @@
       "contactDamage": 0,
       "contactCooldown": 0.8,
       "attack": {
-        "type": "fireball", "damage": 10, "range": 450, "telegraphSeconds": 0.6, "cooldownSeconds": 1.6,
+        "type": "fireball", "damage": 20, "range": 450, "telegraphSeconds": 0.6, "cooldownSeconds": 1.6,
         "projectileSpeed": 380, "projectileRadius": 12, "projectileRange": 700
       },
       "xp": 20,
@@ -58,7 +58,7 @@
       "hp": 400,
       "speed": 60,
       "radius": 34,
-      "contactDamage": 30,
+      "contactDamage": 50,
       "contactCooldown": 1.2,
       "xp": 40,
       "scoreValue": 40,
@@ -75,15 +75,15 @@
       "hp": 300,
       "speed": 160,
       "radius": 26,
-      "contactDamage": 25,
+      "contactDamage": 35,
       "contactCooldown": 0.8,
       "attack": {
-        "type": "fireball", "damage": 10, "range": 500, "telegraphSeconds": 0.5, "cooldownSeconds": 1.4,
+        "type": "fireball", "damage": 20, "range": 500, "telegraphSeconds": 0.5, "cooldownSeconds": 1.4,
         "projectileSpeed": 380, "projectileRadius": 12, "projectileRange": 750,
         "count": 3, "spreadDegrees": 15, "strafeSpeed": 120
       },
       "secondAttack": {
-        "type": "fireball", "damage": 8, "range": 500, "telegraphSeconds": 0.5, "cooldownSeconds": 1.4,
+        "type": "fireball", "damage": 12, "range": 500, "telegraphSeconds": 0.5, "cooldownSeconds": 1.4,
         "projectileSpeed": 460, "projectileRadius": 10, "projectileRange": 750,
         "count": 1, "spreadDegrees": 0, "strafeSpeed": 120, "bursts": 6, "burstInterval": 0.12
       },

@@ -89,6 +89,31 @@ public sealed class Enemy : IHittable
     /// <summary>Index of the player whose shot landed last.</summary>
     public int LastHitBy { get; private set; }
 
+    // Damage taken from each player since it was last read (bosses use it for their aggro).
+    private const int TrackedOwners = 4;
+    private readonly float[] _damageByOwner = new float[TrackedOwners];
+
+    /// <summary>Damage the given player has dealt since the last call; reading it starts the count again.</summary>
+    public float TakeDamageDealtBy(int ownerIndex)
+    {
+        if (ownerIndex < 0 || ownerIndex >= TrackedOwners)
+        {
+            return 0f;
+        }
+
+        var dealt = _damageByOwner[ownerIndex];
+        _damageByOwner[ownerIndex] = 0f;
+        return dealt;
+    }
+
+    private void CountDamage(float damage, int ownerIndex)
+    {
+        if (ownerIndex >= 0 && ownerIndex < TrackedOwners)
+        {
+            _damageByOwner[ownerIndex] += Math.Min(damage, 1_000_000f);
+        }
+    }
+
     /// <summary>True while it keeps burning on its own.</summary>
     public bool IsBurning => _burnLeft > 0f;
 
@@ -136,6 +161,7 @@ public sealed class Enemy : IHittable
         Hp = config.Hp;
         MaxHp = config.Hp;
         LastHitBy = 0;
+        Array.Clear(_damageByOwner);
         _flashLeft = 0f;
         _wasHit = false;
         _attackCooldownLeft = 0f;
@@ -325,6 +351,7 @@ public sealed class Enemy : IHittable
 
         Hp -= damage;
         LastHitBy = ownerIndex;
+        CountDamage(damage, ownerIndex);
         _flashLeft = FlashSeconds;
         _wasHit = true;
     }
@@ -338,6 +365,7 @@ public sealed class Enemy : IHittable
 
         Hp -= damage;
         LastHitBy = ownerIndex;
+        CountDamage(damage, ownerIndex);
         _scorchLeft = ScorchSeconds;
     }
 

@@ -10,6 +10,9 @@ public sealed class BossPatternConfig
 
     public required BossPatternType Type { get; init; }
 
+    /// <summary>Whom it is aimed at: the boss's current target, or the player farthest away.</summary>
+    public BossTargetChoice Target { get; init; } = BossTargetChoice.Current;
+
     /// <summary>Warning before it happens: a ground marker that fills up. Never skipped.</summary>
     public required float TelegraphSeconds { get; init; }
 

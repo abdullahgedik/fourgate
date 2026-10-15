@@ -694,8 +694,9 @@ public class BossTests
         Assert.Equal(BossPatternType.LaserSweep, world.Bosses.CurrentPattern);
         Assert.Equal(100f, player.Hp);
 
+        // It cuts once, for its full damage, however long it takes to cross the player.
         world.Run(2.5f);
-        Assert.True(player.Hp < 100f);
+        Assert.Equal(30f, player.Hp);
     }
 
     [Fact]
@@ -774,6 +775,113 @@ public class BossTests
         Assert.InRange(world.Fireballs.FireballCount, 9, 11);
     }
 
+    [Fact]
+    public void Warning_TurnsLethal_ForAHitThatWouldKill()
+    {
+        var charge = Charge(120);
+        var world = new World(charge);
+        var player = world.AddPlayer(new Vector2(1500, 1000));
+        world.SpawnBoss(new Vector2(1000, 1000));
+
+        world.Run(1.2f);
+        Assert.Equal(BossPatternType.LineCharge, world.Bosses.CurrentPattern);
+        Assert.True(world.Bosses.IsLethalWarning);
+        Assert.True(Vector2.Distance(world.Bosses.LethalPoint, new Vector2(1000, 1000)) > 100f);
+    }
+
+    [Fact]
+    public void Warning_IsLethal_ForAnOrdinaryHit_OnlyWhenThePlayerIsLow()
+    {
+        var full = new World(Charge(30));
+        full.AddPlayer(new Vector2(1500, 1000));
+        full.SpawnBoss(new Vector2(1000, 1000));
+        full.Run(1.2f);
+        Assert.False(full.Bosses.IsLethalWarning);
+
+        var low = new World(Charge(30));
+        var hurt = low.AddPlayer(new Vector2(1500, 1000));
+        hurt.TakeDamage(80f);
+        low.SpawnBoss(new Vector2(1000, 1000));
+        low.Run(1.2f);
+        Assert.True(low.Bosses.IsLethalWarning);
+    }
+
+    [Fact]
+    public void Aggro_ThePlayerDealingDamage_TakesTheBossOver_FromAPassiveOneStandingCloser()
+    {
+        var world = new World(Haste(), aggro: Aggro());
+        world.HpMultiplier = 1000f;
+        world.AddPlayer(new Vector2(1150, 1000));
+        world.AddPlayer(new Vector2(1900, 1000));
+        var boss = world.SpawnBoss(new Vector2(1000, 1000));
+
+        world.Run(0.1f);
+        Assert.Equal(0, world.Bosses.TargetIndex);
+
+        // The far player keeps shooting (about 200 damage a second); the near one does nothing.
+        for (var i = 0; i < 60 * 12; i++)
+        {
+            boss.Hit(200f / 60f, 1);
+            world.Run(1f / 60f);
+        }
+
+        Assert.Equal(1, world.Bosses.TargetIndex);
+        Assert.True(world.Bosses.GetThreat(1) > world.Bosses.GetThreat(0));
+    }
+
+    [Fact]
+    public void Aggro_TheBossStaysCommitted_ForItsMinimumTime_EvenWhenOutDamaged()
+    {
+        var world = new World(Haste(), aggro: Aggro());
+        world.HpMultiplier = 1000f;
+        world.AddPlayer(new Vector2(1150, 1000));
+        world.AddPlayer(new Vector2(1900, 1000));
+        var boss = world.SpawnBoss(new Vector2(1000, 1000));
+        world.Run(0.1f);
+
+        boss.Hit(5000f, 1);
+        world.Run(3f);
+
+        Assert.Equal(0, world.Bosses.TargetIndex);
+    }
+
+    [Fact]
+    public void FarthestTarget_Attack_GoesForThePlayerFarthestAway()
+    {
+        var missiles = new BossPatternConfig
+        {
+            Type = BossPatternType.MissileRain, Target = BossTargetChoice.Farthest, TelegraphSeconds = 1f, Damage = 25,
+            Radius = 110, Count = 1, SpawnRadius = 0, Seconds = 0.8f,
+        };
+        var world = new World(missiles);
+        var near = world.AddPlayer(new Vector2(1200, 1000));
+        var far = world.AddPlayer(new Vector2(1000, 1800));
+        world.SpawnBoss(new Vector2(1000, 1000));
+
+        world.Run(3f);
+
+        Assert.Equal(100f, near.Hp);
+        Assert.Equal(75f, far.Hp);
+    }
+
+    private static BossAggroConfig Aggro()
+    {
+        return new BossAggroConfig
+        {
+            MinTargetSeconds = 5, MaxTargetSeconds = 9, ThreatPerDamage = 1, ProximityThreatPerSecond = 120,
+            ProximityRange = 500, ThreatDecayPerSecond = 0.15f, SwitchMargin = 1.3f,
+        };
+    }
+
+    // An attack that does nothing to the players, so only targeting is tested.
+    private static BossPatternConfig Haste()
+    {
+        return new BossPatternConfig
+        {
+            Type = BossPatternType.Haste, TelegraphSeconds = 0.6f, SpeedMultiplier = 1f, Seconds = 1f,
+        };
+    }
+
     private static int StartWave(GameData shipped, int wave)
     {
         var config = TestData.Game(startWave: wave);
@@ -799,6 +907,14 @@ public class BossTests
         return count;
     }
 
+    private static BossPatternConfig Charge(float damage)
+    {
+        return new BossPatternConfig
+        {
+            Type = BossPatternType.LineCharge, TelegraphSeconds = 0.9f, Damage = damage, Distance = 800, Speed = 1100,
+        };
+    }
+
     private static BossPatternConfig Pattern(BossPatternType type)
     {
         return new BossPatternConfig
@@ -818,7 +934,7 @@ public class BossTests
         public World(
             BossPatternConfig pattern, float turnDegreesPerSecond = 0f, float armorGap = 0f, float armorThickness = 0f,
             float speed = 0f, List<BossPatternConfig>? patterns = null, BossPatternOrder order = BossPatternOrder.Random,
-            List<BossPhaseConfig>? phases = null)
+            List<BossPhaseConfig>? phases = null, BossAggroConfig? aggro = null)
         {
             _boss = new BossConfig
             {
@@ -831,7 +947,7 @@ public class BossTests
                 Phases = phases ?? new List<BossPhaseConfig>(),
             };
             var data = new GameData(
-                TestData.Game(), new[] { TestData.Pistol() }, new[] { TestData.Zombie() }, TestData.Waves(), TestData.Upgrades(),
+                TestData.Game(bossAggro: aggro), new[] { TestData.Pistol() }, new[] { TestData.Zombie() }, TestData.Waves(), TestData.Upgrades(),
                 new[] { _boss });
             _arena = new Arena(TestData.Arena());
             Enemies = new EnemySystem(new NullAudioManager());

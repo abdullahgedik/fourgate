@@ -26,6 +26,9 @@ public static class SfxIds
     public const string EnemyTelegraph = "enemy_telegraph";
     public const string EnemyFireball = "enemy_fireball";
     public const string BossTelegraph = "boss_telegraph";
+
+    /// <summary>A boss attack that would kill is coming (its warning turns crimson).</summary>
+    public const string BossLethalWarning = "boss_lethal_warning";
     public const string BossAttack = "boss_attack";
     public const string ArmorHit = "armor_hit";
     public const string WeaponFire = "weapon_fire";
