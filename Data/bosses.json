@@ -2,6 +2,7 @@
   "bosses": [
     {
       "id": "butcher",
+      "model": "butcher",
       "displayName": "The Butcher",
       "wave": 10,
       "hp": 3000,
@@ -25,6 +26,7 @@
     },
     {
       "id": "pyreWitch",
+      "model": "witch",
       "displayName": "Pyre Witch",
       "wave": 20,
       "hp": 5000,
@@ -59,6 +61,7 @@
     },
     {
       "id": "juggernaut",
+      "model": "juggernaut",
       "displayName": "The Juggernaut",
       "wave": 30,
       "hp": 8000,
@@ -89,6 +92,7 @@
     },
     {
       "id": "swarmMother",
+      "model": "swarmMother",
       "displayName": "Swarm Mother",
       "wave": 40,
       "hp": 10000,
@@ -133,6 +137,7 @@
     },
     {
       "id": "warden",
+      "model": "warden",
       "displayName": "The Warden",
       "wave": 50,
       "hp": 20000,

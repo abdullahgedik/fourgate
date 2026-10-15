@@ -9,6 +9,9 @@ public sealed class DebugConfig
     /// <summary>Places a still and a moving dummy target in the arena for trying out weapons.</summary>
     public bool PracticeTargets { get; init; }
 
+    /// <summary>The 3D model practice targets are drawn with; null draws the plain shape.</summary>
+    public string? PracticeTargetModel { get; init; }
+
     /// <summary>Every player bullet kills what it hits.</summary>
     public bool OneShotKills { get; init; }
 

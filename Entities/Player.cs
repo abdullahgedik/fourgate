@@ -31,6 +31,17 @@ public sealed class Player
     private float _dashTimeLeft;
     private float _dashCooldownLeft;
     private float _hurtFlashLeft;
+    private Vector2 _lastPosition;
+    private Vector2 _previousPosition;
+
+    // Movement this small (a nudge) does not change which way the legs step.
+    private const float MinHeadingStep = 0.05f;
+
+    // Model animation: how long a gun kick lasts, how quickly the walk speed follows, and a jump
+    // too big to be a step (a revive or a teleport) that does not count as walking.
+    private const float RecoilSeconds = 0.12f;
+    private const float SpeedSmoothing = 12f;
+    private const float TeleportDistance = 120f;
 
     public Player(int index, IPlayerInput input, PlayerConfig config, IAudioManager audio, Vector2 position)
     {
@@ -458,7 +469,43 @@ public sealed class Player
 
         Position += move * MoveSpeed * walkSeconds;
         Position = arena.ResolveMovement(Position, Radius);
+        TrackWalk(deltaSeconds);
     }
+
+    /// <summary>Distance walked so far; drives the model's step cycle.</summary>
+    public float WalkDistance { get; private set; }
+
+    /// <summary>How fast the player is moving now, smoothed.</summary>
+    public float Speed { get; private set; }
+
+    /// <summary>0–1: the gun's kick just after a shot.</summary>
+    public float RecoilAmount =>
+        CurrentWeapon is null ? 0f : Math.Clamp(1f - CurrentWeapon.SecondsSinceShot / RecoilSeconds, 0f, 1f);
+
+    /// <summary>0–1: recoiling from a hit.</summary>
+    public float FlinchAmount => _hurtFlashLeft / HurtFlashSeconds;
+
+    private void TrackWalk(float deltaSeconds)
+    {
+        var moved = Vector2.Distance(Position, _lastPosition);
+        _previousPosition = _lastPosition;
+        _lastPosition = Position;
+        if (deltaSeconds <= 0f || moved > TeleportDistance)
+        {
+            return;
+        }
+
+        WalkDistance += moved;
+        Speed = MathHelper.Lerp(Speed, moved / deltaSeconds, Math.Min(1f, deltaSeconds * SpeedSmoothing));
+        if (moved > MinHeadingStep)
+        {
+            var delta = Position - _previousPosition;
+            MoveHeading = MathF.Atan2(delta.Y, delta.X);
+        }
+    }
+
+    /// <summary>Which way the player last moved (radians); it drives the legs' four-way run.</summary>
+    public float MoveHeading { get; private set; }
 
     private void StartDash(Vector2 move)
     {

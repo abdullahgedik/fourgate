@@ -167,6 +167,9 @@ public sealed class Bullet
         Direction = newDirection;
     }
 
+    /// <summary>Distance flown since it was fired or last bounced.</summary>
+    public float Travelled => _travelled;
+
     /// <summary>Trailing end of a streak of the given length; never behind where the bullet started or last bounced.</summary>
     public Vector2 GetTail(float length)
     {

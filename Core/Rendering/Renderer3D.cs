@@ -1,4 +1,5 @@
 using System;
+using Fourgate.Core.Rendering.Models;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -19,6 +20,7 @@ public sealed class Renderer3D : IRenderer, IDisposable
     private const int CircleSegments = 14;
     private const int FlatCircleSegments = 10;
     private const int BarrelSegments = 16;
+    private const int MaxModelParts = 48;
     private const int MaxWallStainVertices = 6 * 1024;
     private const int SootTextureSize = 64;
 
@@ -82,6 +84,17 @@ public sealed class Renderer3D : IRenderer, IDisposable
     private readonly BasicEffect _stainEffect;
     private readonly VertexPositionTexture[] _stainQuad = new VertexPositionTexture[6];
     private int _stainsAt = -1;
+    private readonly Matrix[] _partWorlds = new Matrix[MaxModelParts];
+    private readonly Matrix[] _heldWorlds = new Matrix[MaxModelParts];
+    private readonly Vector3[] _corners = new Vector3[8];
+    private static readonly ModelPose StillPose = new(string.Empty, Vector2.Zero, 0f, 0f, 0f, 0f, Color.White);
+
+    // Corners of each box face (bit 1: +x, 2: +y, 4: +z) and the face's normal before turning.
+    private static readonly int[] FaceCorners = { 1, 3, 7, 5, 0, 4, 6, 2, 2, 6, 7, 3, 0, 1, 5, 4, 4, 5, 7, 6, 0, 2, 3, 1 };
+    private static readonly Vector3[] FaceNormals =
+    {
+        Vector3.UnitX, -Vector3.UnitX, Vector3.UnitY, -Vector3.UnitY, Vector3.UnitZ, -Vector3.UnitZ,
+    };
     private readonly BasicEffect _wallStainEffect;
     private readonly Texture2D _sootTexture;
     private readonly VertexPositionColorTexture[] _wallStains = new VertexPositionColorTexture[MaxWallStainVertices];
@@ -258,6 +271,131 @@ public sealed class Renderer3D : IRenderer, IDisposable
     }
 
     public bool IsThreeD => true;
+
+    /// <summary>The models characters and guns are drawn with; null draws plain shapes.</summary>
+    public ModelLibrary? Models { get; set; }
+
+    public void DrawModel(in ModelPose pose, in VisualDescriptor fallback)
+    {
+        if (!_inWorld)
+        {
+            _screen.DrawModel(pose, fallback);
+            return;
+        }
+
+        if (Models is null || !Models.TryGet(pose.ModelId, out var model) || model.Parts.Count > MaxModelParts)
+        {
+            DrawVisual(fallback, pose.Position, pose.Facing);
+            return;
+        }
+
+        if (pose.ShadowRadius > 0f && pose.Elevation > 0f)
+        {
+            DrawShadow(pose.Position, pose.Elevation + model.Height, pose.ShadowRadius);
+        }
+        else if (pose.ShadowRadius > 0f && pose.Fall < 0.5f)
+        {
+            Shadow(pose.Position, pose.ShadowRadius * (1f - pose.Shrink), model.Height * (1f - pose.Shrink));
+        }
+
+        var root = ModelAnimator.Root(pose);
+        ModelAnimator.Pose(model, pose, root, _partWorlds);
+        var parts = model.Parts;
+        for (var i = 0; i < parts.Count; i++)
+        {
+            var part = parts[i];
+            if (part.IsVisible)
+            {
+                var color = PartColor(part, pose.Tint);
+                if (pose.Glow > 0f)
+                {
+                    color = Color.Lerp(color, pose.GlowColor, Math.Clamp(pose.Glow, 0f, 1f));
+                }
+
+                OrientedBox(_partWorlds[i], part.Center, part.HalfSize, color);
+            }
+
+            if (pose.GunId is not null && HoldsGunHere(part.Mount, pose.Hold))
+            {
+                DrawHeldModel(pose.GunId, _partWorlds[i]);
+            }
+        }
+    }
+
+    // One gun goes in the right hand or at the chest; dual wielding puts one in each hand.
+    private static bool HoldsGunHere(ModelMount mount, ModelHold hold)
+    {
+        return hold switch
+        {
+            ModelHold.TwoHands => mount == ModelMount.GunTwoHands,
+            ModelHold.Dual => mount is ModelMount.Gun or ModelMount.GunLeft,
+            ModelHold.Shoulder => mount == ModelMount.GunShoulder,
+            _ => mount == ModelMount.Gun,
+        };
+    }
+
+    // A held model (a gun): drawn in the hand's space, unanimated.
+    private void DrawHeldModel(string id, Matrix hand)
+    {
+        if (Models is null || !Models.TryGet(id, out var held) || held.Parts.Count > MaxModelParts)
+        {
+            return;
+        }
+
+        ModelAnimator.Pose(held, StillPose, hand, _heldWorlds);
+        for (var i = 0; i < held.Parts.Count; i++)
+        {
+            var part = held.Parts[i];
+            if (part.IsVisible)
+            {
+                OrientedBox(_heldWorlds[i], part.Center, part.HalfSize, PartColor(part, part.Color));
+            }
+        }
+    }
+
+    private static Color PartColor(ModelPart part, Color tint)
+    {
+        var color = part.Tint ? tint : part.Color;
+        if (part.Shade == 1f)
+        {
+            return new Color(color.R, color.G, color.B);
+        }
+
+        return new Color(Vector3.Clamp(color.ToVector3() * part.Shade, Vector3.Zero, Vector3.One));
+    }
+
+    // A box turned any way (a model part): its 8 corners placed by the part's matrix, each face
+    // lit by its turned normal.
+    private void OrientedBox(in Matrix world, Vector3 center, Vector3 half, Color color)
+    {
+        if (_solidCount + 36 > MaxSolidVertices)
+        {
+            return;
+        }
+
+        for (var i = 0; i < 8; i++)
+        {
+            var corner = center + new Vector3(
+                (i & 1) != 0 ? half.X : -half.X, (i & 2) != 0 ? half.Y : -half.Y, (i & 4) != 0 ? half.Z : -half.Z);
+            _corners[i] = Vector3.Transform(corner, world);
+        }
+
+        for (var face = 0; face < 6; face++)
+        {
+            var normal = Vector3.TransformNormal(FaceNormals[face], world);
+            normal = normal.LengthSquared() > 0f ? Vector3.Normalize(normal) : Vector3.Up;
+            var a = _corners[FaceCorners[face * 4]];
+            var b = _corners[FaceCorners[face * 4 + 1]];
+            var c = _corners[FaceCorners[face * 4 + 2]];
+            var d = _corners[FaceCorners[face * 4 + 3]];
+            Solid(a, normal, color);
+            Solid(b, normal, color);
+            Solid(c, normal, color);
+            Solid(a, normal, color);
+            Solid(c, normal, color);
+            Solid(d, normal, color);
+        }
+    }
 
     public void DrawLowBody(in VisualDescriptor visual, Vector2 position, float height)
     {

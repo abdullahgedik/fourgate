@@ -89,6 +89,15 @@ public sealed class Enemy : IHittable
     /// <summary>Index of the player whose shot landed last.</summary>
     public int LastHitBy { get; private set; }
 
+    // Model animation: how long a lunge lasts, how quickly the walk speed follows, and a jump too
+    // big to be a step (a teleport) that does not count as walking.
+    private const float LungeSeconds = 0.3f;
+    private const float SpeedSmoothing = 10f;
+    private const float TeleportDistance = 120f;
+    private Vector2 _lastPosition;
+    private Vector2 _previousPosition;
+    private float _lungeAge;
+
     // Damage taken from each player since it was last read (bosses use it for their aggro).
     private const int TrackedOwners = 4;
     private readonly float[] _damageByOwner = new float[TrackedOwners];
@@ -129,6 +138,79 @@ public sealed class Enemy : IHittable
         }
     }
 
+    /// <summary>Distance walked so far; drives the model's step cycle.</summary>
+    public float WalkDistance { get; private set; }
+
+    /// <summary>How fast it is moving now, smoothed.</summary>
+    public float Speed { get; private set; }
+
+    /// <summary>0–1–0: the lunge of a contact attack.</summary>
+    public float LungeAmount => _lungeAge < LungeSeconds ? MathF.Sin(MathF.PI * _lungeAge / LungeSeconds) : 0f;
+
+    /// <summary>0–1: recoiling from a hit.</summary>
+    public float FlinchAmount => _flashLeft / FlashSeconds;
+
+    /// <summary>Its own colour, burning included but without the hit flash (a model's tinted parts).</summary>
+    public Color BodyColor => IsBurning || _scorchLeft > 0f ? Color.Lerp(_bodyColor, BurnColor, 0.6f) : _bodyColor;
+
+    /// <summary>
+    /// How strongly its whole model is washed with a colour, and which: the hit flash first, then
+    /// a softer glow while it burns.
+    /// </summary>
+    public float ModelGlow(out Color color)
+    {
+        if (_flashLeft > 0f)
+        {
+            color = HitColor;
+            return ModelHitGlow * _flashLeft / FlashSeconds;
+        }
+
+        color = BurnColor;
+        return IsBurning || _scorchLeft > 0f ? ModelBurnGlow : 0f;
+    }
+
+    // How far a hit and burning wash a model's colours.
+    private const float ModelHitGlow = 0.75f;
+    private const float ModelBurnGlow = 0.35f;
+
+    /// <summary>0–1: how far its ranged wind-up has come (drawing back to throw).</summary>
+    public float WindupAmount => IsWindingUp ? WindUpProgress : 0f;
+
+    /// <summary>Which way it last moved (radians); it drives the legs when it sidesteps.</summary>
+    public float MoveHeading { get; private set; }
+
+    /// <summary>Set by the boss system: 0–1 while a boss draws back before an attack.</summary>
+    public float BossWindup { get; set; }
+
+    /// <summary>Set by the boss system: 0–1 while a boss carries an attack out.</summary>
+    public float BossAction { get; set; }
+
+    /// <summary>Plays the throw (or blow) motion: the same lunge as a contact attack.</summary>
+    public void PlayAttackMotion()
+    {
+        _lungeAge = 0f;
+    }
+
+    /// <summary>Notes how far it moved this frame, for its walk.</summary>
+    public void TrackWalk(float deltaSeconds)
+    {
+        var moved = Vector2.Distance(Position, _lastPosition);
+        _previousPosition = _lastPosition;
+        _lastPosition = Position;
+        if (deltaSeconds <= 0f || moved > TeleportDistance)
+        {
+            return;
+        }
+
+        WalkDistance += moved;
+        Speed = MathHelper.Lerp(Speed, moved / deltaSeconds, Math.Min(1f, deltaSeconds * SpeedSmoothing));
+        if (moved > 0.05f)
+        {
+            var delta = Position - _previousPosition;
+            MoveHeading = MathF.Atan2(delta.Y, delta.X);
+        }
+    }
+
     /// <summary>Way it ambles while there is nobody to chase (zero: standing still).</summary>
     public Vector2 WanderHeading { get; set; }
 
@@ -144,6 +226,14 @@ public sealed class Enemy : IHittable
         WanderHeading = Vector2.Zero;
         WanderLeft = 0f;
         WanderLegs = 0;
+        WalkDistance = 0f;
+        Speed = 0f;
+        _lastPosition = position;
+        _previousPosition = position;
+        MoveHeading = 0f;
+        BossWindup = 0f;
+        BossAction = 0f;
+        _lungeAge = LungeSeconds;
         Config = config;
         Position = position;
         Facing = 0f;
@@ -254,6 +344,7 @@ public sealed class Enemy : IHittable
     public void StartAttackCooldown()
     {
         _attackCooldownLeft = Config.ContactCooldown;
+        _lungeAge = 0f;
     }
 
     /// <summary>
@@ -407,6 +498,7 @@ public sealed class Enemy : IHittable
     public void Tick(float deltaSeconds)
     {
         _flashLeft = Math.Max(0f, _flashLeft - deltaSeconds);
+        _lungeAge += deltaSeconds;
         _attackCooldownLeft = Math.Max(0f, _attackCooldownLeft - deltaSeconds);
         _rangedCooldownLeft = Math.Max(0f, _rangedCooldownLeft - deltaSeconds);
         _scorchLeft = Math.Max(0f, _scorchLeft - deltaSeconds);

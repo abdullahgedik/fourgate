@@ -4,6 +4,7 @@ using Fourgate.Core.Audio;
 using Fourgate.Core.Data;
 using Fourgate.Core.Pooling;
 using Fourgate.Core.Rendering;
+using Fourgate.Core.Rendering.Models;
 using Fourgate.Core.Rng;
 using Fourgate.Entities;
 using Fourgate.Entities.Effects;
@@ -21,8 +22,9 @@ public sealed class ExplosiveSystem
 
     // A molotov in flight: a spinning bottle with a burning rag that trails embers.
     private const float BottleSpins = 2.5f;
-    private const float BottleHalfLength = 1.4f;
-    private const float BottleThickness = 1.1f;
+    private const float BottleHalfLength = 1.6f;
+    private const float BottleThickness = 1f;
+    private const float GrenadeSpins = 2f;
     private const float RagEmbersPerSecond = 45f;
     private const float RagEmberSize = 3f;
 
@@ -195,6 +197,21 @@ public sealed class ExplosiveSystem
         {
             var thrown = _thrown[i];
             var visual = thrown.Visual;
+            if (renderer.IsThreeD && thrown.Shot.Model is { } model && thrown.Shot.FireRadius <= 0f)
+            {
+                // A grenade tumbles end over end along its arc, its shadow on the floor below.
+                var throwDirection = thrown.Shot.Target - thrown.Shot.Origin;
+                var heading = MathF.Atan2(throwDirection.Y, throwDirection.X);
+                renderer.DrawModel(
+                    new ModelPose(
+                        model, thrown.Position, heading, heading, 0f, 0f, Color.White,
+                        ShadowRadius: thrown.Shot.VisualRadius,
+                        Elevation: ThrowPeakHeight * thrown.ArcHeight + thrown.Shot.VisualRadius,
+                        Tumble: thrown.Progress * GrenadeSpins * MathHelper.TwoPi),
+                    visual);
+                continue;
+            }
+
             var height = ThrowPeakHeight * thrown.ArcHeight + visual.Radius;
             if (renderer.IsThreeD)
             {
@@ -358,7 +375,8 @@ public sealed class ExplosiveSystem
                 shot.VisualRadius * ClusterVisualScale,
                 shot.Damage * shot.ClusterDamageMult,
                 shot.BlastRadius * shot.ClusterRadiusMult,
-                shot.OwnerIndex));
+                shot.OwnerIndex,
+                Model: shot.Model));
         }
     }
 }

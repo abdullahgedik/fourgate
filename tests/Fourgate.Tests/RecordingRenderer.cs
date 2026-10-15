@@ -1,4 +1,5 @@
 using Fourgate.Core.Rendering;
+using Fourgate.Core.Rendering.Models;
 using Microsoft.Xna.Framework;
 
 namespace Fourgate.Tests;
@@ -44,6 +45,13 @@ public sealed class RecordingRenderer : IRenderer
     }
 
     public bool IsThreeD => false;
+
+    public List<ModelPose> Models { get; } = new();
+
+    public void DrawModel(in ModelPose pose, in VisualDescriptor fallback)
+    {
+        Models.Add(pose);
+    }
 
     public void DrawLowBody(in VisualDescriptor visual, Vector2 position, float height)
     {

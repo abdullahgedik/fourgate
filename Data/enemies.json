@@ -2,6 +2,7 @@
   "enemies": [
     {
       "id": "normal",
+      "model": "zombie",
       "displayName": "Zombie",
       "hp": 80,
       "speed": 110,
@@ -18,6 +19,7 @@
     },
     {
       "id": "fast",
+      "model": "runner",
       "displayName": "Fast Zombie",
       "hp": 40,
       "speed": 220,
@@ -34,6 +36,7 @@
     },
     {
       "id": "ranged",
+      "model": "spitter",
       "displayName": "Ranged Zombie",
       "hp": 60,
       "speed": 70,
@@ -54,6 +57,7 @@
     },
     {
       "id": "tank",
+      "model": "brute",
       "displayName": "Tank Zombie",
       "hp": 400,
       "speed": 60,
@@ -71,6 +75,7 @@
     },
     {
       "id": "elite",
+      "model": "elite",
       "displayName": "Elite Zombie",
       "hp": 300,
       "speed": 160,

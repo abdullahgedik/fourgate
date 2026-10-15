@@ -9,8 +9,8 @@
       { "centerX": 2010, "centerY": 2010, "width": 300, "height": 300 }
     ]
   },
-  "camera": { "zoom": 1.15, "leadFraction": 0.35, "leadMaxDistance": 260, "smoothing": 10, "edgeMargin": 120 },
-  "debug": { "hotkeys": true, "practiceTargets": false, "oneShotKills": false, "keyboardPlayerTwo": true, "showAudioEvents": false },
+  "camera": { "zoom": 1.3, "leadFraction": 0.35, "leadMaxDistance": 260, "smoothing": 10, "edgeMargin": 120 },
+  "debug": { "hotkeys": true, "practiceTargets": false, "practiceTargetModel": "dummy", "oneShotKills": false, "keyboardPlayerTwo": true, "showAudioEvents": false },
   "maxAliveEnemies": 60,
   "campaignWaves": 50,
   "restCountdownSeconds": 5,
@@ -35,7 +35,7 @@
   "reloadsEnabled": true,
   "globalReloadTimeMultiplier": 1.0,
   "player": {
-    "maxHp": 100, "moveSpeed": 300, "radius": 20, "startingWeapon": "pistol",
+    "maxHp": 100, "moveSpeed": 300, "radius": 20, "startingWeapon": "pistol", "model": "survivor", "defaultGunModel": "rifle",
     "dash": { "cooldown": 2.0, "duration": 0.18, "distance": 200, "iFrames": true }
   }
 }

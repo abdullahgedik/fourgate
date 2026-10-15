@@ -97,7 +97,7 @@ public class RailgunTests
     }
 
     [Fact]
-    public void ShippedRailgun_IsABeamGunOnKeyNine_WithDualBeamAndEndBlastAtLevelTen()
+    public void ShippedRailgun_IsABeamGunOnKeyNine_WithAThickBeamAndEndBlastAtLevelTen()
     {
         var config = DataLoader.LoadAll(DataLoader.DefaultDirectory).GetWeapon("railgun");
         var handler = new FakeShotHandler();
@@ -111,17 +111,23 @@ public class RailgunTests
         Assert.Equal(18, config.UnlockWave);
         Assert.False(one.DualWield);
         Assert.Equal(0f, one.EndBlastRadius);
-        Assert.True(ten.DualWield);
+        Assert.False(ten.DualWield);
         Assert.True(ten.EndBlastRadius > 0f);
 
         var weapon = new Weapon(config, TestData.Game(), new NullAudioManager());
         weapon.SetLevel(10);
         weapon.Update(Step, new WeaponTrigger(true, true, false, 500f), new Vector2(1000, 1000), Vector2.UnitX, 0, handler);
 
-        Assert.Equal(2, handler.Beams.Count);
-        Assert.NotEqual(handler.Beams[0].Origin, handler.Beams[1].Origin);
-        Assert.Equal(handler.Beams[0].Direction, handler.Beams[1].Direction);
-        Assert.True(handler.Beams[0].EndBlastDamage > 0f);
+        // One beam, two and a half times as wide as at level 9.
+        var beam = Assert.Single(handler.Beams);
+        Assert.Equal(config.Beam!.Width * 2.5f, beam.Width, 2);
+        Assert.True(beam.EndBlastDamage > 0f);
+
+        var nine = new Weapon(config, TestData.Game(), new NullAudioManager());
+        nine.SetLevel(9);
+        var nineHandler = new FakeShotHandler();
+        nine.Update(Step, new WeaponTrigger(true, true, false, 500f), new Vector2(1000, 1000), Vector2.UnitX, 0, nineHandler);
+        Assert.Equal(config.Beam.Width, Assert.Single(nineHandler.Beams).Width, 2);
     }
 
     private static BeamShot Beam(Vector2 origin, Vector2 direction)

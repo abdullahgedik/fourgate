@@ -14,4 +14,10 @@ public sealed class PlayerConfig
     public required string StartingWeapon { get; init; }
 
     public required DashConfig Dash { get; init; }
+
+    /// <summary>The player's 3D model; null draws the plain shape.</summary>
+    public string? Model { get; init; }
+
+    /// <summary>The gun model held when the weapon in hand has none of its own.</summary>
+    public string? DefaultGunModel { get; init; }
 }

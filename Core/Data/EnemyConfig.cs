@@ -55,6 +55,9 @@ public sealed class EnemyConfig
     /// <summary>True for a boss's body: the boss system moves it instead of the zombie AI.</summary>
     public bool IsBoss { get; init; }
 
+    /// <summary>The enemy's 3D model; null draws the plain shape.</summary>
+    public string? Model { get; init; }
+
     /// <summary>Ranged attack; null for enemies that only hit by touch.</summary>
     public EnemyAttackConfig? Attack { get; init; }
 

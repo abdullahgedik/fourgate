@@ -882,6 +882,26 @@ public class BossTests
         };
     }
 
+    [Fact]
+    public void BossBody_DrawsBackDuringTheWarning_AndCommitsWhileItActs()
+    {
+        var world = new World(Charge(40));
+        world.AddPlayer(new Vector2(1500, 1000));
+        var boss = world.SpawnBoss(new Vector2(1000, 1000));
+
+        world.Run(0.5f);
+        Assert.True(boss.BossWindup < 0.05f);
+
+        // Most of the way through the 0.9 s warning.
+        world.Run(1.25f);
+        Assert.True(boss.BossWindup > 0.4f);
+        Assert.True(boss.BossAction < 0.1f);
+
+        // Charging.
+        world.Run(0.35f);
+        Assert.True(boss.BossAction > 0.5f);
+    }
+
     private static int StartWave(GameData shipped, int wave)
     {
         var config = TestData.Game(startWave: wave);

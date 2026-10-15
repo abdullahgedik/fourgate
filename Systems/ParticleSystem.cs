@@ -16,7 +16,7 @@ public sealed class ParticleSystem
     private const int Capacity = 4000;
 
     // Starting heights (3D only) of things born in the air: shot impacts and dust.
-    private const float ShotHeight = 18f;
+    private const float ShotHeight = 30f;
     private const float SplatAlpha = 0.6f;
 
     // Lasting stains are nearly solid and a little brighter than flying drops, so fresh blood

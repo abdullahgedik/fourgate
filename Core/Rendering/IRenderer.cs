@@ -1,3 +1,4 @@
+using Fourgate.Core.Rendering.Models;
 using Microsoft.Xna.Framework;
 
 namespace Fourgate.Core.Rendering;
@@ -78,6 +79,12 @@ public interface IRenderer
     /// height, darkest at the bottom, fading up and to both sides.
     /// </summary>
     void DrawWallStain(Vector2 from, Vector2 to, float height, Color color);
+
+    /// <summary>
+    /// A character drawn as its blocky 3D model, posed from what it reports; the 2D look (or a
+    /// missing model) draws <paramref name="fallback"/> instead.
+    /// </summary>
+    void DrawModel(in ModelPose pose, in VisualDescriptor fallback);
 
     /// <summary>True for the 3D look, for the few things drawn differently there.</summary>
     bool IsThreeD { get; }

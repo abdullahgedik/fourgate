@@ -10,6 +10,9 @@ public sealed class BossConfig
 
     public required string Id { get; init; }
 
+    /// <summary>The boss's 3D model; null draws the plain shape.</summary>
+    public string? Model { get; init; }
+
     public required string DisplayName { get; init; }
 
     /// <summary>The wave this boss appears in.</summary>
@@ -93,6 +96,7 @@ public sealed class BossConfig
         FrontArmorThickness = FrontArmorThickness,
         Shape = Shape,
         Color = Color,
+        Model = Model,
         IsBoss = true,
     };
 

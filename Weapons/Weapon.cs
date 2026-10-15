@@ -27,6 +27,13 @@ public sealed class Weapon
     // One sound id per weapon, built once.
     private readonly string _fireSfx;
     private readonly string _throwSfx;
+
+    // A beam's width, thicker at level 10 when the level-10 bonus says so.
+    private float BeamWidth => Config.Beam!.Width
+        * (Level >= WeaponConfig.MaxLevel ? Config.LevelTen?.BeamWidthMult ?? 1f : 1f);
+
+    /// <summary>Seconds since it last fired (for the gun's kick on a model).</summary>
+    public float SecondsSinceShot { get; private set; } = float.MaxValue;
     private readonly IAudioManager _audio;
     private readonly GameRandom? _random;
     private float _cooldown;
@@ -148,6 +155,7 @@ public sealed class Weapon
         // Goes negative only on the frame the cooldown runs out; that overshoot is carried
         // into the next shot so the fire rate stays exact. An idle weapon rests at zero.
         _cooldown = _cooldown <= 0f ? 0f : _cooldown - deltaSeconds;
+        SecondsSinceShot += deltaSeconds;
         _clickBufferLeft = Math.Max(0f, _clickBufferLeft - deltaSeconds);
         UpdateOverdrive(deltaSeconds, trigger.Held);
         _trailCooldown = Math.Max(0f, _trailCooldown - deltaSeconds);
@@ -196,6 +204,7 @@ public sealed class Weapon
         }
 
         _audio.PlaySfx(_fireSfx);
+        SecondsSinceShot = 0f;
 
         if (_rules.ReloadsEnabled && Magazine == 0)
         {
@@ -369,7 +378,8 @@ public sealed class Weapon
             Stats.FireSeconds,
             Stats.Damage,
             Stats.IgniteSeconds,
-            Config.Fire?.SpreadSeconds ?? 0f));
+            Config.Fire?.SpreadSeconds ?? 0f,
+            Config.Model));
         _audio.PlaySfx(_throwSfx);
     }
 
@@ -379,7 +389,7 @@ public sealed class Weapon
         {
             var beam = Config.Beam!;
             shots.FireBeam(new BeamShot(
-                muzzle, direction, damage, Stats.Range, beam.Width, beam.Knockback, ownerIndex,
+                muzzle, direction, damage, Stats.Range, BeamWidth, beam.Knockback, ownerIndex,
                 Stats.EndBlastRadius, damage * Stats.EndBlastDamageMult, beam.HitEffect));
             return;
         }

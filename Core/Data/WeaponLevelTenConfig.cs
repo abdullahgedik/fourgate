@@ -27,6 +27,9 @@ public sealed class WeaponLevelTenConfig
 
     public float BlastRadiusMult { get; init; } = 1f;
 
+    /// <summary>Multiplies a beam weapon's width (how wide it hits and how thick it looks).</summary>
+    public float BeamWidthMult { get; init; } = 1f;
+
     /// <summary>Checks value ranges; <paramref name="path"/> locates this entry inside the file.</summary>
     public void Validate(string file, string path)
     {
@@ -34,6 +37,7 @@ public sealed class WeaponLevelTenConfig
             Description is { Count: > 0 }, file, $"{path}.description", "must contain at least one line");
         DataLoadException.Require(Abilities is not null, file, $"{path}.abilities", "is required");
         DataLoadException.Require(DamageMult > 0, file, $"{path}.damageMult", "must be greater than 0");
+        DataLoadException.Require(BeamWidthMult > 0, file, $"{path}.beamWidthMult", "must be greater than 0");
         DataLoadException.Require(FireRateMult > 0, file, $"{path}.fireRateMult", "must be greater than 0");
         DataLoadException.Require(MagSizeBonus >= 0, file, $"{path}.magSizeBonus", "must not be negative");
         DataLoadException.Require(DurationMult > 0, file, $"{path}.durationMult", "must be greater than 0");

@@ -1,5 +1,6 @@
 using System;
 using FontStashSharp;
+using Fourgate.Core.Rendering.Models;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -123,6 +124,11 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
     }
 
     public bool IsThreeD => false;
+
+    public void DrawModel(in ModelPose pose, in VisualDescriptor fallback)
+    {
+        DrawVisual(fallback, pose.Position, pose.Facing);
+    }
 
     public void DrawLowBody(in VisualDescriptor visual, Vector2 position, float height)
     {

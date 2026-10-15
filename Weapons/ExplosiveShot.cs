@@ -19,6 +19,7 @@ namespace Fourgate.Weapons;
 /// <param name="FireDamagePerSecond">Damage per second of the fire pool.</param>
 /// <param name="IgniteSeconds">How long enemies keep burning after the fire; 0 for not at all.</param>
 /// <param name="FireSpreadSeconds">How long the fire takes to spread to its full radius; 0 for at once.</param>
+/// <param name="Model">The 3D model it flies as; null for a plain ball.</param>
 public readonly record struct ExplosiveShot(
     Vector2 Origin,
     Vector2 Target,
@@ -35,4 +36,5 @@ public readonly record struct ExplosiveShot(
     float FireSeconds = 0f,
     float FireDamagePerSecond = 0f,
     float IgniteSeconds = 0f,
-    float FireSpreadSeconds = 0f);
+    float FireSpreadSeconds = 0f,
+    string? Model = null);

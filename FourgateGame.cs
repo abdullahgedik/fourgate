@@ -5,6 +5,7 @@ using Fourgate.Core.Data;
 using Fourgate.Core.Input;
 using Fourgate.Core.Persistence;
 using Fourgate.Core.Rendering;
+using Fourgate.Core.Rendering.Models;
 using Fourgate.Scenes;
 using Fourgate.Systems;
 using Fourgate.UI;
@@ -39,6 +40,7 @@ public sealed class FourgateGame : Game
     private ShapeRenderer? _renderer;
     private Renderer3D? _renderer3D;
     private FloorStainCanvas? _stainCanvas;
+    private readonly ModelLibrary _models;
     private IScene? _scene;
     private IPlayerInput? _playerOneInput;
     private IPlayerInput[] _singleInputs = Array.Empty<IPlayerInput>();
@@ -59,6 +61,8 @@ public sealed class FourgateGame : Game
     public FourgateGame()
     {
         _data = DataLoader.LoadAll(DataLoader.DefaultDirectory);
+        _models = new ModelLibrary(DataLoader.LoadModels(DataLoader.DefaultDirectory));
+        _models.CheckReferences(_data);
 
         // No real sounds yet; with debug.showAudioEvents on, the latest sound events are listed on screen.
         if (_data.Game.Debug.ShowAudioEvents)
@@ -91,6 +95,7 @@ public sealed class FourgateGame : Game
         _stainCanvas = new FloorStainCanvas(GraphicsDevice, _data.Game.Arena.Size);
         _renderer.FloorStainTexture = _stainCanvas.Texture;
         _renderer3D.FloorStainTexture = _stainCanvas.Texture;
+        _renderer3D.Models = _models;
 
         // Single-player: keyboard+mouse or the first gamepad, whichever was used last.
         // Co-op: player 1 on keyboard+mouse, player 2 on the gamepad (and, for testing, debug keys).

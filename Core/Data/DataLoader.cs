@@ -16,6 +16,7 @@ public static class DataLoader
     public const string UpgradesFileName = "upgrades.json";
     public const string BossesFileName = "bosses.json";
     public const string ModesFileName = "modes.json";
+    public const string ModelsFileName = "models.json";
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -39,6 +40,29 @@ public static class DataLoader
         var bosses = ParseBosses(ReadFile(dataDirectory, BossesFileName), BossesFileName);
         var modes = ParseModes(ReadFile(dataDirectory, ModesFileName), ModesFileName);
         return new GameData(game, weapons, enemies, waves, upgrades, bosses, modes);
+    }
+
+    /// <summary>Reads and validates <c>models.json</c> from the data directory.</summary>
+    public static ModelsFile LoadModels(string dataDirectory)
+    {
+        return ParseModels(ReadFile(dataDirectory, ModelsFileName), ModelsFileName);
+    }
+
+    /// <summary>Parses and validates <c>models.json</c> content; <paramref name="file"/> is only used in error messages.</summary>
+    public static ModelsFile ParseModels(string json, string file)
+    {
+        var models = Parse<ModelsFile>(json, file);
+        DataLoadException.Require(models.Models is { Count: > 0 }, file, "models", "must contain at least one model");
+        var ids = new HashSet<string>();
+        for (var i = 0; i < models.Models.Count; i++)
+        {
+            var model = models.Models[i];
+            DataLoadException.Require(model is not null, file, $"models[{i}]", "must not be null");
+            model!.Validate(file, $"models[{i}]");
+            DataLoadException.Require(ids.Add(model.Id), file, $"models[{i}].id", $"'{model.Id}' is used twice");
+        }
+
+        return models;
     }
 
     /// <summary>Parses and validates <c>upgrades.json</c> content; <paramref name="file"/> is only used in error messages.</summary>

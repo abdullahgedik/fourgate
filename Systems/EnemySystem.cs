@@ -5,6 +5,7 @@ using Fourgate.Core.Audio;
 using Fourgate.Core.Data;
 using Fourgate.Core.Pooling;
 using Fourgate.Core.Rendering;
+using Fourgate.Core.Rendering.Models;
 using Fourgate.Entities;
 using Fourgate.Entities.Enemies;
 using Microsoft.Xna.Framework;
@@ -125,6 +126,11 @@ public sealed class EnemySystem : IHittableSource
             SpreadFire(enemy);
         }
 
+        for (var i = 0; i < _enemies.Count; i++)
+        {
+            _enemies[i].TrackWalk(deltaSeconds);
+        }
+
         // Second rebuild so shots fired this frame are tested against final positions.
         RebuildHash();
     }
@@ -167,7 +173,24 @@ public sealed class EnemySystem : IHittableSource
         for (var i = 0; i < _enemies.Count; i++)
         {
             var enemy = _enemies[i];
-            if (enemy.Elevation > 0f)
+            if (enemy.Config.Model is { } model)
+            {
+                // A boss poses from its attack (drawing back, then carrying it out); others from
+                // their own wind-up and lunge.
+                var visual = enemy.Visual;
+                var boss = enemy.Config.IsBoss;
+                var glow = enemy.ModelGlow(out var glowColor);
+                renderer.DrawModel(
+                    new ModelPose(
+                        model, enemy.Position, enemy.Facing, enemy.Facing, enemy.WalkDistance, enemy.Speed, enemy.BodyColor,
+                        Lunge: boss ? Math.Max(enemy.BossAction, enemy.LungeAmount) : enemy.LungeAmount,
+                        Flinch: enemy.FlinchAmount, ShadowRadius: enemy.Radius,
+                        MoveHeading: enemy.MoveHeading,
+                        Windup: boss ? enemy.BossWindup : enemy.WindupAmount,
+                        Elevation: enemy.Elevation, Glow: glow, GlowColor: glowColor),
+                    visual);
+            }
+            else if (enemy.Elevation > 0f)
             {
                 renderer.DrawVisualElevated(enemy.Visual, enemy.Position, enemy.Facing, enemy.Elevation);
             }
@@ -199,7 +222,7 @@ public sealed class EnemySystem : IHittableSource
             var enemy = _enemies[i];
             if (!enemy.IsAlive)
             {
-                _deaths.Add(new EnemyDeath(enemy.Config, enemy.Position, enemy.LastHitBy));
+                _deaths.Add(new EnemyDeath(enemy.Config, enemy.Position, enemy.LastHitBy, enemy.Facing));
                 KillCount++;
                 _audio.PlaySfx(SfxIds.EnemyDeath);
                 _enemies.ReturnAt(i);
@@ -234,6 +257,7 @@ public sealed class EnemySystem : IHittableSource
             if (enemy.TickBurst(deltaSeconds, attack.BurstInterval))
             {
                 ThrowVolley(enemy, attack);
+                enemy.PlayAttackMotion();
                 _audio.PlaySfx(SfxIds.EnemyFireball);
             }
 
@@ -250,6 +274,7 @@ public sealed class EnemySystem : IHittableSource
             if (enemy.TickWindUp(deltaSeconds, attack.CooldownSeconds))
             {
                 ThrowVolley(enemy, attack);
+                enemy.PlayAttackMotion();
                 _audio.PlaySfx(SfxIds.EnemyFireball);
                 if (attack.Bursts > 1)
                 {

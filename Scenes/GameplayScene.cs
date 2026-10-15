@@ -7,8 +7,10 @@ using Fourgate.Core.Data;
 using Fourgate.Core.Input;
 using Fourgate.Core.Persistence;
 using Fourgate.Core.Rendering;
+using Fourgate.Core.Rendering.Models;
 using Fourgate.Core.Rng;
 using Fourgate.Entities;
+using Fourgate.Entities.Enemies;
 using Fourgate.Entities.Pickups;
 using Fourgate.Systems;
 using Fourgate.UI;
@@ -50,6 +52,12 @@ public sealed class GameplayScene : IScene
 
     // Once its enemies are out, a door's warning fades over this long instead of vanishing.
     private const float DoorFadeSeconds = 0.4f;
+
+    // Bodies (3D only): how long they lie before shrinking away, and how much darker a dead zombie is.
+    private const float EnemyCorpseSeconds = 1.6f;
+    private const float PlayerCorpseSeconds = 8f;
+    private const float BossCorpseSeconds = 6f;
+    private const float CorpseDarkening = 0.75f;
 
     // The lethal-attack warning on screen.
     private const float LethalPulseSpeed = 14f;
@@ -141,6 +149,8 @@ public sealed class GameplayScene : IScene
     private readonly BossHud _bossHud = new();
     private readonly BossSystem _bosses;
     private readonly ParticleSystem _particles;
+    private readonly CorpseSystem _corpses = new();
+    private readonly List<bool> _wasAlive = new();
     private readonly GameRandom _visualRandom = new(Environment.TickCount);
     private readonly GameSettings? _settings;
     private float _doorPulseTime;
@@ -435,6 +445,7 @@ public sealed class GameplayScene : IScene
             player.Update(deltaSeconds, _arena, _shotRouter);
             camera.Follow(player.Position, player.Input.AimScreen, deltaSeconds);
             ShakeOnHurt(i);
+            LeaveBodyOnDeath(i);
             camera.UpdateShake(deltaSeconds, _visualRandom.Range(-1f, 1f), _visualRandom.Range(-1f, 1f));
             var view = camera.ViewRect;
             player.SetView(
@@ -449,6 +460,7 @@ public sealed class GameplayScene : IScene
         _flames.Update(deltaSeconds);
         UpdateDoorGlows(deltaSeconds);
         _particles.Update(deltaSeconds);
+        _corpses.Update(deltaSeconds);
         _drops.Update(deltaSeconds, _players);
 
         LayOutViews();
@@ -474,6 +486,7 @@ public sealed class GameplayScene : IScene
         _flames.Update(deltaSeconds);
         UpdateDoorGlows(deltaSeconds);
         _particles.Update(deltaSeconds);
+        _corpses.Update(deltaSeconds);
         for (var i = 0; i < _cameras.Count; i++)
         {
             _cameras[i].UpdateShake(deltaSeconds, _visualRandom.Range(-1f, 1f), _visualRandom.Range(-1f, 1f));
@@ -857,6 +870,7 @@ public sealed class GameplayScene : IScene
         var deaths = _enemies.Deaths;
         for (var i = 0; i < deaths.Count; i++)
         {
+            LeaveBody(deaths[i]);
             _xp.Award(deaths[i].Config.Xp, deaths[i].KilledBy, _players);
             _score.AddKill(deaths[i].Config.ScoreValue);
             _drops.OnEnemyKilled(deaths[i], _players);
@@ -1022,12 +1036,26 @@ public sealed class GameplayScene : IScene
             renderer.BeginWorld(_cameras[i]);
             DrawArena(renderer);
             Scorches.Draw(renderer);
+            _corpses.Draw(renderer);
             _particles.DrawFloor(renderer);
             _hazards.Draw(renderer);
             _mines.Draw(renderer);
             for (var t = 0; t < _practiceTargets.Count; t++)
             {
-                renderer.DrawVisual(_practiceTargets[t].Visual, _practiceTargets[t].Position, 0f);
+                var target = _practiceTargets[t];
+                if (_data.Game.Debug.PracticeTargetModel is { } dummy)
+                {
+                    // A training dummy facing the camera, wobbling when hit.
+                    renderer.DrawModel(
+                        new ModelPose(
+                            dummy, target.Position, MathHelper.PiOver2, MathHelper.PiOver2, 0f, 0f, target.Visual.Color,
+                            Flinch: target.IsFlashing ? 1f : 0f, ShadowRadius: target.Radius),
+                        target.Visual);
+                }
+                else
+                {
+                    renderer.DrawVisual(target.Visual, target.Position, 0f);
+                }
             }
 
             _drops.Draw(renderer);
@@ -1249,6 +1277,22 @@ public sealed class GameplayScene : IScene
                 continue;
             }
 
+            if (renderer.IsThreeD && _data.Game.Player.Model is { } model)
+            {
+                // The body faces the aim; the gun is in its hands.
+                var aim = MathF.Atan2(player.AimDirection.Y, player.AimDirection.X);
+                var weapon = player.CurrentWeapon;
+                renderer.DrawModel(
+                    new ModelPose(
+                        model, player.Position, aim, aim, player.WalkDistance, player.Speed, player.Visual.Color,
+                        Recoil: player.RecoilAmount, Flinch: player.FlinchAmount,
+                        GunId: weapon?.Config.Model ?? _data.Game.Player.DefaultGunModel,
+                        ShadowRadius: player.Radius,
+                        Hold: HoldFor(weapon), MoveHeading: player.MoveHeading),
+                    player.Visual);
+                continue;
+            }
+
             renderer.DrawVisual(player.Visual, player.Position, 0f);
 
             var muzzle = player.Position + player.AimDirection * player.Radius;
@@ -1462,6 +1506,60 @@ public sealed class GameplayScene : IScene
             var x = jawTopLeft.X + jawSize.X * i / 4f;
             renderer.FillRect(new Vector2(x - 1.5f, jawTopLeft.Y + jawSize.Y * 0.35f), new Vector2(3f, jawSize.Y * 0.65f), SkullHoleColor);
         }
+    }
+
+    // Dual wielding fills both hands; otherwise the weapon says how it is held.
+    private static ModelHold HoldFor(Weapon? weapon)
+    {
+        if (weapon is null)
+        {
+            return ModelHold.OneHand;
+        }
+
+        if (weapon.Stats.DualWield)
+        {
+            return ModelHold.Dual;
+        }
+
+        return weapon.Config.Hold switch
+        {
+            WeaponHold.OneHand => ModelHold.OneHand,
+            WeaponHold.Shoulder => ModelHold.Shoulder,
+            _ => ModelHold.TwoHands,
+        };
+    }
+
+    // A zombie with a model leaves a body that topples over and later shrinks away.
+    private void LeaveBody(in EnemyDeath death)
+    {
+        if (death.Config.Model is not { } model)
+        {
+            return;
+        }
+
+        var color = death.Config.Color;
+        var tint = new Color(color[0], color[1], color[2]) * CorpseDarkening;
+        _corpses.Add(
+            model, death.Position, death.Facing, new Color(tint.R, tint.G, tint.B), death.Config.Radius,
+            death.Config.IsBoss ? BossCorpseSeconds : EnemyCorpseSeconds);
+    }
+
+    // A player who just went down leaves a body where they fell.
+    private void LeaveBodyOnDeath(int index)
+    {
+        while (_wasAlive.Count <= index)
+        {
+            _wasAlive.Add(true);
+        }
+
+        var player = _players[index];
+        if (_wasAlive[index] && !player.IsAlive && _data.Game.Player.Model is { } model)
+        {
+            var aim = MathF.Atan2(player.AimDirection.Y, player.AimDirection.X);
+            _corpses.Add(model, player.Position, aim, player.Visual.Color, player.Radius, PlayerCorpseSeconds);
+        }
+
+        _wasAlive[index] = player.IsAlive;
     }
 
     // Red bands along the edges of a view, fading out, when its player was just hurt.

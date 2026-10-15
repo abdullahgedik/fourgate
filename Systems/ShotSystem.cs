@@ -16,6 +16,11 @@ public sealed class ShotSystem
 {
     private const int InitialBullets = 128;
     private const float StreakLength = 90f;
+
+    // Shotgun pellets: hidden for the first stretch out of the muzzle, then thin short streaks.
+    private const float PelletHiddenDistance = 28f;
+    private const float PelletStreakLength = 40f;
+    private const float PelletThickness = 2.5f;
     private const float StreakThickness = 4f;
     private const float RocketLength = 30f;
     private const float RocketThickness = 10f;
@@ -40,7 +45,7 @@ public sealed class ShotSystem
     private const float BeamGlowScale = 3f;
 
     // How high shots fly in the 3D view (chest height); ignored in 2D.
-    private const float ShotHeight = 18f;
+    private const float ShotHeight = 30f;
 
     // Where on a body hit effects burst, as a share of its height.
     private const float HitHeightOnBody = 0.8f;
@@ -303,7 +308,22 @@ public sealed class ShotSystem
             var bullet = _bullets[i];
             if (bullet.Rocket is null)
             {
-                renderer.DrawLineRaised(bullet.GetTail(StreakLength), bullet.Position, ShotHeight, StreakThickness, BulletColor);
+                if (bullet.HitEffect == HitEffect.Pellet)
+                {
+                    // Pellets leave the muzzle together: drawn thin and short, and only once they
+                    // have spread a little, so the volley never merges into one thick wedge.
+                    var shown = bullet.Travelled - PelletHiddenDistance;
+                    if (shown > 0f)
+                    {
+                        renderer.DrawLineRaised(
+                            bullet.GetTail(Math.Min(PelletStreakLength, shown)), bullet.Position, ShotHeight,
+                            PelletThickness, BulletColor);
+                    }
+                }
+                else
+                {
+                    renderer.DrawLineRaised(bullet.GetTail(StreakLength), bullet.Position, ShotHeight, StreakThickness, BulletColor);
+                }
                 continue;
             }
 

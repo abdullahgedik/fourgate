@@ -15,7 +15,7 @@ public sealed class FlameSystem
     private const float FlameEmbersPerSecond = 6f;
 
     // How high the stream flies in the 3D view; ignored in 2D.
-    private const float FlameHeight = 16f;
+    private const float FlameHeight = 28f;
 
     private const int InitialFlames = 128;
 

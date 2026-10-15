@@ -62,6 +62,12 @@ public sealed class WeaponConfig
     /// <summary>Flame values; required for <see cref="WeaponType.Stream"/> weapons.</summary>
     public StreamConfig? Stream { get; init; }
 
+    /// <summary>The gun model held in 3D; null uses the player's default gun model.</summary>
+    public string? Model { get; init; }
+
+    /// <summary>How the player's model holds it: at the chest with two hands (the default) or in one hand.</summary>
+    public WeaponHold Hold { get; init; } = WeaponHold.TwoHands;
+
     /// <summary>Beam values; required for <see cref="WeaponType.Beam"/> weapons.</summary>
     public BeamConfig? Beam { get; init; }
 

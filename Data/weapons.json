@@ -2,6 +2,8 @@
   "weapons": [
     {
       "id": "pistol",
+      "model": "pistol",
+      "hold": "oneHand",
       "displayName": "Pistol",
       "slot": 1,
       "unlockWave": 1,
@@ -29,6 +31,8 @@
     },
     {
       "id": "smg",
+      "model": "smg",
+      "hold": "oneHand",
       "displayName": "SMG",
       "slot": 2,
       "unlockWave": 2,
@@ -57,6 +61,7 @@
     },
     {
       "id": "shotgun",
+      "model": "shotgun",
       "displayName": "Shotgun",
       "slot": 3,
       "unlockWave": 3,
@@ -88,6 +93,7 @@
     },
     {
       "id": "grenade",
+      "model": "grenade",
       "displayName": "Grenade",
       "category": "equipment",
       "slot": 1,
@@ -97,7 +103,7 @@
       "fireRate": 1.25,
       "automatic": false,
       "ammo": { "usesMagazine": false, "reserveMax": 10, "infiniteReserve": false },
-      "thrown": { "speed": 900, "maxRange": 520, "radius": 10 },
+      "thrown": { "speed": 900, "maxRange": 520, "radius": 5 },
       "explosion": { "radius": 110 },
       "levels": [
         { "level": 2, "damageMult": 1.08, "fireRateMult": 1.10 },
@@ -117,6 +123,7 @@
     },
     {
       "id": "marksman",
+      "model": "marksman",
       "displayName": "Marksman Rifle",
       "slot": 4,
       "unlockWave": 6,
@@ -144,6 +151,7 @@
     },
     {
       "id": "assault",
+      "model": "assault",
       "displayName": "Assault Rifle",
       "slot": 5,
       "unlockWave": 7,
@@ -172,6 +180,7 @@
     },
     {
       "id": "sniper",
+      "model": "sniper",
       "displayName": "Sniper Rifle",
       "slot": 6,
       "unlockWave": 11,
@@ -208,7 +217,7 @@
       "fireRate": 1.0,
       "automatic": false,
       "ammo": { "usesMagazine": false, "reserveMax": 8, "infiniteReserve": false },
-      "thrown": { "speed": 850, "maxRange": 480, "radius": 9 },
+      "thrown": { "speed": 850, "maxRange": 480, "radius": 5 },
       "fire": { "radius": 130, "seconds": 4, "spreadSeconds": 0.35 },
       "levels": [
         { "level": 2, "damageMult": 1.08, "fireRateMult": 1.10 },
@@ -259,6 +268,7 @@
     },
     {
       "id": "flamethrower",
+      "model": "flamer",
       "displayName": "Flamethrower",
       "slot": 7,
       "unlockWave": 12,
@@ -289,6 +299,8 @@
     },
     {
       "id": "rocket",
+      "model": "launcher",
+      "hold": "shoulder",
       "displayName": "Rocket Launcher",
       "slot": 8,
       "unlockWave": 14,
@@ -317,6 +329,7 @@
     },
     {
       "id": "railgun",
+      "model": "railgun",
       "displayName": "Railgun",
       "slot": 9,
       "unlockWave": 18,
@@ -337,9 +350,10 @@
         { "level": 9, "damageMult": 1.08, "reserveMaxBonus": 2 }
       ],
       "levelTen": {
-        "description": [ "Dual beam", "Blast where each beam ends", "+8% damage" ],
+        "description": [ "A much thicker beam", "Blast where the beam ends", "+8% damage" ],
         "damageMult": 1.08,
-        "abilities": [ { "id": "dualWield" }, { "id": "endBlast", "radius": 130, "damageMult": 0.5 } ]
+        "beamWidthMult": 2.5,
+        "abilities": [ { "id": "endBlast", "radius": 130, "damageMult": 0.5 } ]
       }
     },
     {

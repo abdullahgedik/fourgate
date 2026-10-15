@@ -30,6 +30,9 @@ public sealed class BossSystem
 
     // How long a player usually stays in a sweeping fire stream when crossing it.
     private const float FireCrossingSeconds = 0.15f;
+
+    // How quickly a boss's body follows its attacks (per second).
+    private const float BodyPoseSpeed = 10f;
     private static readonly Color ShockwaveColor = new(255, 200, 120);
     private static readonly Color FireColor = new(255, 120, 30);
     private static readonly Color FireCoreColor = new(255, 220, 120);
@@ -167,6 +170,7 @@ public sealed class BossSystem
         {
             return;
         }
+        UpdateBodyPose(boss, deltaSeconds);
         var target = UpdateAggro(boss, players, deltaSeconds);
         if (target is null)
         {
@@ -408,6 +412,19 @@ public sealed class BossSystem
             renderer.DrawGlowWall(previous, point, height, color);
             previous = point;
         }
+    }
+
+    // The body draws back while an attack is warned and commits while it is carried out (and
+    // while it charges, streams or flies); both ease, so poses blend instead of snapping.
+    private void UpdateBodyPose(Enemy boss, float deltaSeconds)
+    {
+        var warning = _state == State.Telegraph && _pattern is not null
+            ? 1f - Math.Clamp(_stateLeft / _pattern.TelegraphSeconds, 0f, 1f)
+            : 0f;
+        var acting = _state == State.Acting ? 1f : 0f;
+        var ease = Math.Min(1f, deltaSeconds * BodyPoseSpeed);
+        boss.BossWindup += (warning - boss.BossWindup) * ease;
+        boss.BossAction += (acting - boss.BossAction) * ease;
     }
 
     /// <summary>Index of the player the boss is after, or -1.</summary>
