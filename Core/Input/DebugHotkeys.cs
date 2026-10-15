@@ -37,6 +37,9 @@ public sealed class DebugHotkeys
     /// <summary>Raise the level of every player's gun in hand and active equipment by one.</summary>
     public bool LevelUpWeaponPressed { get; private set; }
 
+    /// <summary>Shift + F7: every weapon of every player to the top level.</summary>
+    public bool MaxAllWeaponsPressed { get; private set; }
+
     /// <summary>Switch which enemy type F1/F2 spawn.</summary>
     public bool NextEnemyPressed { get; private set; }
 
@@ -49,7 +52,10 @@ public sealed class DebugHotkeys
         DropCratesPressed = current.IsKeyDown(DropCratesKey) && _previous.IsKeyUp(DropCratesKey);
         GrantWeaponsPressed = current.IsKeyDown(GrantWeaponsKey) && _previous.IsKeyUp(GrantWeaponsKey);
         OneShotKillsPressed = current.IsKeyDown(OneShotKillsKey) && _previous.IsKeyUp(OneShotKillsKey);
-        LevelUpWeaponPressed = current.IsKeyDown(LevelUpWeaponKey) && _previous.IsKeyUp(LevelUpWeaponKey);
+        var levelKey = current.IsKeyDown(LevelUpWeaponKey) && _previous.IsKeyUp(LevelUpWeaponKey);
+        var shift = current.IsKeyDown(Keys.LeftShift) || current.IsKeyDown(Keys.RightShift);
+        LevelUpWeaponPressed = levelKey && !shift;
+        MaxAllWeaponsPressed = levelKey && shift;
         NextEnemyPressed = current.IsKeyDown(NextEnemyKey) && _previous.IsKeyUp(NextEnemyKey);
         _previous = current;
     }

@@ -48,6 +48,9 @@ public sealed class FirePool
         }
     }
 
+    /// <summary>Seconds since it was lit (for flickering).</summary>
+    public float Age => _age;
+
     /// <summary>1 while burning fully, falling to 0 as the pool dies out.</summary>
     public float Fade => Math.Clamp(SecondsLeft / FadeSeconds, 0f, 1f);
 

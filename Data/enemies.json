@@ -82,6 +82,11 @@
         "projectileSpeed": 380, "projectileRadius": 12, "projectileRange": 750,
         "count": 3, "spreadDegrees": 15, "strafeSpeed": 120
       },
+      "secondAttack": {
+        "type": "fireball", "damage": 8, "range": 500, "telegraphSeconds": 0.5, "cooldownSeconds": 1.4,
+        "projectileSpeed": 460, "projectileRadius": 10, "projectileRange": 750,
+        "count": 1, "spreadDegrees": 0, "strafeSpeed": 120, "bursts": 6, "burstInterval": 0.12
+      },
       "xp": 80,
       "scoreValue": 80,
       "cost": 10,

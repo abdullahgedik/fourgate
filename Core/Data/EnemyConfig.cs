@@ -58,6 +58,9 @@ public sealed class EnemyConfig
     /// <summary>Ranged attack; null for enemies that only hit by touch.</summary>
     public EnemyAttackConfig? Attack { get; init; }
 
+    /// <summary>A second ranged attack, used in turn with the first; null for none.</summary>
+    public EnemyAttackConfig? SecondAttack { get; init; }
+
     /// <summary>Share of knockback it ignores (0–1); 0 (the default) takes the full push.</summary>
     public float KnockbackResist { get; init; }
 
@@ -84,6 +87,9 @@ public sealed class EnemyConfig
             Color is not null && Color.Count == 3 && Color.TrueForAll(c => c >= 0 && c <= 255),
             file, $"{path}.color", "must be three numbers from 0 to 255 (red, green, blue)");
         Attack?.Validate(file, $"{path}.attack");
+        SecondAttack?.Validate(file, $"{path}.secondAttack");
+        DataLoadException.Require(
+            SecondAttack is null || Attack is not null, file, $"{path}.secondAttack", "needs an attack as well");
         DataLoadException.Require(
             FrontArmorArcDegrees >= 0 && FrontArmorArcDegrees <= 360, file, $"{path}.frontArmorArcDegrees",
             "must be between 0 and 360");

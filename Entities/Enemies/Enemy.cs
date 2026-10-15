@@ -30,6 +30,9 @@ public sealed class Enemy : IHittable
     private float _windUpLeft;
     private float _windUpSeconds;
     private float _rangedCooldownLeft;
+    private bool _useSecondAttack;
+    private int _burstsLeft;
+    private float _nextBurstIn;
 
     /// <summary>Unique per spawn; gives overlapping enemies a stable order.</summary>
     public int Id { get; private set; }
@@ -49,6 +52,16 @@ public sealed class Enemy : IHittable
 
     /// <summary>Which way it sidesteps between throws: 1 or -1; switches after every throw.</summary>
     public float StrafeSide { get; private set; } = 1f;
+
+    /// <summary>How high it is off the floor (a leaping boss); 0 on the ground.</summary>
+    public float Elevation { get; set; }
+
+    /// <summary>The ranged attack it uses next; the two attacks take turns when it has two.</summary>
+    public EnemyAttackConfig? CurrentAttack =>
+        _useSecondAttack && Config.SecondAttack is not null ? Config.SecondAttack : Config.Attack;
+
+    /// <summary>True while it keeps throwing the rest of a stream after its wind-up.</summary>
+    public bool IsFiringBursts => _burstsLeft > 0;
 
     /// <summary>True when its ranged attack is off cooldown.</summary>
     public bool CanStartRangedAttack => _rangedCooldownLeft <= 0f && !IsWindingUp;
@@ -102,6 +115,10 @@ public sealed class Enemy : IHittable
         _windUpLeft = 0f;
         _windUpSeconds = 0f;
         _rangedCooldownLeft = 0f;
+        _useSecondAttack = false;
+        _burstsLeft = 0;
+        _nextBurstIn = 0f;
+        Elevation = 0f;
         StrafeSide = id % 2 == 0 ? 1f : -1f;
         _bodyColor = new Color(config.Color[0], config.Color[1], config.Color[2]);
         Hp = config.Hp;
@@ -161,6 +178,38 @@ public sealed class Enemy : IHittable
         _rangedCooldownLeft = cooldownSeconds;
         StrafeSide = -StrafeSide;
         return true;
+    }
+
+    /// <summary>Starts the rest of a stream: this many more throws, one per interval.</summary>
+    public void StartBursts(int count, float interval)
+    {
+        _burstsLeft = count;
+        _nextBurstIn = interval;
+    }
+
+    /// <summary>Advances a stream; true on the frames a throw goes out.</summary>
+    public bool TickBurst(float deltaSeconds, float interval)
+    {
+        if (_burstsLeft <= 0)
+        {
+            return false;
+        }
+
+        _nextBurstIn -= deltaSeconds;
+        if (_nextBurstIn > 0f)
+        {
+            return false;
+        }
+
+        _burstsLeft--;
+        _nextBurstIn += interval;
+        return true;
+    }
+
+    /// <summary>The next ranged attack will be the other one (when there are two).</summary>
+    public void SwitchAttack()
+    {
+        _useSecondAttack = !_useSecondAttack;
     }
 
     /// <summary>Starts the wait before the next contact attack.</summary>

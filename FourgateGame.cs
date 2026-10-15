@@ -304,6 +304,12 @@ public sealed class FourgateGame : Game
             CurrentRun?.DebugToggleOneShotKills();
         }
 
+        if (_debugHotkeys.MaxAllWeaponsPressed)
+        {
+            CurrentRun?.DebugMaxAllWeapons();
+            CurrentRun?.ShowDebugNotice("All weapons at level 10");
+        }
+
         if (_debugHotkeys.LevelUpWeaponPressed)
         {
             CurrentRun?.DebugLevelUpCurrentWeapons();

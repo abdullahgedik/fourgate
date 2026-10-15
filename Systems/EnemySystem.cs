@@ -98,6 +98,13 @@ public sealed class EnemySystem : IHittableSource
         for (var i = 0; i < _enemies.Count; i++)
         {
             var enemy = _enemies[i];
+
+            // A body in the air (a leaping boss) neither collides nor hits by touch.
+            if (enemy.Elevation > 0f)
+            {
+                continue;
+            }
+
             Separate(enemy);
             PushOutOfPlayers(enemy, players);
             enemy.Position = arena.ResolveMovement(enemy.Position, enemy.Radius);
@@ -130,15 +137,16 @@ public sealed class EnemySystem : IHittableSource
         for (var i = 0; i < _enemies.Count; i++)
         {
             var enemy = _enemies[i];
-            if (!enemy.IsWindingUp || enemy.Config.Attack is null)
+            if (!enemy.IsWindingUp || enemy.CurrentAttack is null)
             {
                 continue;
             }
 
-            // A red glow that swells and brightens as the throw nears.
+            // A red glow that swells and brightens as the throw nears; in 3D a halo round the body.
             var progress = enemy.WindUpProgress;
             var radius = enemy.Radius * MathHelper.Lerp(TelegraphGlowStart, TelegraphGlowEnd, progress);
-            renderer.FillCircle(enemy.Position, radius, TelegraphColor * (0.3f + 0.5f * progress));
+            renderer.FillCircleRaised(
+                enemy.Position, Depth3D.BodyHeight(enemy.Radius) * 0.5f, radius, TelegraphColor * (0.3f + 0.5f * progress));
         }
     }
 
@@ -147,7 +155,14 @@ public sealed class EnemySystem : IHittableSource
         for (var i = 0; i < _enemies.Count; i++)
         {
             var enemy = _enemies[i];
-            renderer.DrawVisual(enemy.Visual, enemy.Position, enemy.Facing);
+            if (enemy.Elevation > 0f)
+            {
+                renderer.DrawVisualElevated(enemy.Visual, enemy.Position, enemy.Facing, enemy.Elevation);
+            }
+            else
+            {
+                renderer.DrawVisual(enemy.Visual, enemy.Position, enemy.Facing);
+            }
         }
     }
 
@@ -195,10 +210,27 @@ public sealed class EnemySystem : IHittableSource
     // holds still: winding up, or waiting out its cooldown in a good spot.
     private bool UpdateRangedAttack(Enemy enemy, IReadOnlyList<Player> players, Arena arena, float deltaSeconds)
     {
-        var attack = enemy.Config.Attack;
+        var attack = enemy.CurrentAttack;
         if (attack is null || !enemy.IsAlive)
         {
             return false;
+        }
+
+        // The rest of a stream goes out along the same locked aim.
+        if (enemy.IsFiringBursts)
+        {
+            if (enemy.TickBurst(deltaSeconds, attack.BurstInterval))
+            {
+                ThrowVolley(enemy, attack);
+                _audio.PlaySfx(SfxIds.EnemyFireball);
+            }
+
+            if (!enemy.IsFiringBursts)
+            {
+                enemy.SwitchAttack();
+            }
+
+            return true;
         }
 
         if (enemy.IsWindingUp)
@@ -207,6 +239,14 @@ public sealed class EnemySystem : IHittableSource
             {
                 ThrowVolley(enemy, attack);
                 _audio.PlaySfx(SfxIds.EnemyFireball);
+                if (attack.Bursts > 1)
+                {
+                    enemy.StartBursts(attack.Bursts - 1, attack.BurstInterval);
+                }
+                else
+                {
+                    enemy.SwitchAttack();
+                }
             }
 
             return true;

@@ -19,8 +19,6 @@ public sealed class Renderer3D : IRenderer, IDisposable
     private const int CircleSegments = 14;
     private const int FlatCircleSegments = 10;
 
-    // A body is about this many times its radius tall.
-    private const float BodyHeightPerRadius = 1.6f;
 
     // Flat things float just above the floor so the floor does not hide them.
     private const float FlatHeight = 0.5f;
@@ -30,6 +28,9 @@ public sealed class Renderer3D : IRenderer, IDisposable
     private const float ShadowLengthPerHeight = 0.45f;
     private static readonly Vector2 ShadowDirection = Vector2.Normalize(new Vector2(0.55f, 0.4f));
     private static readonly Color ShadowColor = new(16, 17, 22);
+
+    // Flying things cast a softer, see-through shadow.
+    private static readonly Color FlyingShadowColor = new Color(0, 0, 0) * 0.45f;
 
     private static readonly RasterizerState NoCulling = new() { CullMode = CullMode.None };
 
@@ -144,7 +145,7 @@ public sealed class Renderer3D : IRenderer, IDisposable
             return;
         }
 
-        var height = visual.Radius * BodyHeightPerRadius;
+        var height = Depth3D.BodyHeight(visual.Radius);
         Shadow(position, visual.Radius, height);
         switch (visual.Shape)
         {
@@ -220,8 +221,123 @@ public sealed class Renderer3D : IRenderer, IDisposable
             return;
         }
 
-        var side = Vector2.Normalize(new Vector2(-along.Y, along.X)) * (thickness / 2f);
-        FlatQuadAt(from - side, to - side, to + side, from + side, height, color);
+        // A ribbon turned to face the camera, so a beam looks round from any angle.
+        var start = new Vector3(from.X, height, from.Y);
+        var end = new Vector3(to.X, height, to.Y);
+        var direction = Vector3.Normalize(end - start);
+        var towardCamera = Vector3.Cross(_billboardRight, _billboardUp);
+        var side = Vector3.Cross(direction, towardCamera);
+        if (side.LengthSquared() < 0.0001f)
+        {
+            side = new Vector3(-direction.Z, 0f, direction.X);
+        }
+
+        side = Vector3.Normalize(side) * (thickness / 2f);
+        Triangle(start - side, end - side, end + side, color);
+        Triangle(start - side, end + side, start + side, color);
+    }
+
+    public bool IsThreeD => true;
+
+    public void DrawVisualElevated(in VisualDescriptor visual, Vector2 position, float rotation, float elevation)
+    {
+        if (!_inWorld)
+        {
+            _screen.DrawVisual(visual, position, rotation);
+            return;
+        }
+
+        var height = Depth3D.BodyHeight(visual.Radius);
+        Shadow(position, visual.Radius, elevation + height);
+        switch (visual.Shape)
+        {
+            case ShapeKind.Square:
+                Box(position, new Vector2(visual.Radius), 0f, elevation + height, visual.Color, elevation);
+                break;
+
+            case ShapeKind.Diamond:
+                Prism(position, visual.Radius, 4, 0f, height, visual.Color, elevation);
+                break;
+
+            case ShapeKind.Triangle:
+                Prism(position, visual.Radius, 3, rotation, height, visual.Color, elevation);
+                break;
+
+            case ShapeKind.Hexagon:
+                Prism(position, visual.Radius, 6, rotation, height, visual.Color, elevation);
+                break;
+
+            default:
+                Prism(position, visual.Radius, CircleSegments, 0f, height, visual.Color, elevation);
+                break;
+        }
+    }
+
+    public void DrawGlowWall(Vector2 from, Vector2 to, float height, Color color)
+    {
+        if (!_inWorld || height <= 0f)
+        {
+            return;
+        }
+
+        var b0 = new Vector3(from.X, FlatHeight, from.Y);
+        var b1 = new Vector3(to.X, FlatHeight, to.Y);
+        var t0 = new Vector3(from.X, height, from.Y);
+        var t1 = new Vector3(to.X, height, to.Y);
+        var top = Color.Transparent;
+        Triangle(b0, color, b1, color, t1, top);
+        Triangle(b0, color, t1, top, t0, top);
+    }
+
+    public void DrawShadow(Vector2 position, float height, float radius)
+    {
+        if (!_inWorld)
+        {
+            return;
+        }
+
+        var offset = ShadowDirection * (height * ShadowLengthPerHeight);
+        FlatPolygon(position + offset, radius, FlatCircleSegments, 0f, FlyingShadowColor);
+    }
+
+    public void DrawBar(Vector2 from, Vector2 to, float thickness, float bottom, float top, Color color)
+    {
+        if (!_inWorld)
+        {
+            _screen.DrawLine(from, to, thickness, color);
+            return;
+        }
+
+        var along = to - from;
+        var length = along.Length();
+        if (length < 0.001f)
+        {
+            return;
+        }
+
+        Box((from + to) / 2f, new Vector2(length / 2f, thickness / 2f), MathF.Atan2(along.Y, along.X), top, color, bottom);
+    }
+
+    public void FillRectRaised(Vector2 topLeft, Vector2 size, float height, Color color)
+    {
+        if (!_inWorld)
+        {
+            _screen.FillRect(topLeft, size, color);
+            return;
+        }
+
+        FlatQuadAt(topLeft, topLeft + new Vector2(size.X, 0f), topLeft + size, topLeft + new Vector2(0f, size.Y), height, color);
+    }
+
+    public void DrawVisualRaised(in VisualDescriptor visual, Vector2 position, float rotation, float height)
+    {
+        if (!_inWorld)
+        {
+            _screen.DrawVisual(visual, position, rotation);
+            return;
+        }
+
+        FlatShape(visual, position, rotation, height);
     }
 
     public void DrawParticle(Vector2 ground, float baseHeight, float lift, float radius, Color color)
@@ -267,6 +383,11 @@ public sealed class Renderer3D : IRenderer, IDisposable
     public void DrawText(string text, Vector2 position, float size, Color color, TextAlign align = TextAlign.Left)
     {
         _screen.DrawText(text, position, size, color, align);
+    }
+
+    public void DrawTextCentered(string text, Vector2 center, float size, Color color)
+    {
+        _screen.DrawTextCentered(text, center, size, color);
     }
 
     public void Dispose()
@@ -337,34 +458,34 @@ public sealed class Renderer3D : IRenderer, IDisposable
 
     // --- solids ---
 
-    private void Box(Vector2 center, Vector2 half, float rotation, float height, Color color)
+    private void Box(Vector2 center, Vector2 half, float rotation, float height, Color color, float bottom = 0f)
     {
         var a = center + Rotate(new Vector2(-half.X, -half.Y), rotation);
         var b = center + Rotate(new Vector2(half.X, -half.Y), rotation);
         var c = center + Rotate(new Vector2(half.X, half.Y), rotation);
         var d = center + Rotate(new Vector2(-half.X, half.Y), rotation);
-        SideQuad(a, b, height, color);
-        SideQuad(b, c, height, color);
-        SideQuad(c, d, height, color);
-        SideQuad(d, a, height, color);
+        SideQuad(a, b, height, color, bottom);
+        SideQuad(b, c, height, color, bottom);
+        SideQuad(c, d, height, color, bottom);
+        SideQuad(d, a, height, color, bottom);
         TopTriangle(a, b, c, height, color);
         TopTriangle(a, c, d, height, color);
     }
 
     // A regular prism standing on the floor; corner 0 points along the rotation.
-    private void Prism(Vector2 center, float radius, int sides, float rotation, float height, Color color)
+    private void Prism(Vector2 center, float radius, int sides, float rotation, float height, Color color, float bottom = 0f)
     {
         var previous = center + Direction(rotation) * radius;
         for (var i = 1; i <= sides; i++)
         {
             var corner = center + Direction(rotation + MathHelper.TwoPi * i / sides) * radius;
-            SideQuad(previous, corner, height, color);
-            TopTriangle(center, previous, corner, height, color);
+            SideQuad(previous, corner, bottom + height, color, bottom);
+            TopTriangle(center, previous, corner, bottom + height, color);
             previous = corner;
         }
     }
 
-    private void SideQuad(Vector2 from, Vector2 to, float height, Color color)
+    private void SideQuad(Vector2 from, Vector2 to, float height, Color color, float bottom = 0f)
     {
         if ((_writingWalls ? _wallCount : _solidCount) + 6 > MaxSolidVertices)
         {
@@ -373,8 +494,8 @@ public sealed class Renderer3D : IRenderer, IDisposable
 
         var outward = new Vector3(to.Y - from.Y, 0f, -(to.X - from.X));
         var normal = outward.LengthSquared() > 0f ? Vector3.Normalize(outward) : Vector3.Up;
-        var b0 = new Vector3(from.X, 0f, from.Y);
-        var b1 = new Vector3(to.X, 0f, to.Y);
+        var b0 = new Vector3(from.X, bottom, from.Y);
+        var b1 = new Vector3(to.X, bottom, to.Y);
         var t0 = new Vector3(from.X, height, from.Y);
         var t1 = new Vector3(to.X, height, to.Y);
         Solid(b0, normal, color);
@@ -412,39 +533,39 @@ public sealed class Renderer3D : IRenderer, IDisposable
 
     // --- flat things ---
 
-    private void FlatShape(in VisualDescriptor visual, Vector2 position, float rotation)
+    private void FlatShape(in VisualDescriptor visual, Vector2 position, float rotation, float height = FlatHeight)
     {
         switch (visual.Shape)
         {
             case ShapeKind.Square:
-                FlatPolygon(position, visual.Radius * MathF.Sqrt(2f), 4, MathHelper.PiOver4, visual.Color);
+                FlatPolygon(position, visual.Radius * MathF.Sqrt(2f), 4, MathHelper.PiOver4, visual.Color, height);
                 break;
 
             case ShapeKind.Diamond:
-                FlatPolygon(position, visual.Radius, 4, 0f, visual.Color);
+                FlatPolygon(position, visual.Radius, 4, 0f, visual.Color, height);
                 break;
 
             case ShapeKind.Triangle:
-                FlatPolygon(position, visual.Radius, 3, rotation, visual.Color);
+                FlatPolygon(position, visual.Radius, 3, rotation, visual.Color, height);
                 break;
 
             case ShapeKind.Hexagon:
-                FlatPolygon(position, visual.Radius, 6, rotation, visual.Color);
+                FlatPolygon(position, visual.Radius, 6, rotation, visual.Color, height);
                 break;
 
             default:
-                FlatPolygon(position, visual.Radius, FlatCircleSegments, 0f, visual.Color);
+                FlatPolygon(position, visual.Radius, FlatCircleSegments, 0f, visual.Color, height);
                 break;
         }
     }
 
-    private void FlatPolygon(Vector2 center, float radius, int sides, float rotation, Color color)
+    private void FlatPolygon(Vector2 center, float radius, int sides, float rotation, Color color, float height = FlatHeight)
     {
         var previous = center + Direction(rotation) * radius;
         for (var i = 1; i <= sides; i++)
         {
             var corner = center + Direction(rotation + MathHelper.TwoPi * i / sides) * radius;
-            FlatTriangle(center, previous, corner, color);
+            FlatTriangleAt(center, previous, corner, height, color);
             previous = corner;
         }
     }
@@ -472,14 +593,19 @@ public sealed class Renderer3D : IRenderer, IDisposable
 
     private void Triangle(Vector3 a, Vector3 b, Vector3 c, Color color)
     {
+        Triangle(a, color, b, color, c, color);
+    }
+
+    private void Triangle(Vector3 a, Color colorA, Vector3 b, Color colorB, Vector3 c, Color colorC)
+    {
         if (_flatCount + 3 > MaxFlatVertices)
         {
             return;
         }
 
-        _flats[_flatCount++] = new VertexPositionColor(a, color);
-        _flats[_flatCount++] = new VertexPositionColor(b, color);
-        _flats[_flatCount++] = new VertexPositionColor(c, color);
+        _flats[_flatCount++] = new VertexPositionColor(a, colorA);
+        _flats[_flatCount++] = new VertexPositionColor(b, colorB);
+        _flats[_flatCount++] = new VertexPositionColor(c, colorC);
     }
 
     // A disc in the camera's plane, so it looks round from any angle.

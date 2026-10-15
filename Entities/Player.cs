@@ -179,6 +179,20 @@ public sealed class Player
         return _weaponLevels.TryGetValue(weaponId, out var level) ? level : 1;
     }
 
+    /// <summary>Sets a weapon's level (kept for when it is found if not carried), without the level-up sound.</summary>
+    public void SetWeaponLevel(string weaponId, int level)
+    {
+        level = Math.Clamp(level, 1, WeaponConfig.MaxLevel);
+        _weaponLevels[weaponId] = level;
+        for (var i = 0; i < _weapons.Count; i++)
+        {
+            if (_weapons[i].Config.Id == weaponId)
+            {
+                _weapons[i].SetLevel(level);
+            }
+        }
+    }
+
     /// <summary>Raises a weapon's level by one, up to the maximum, and updates the carried copy if there is one.</summary>
     public void LevelUpWeapon(string weaponId)
     {

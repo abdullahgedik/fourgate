@@ -66,6 +66,7 @@ public sealed class EnemyShotSystem
         for (var i = 0; i < _fireballs.Count; i++)
         {
             var fireball = _fireballs[i];
+            renderer.DrawShadow(fireball.Position, FlightHeight, fireball.Radius);
             renderer.FillCircleRaised(fireball.Position, FlightHeight, fireball.Radius * GlowScale, GlowColor * 0.5f);
             renderer.FillCircleRaised(fireball.Position, FlightHeight, fireball.Radius, CoreColor);
         }

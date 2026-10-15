@@ -41,6 +41,32 @@ public sealed class RecordingRenderer : IRenderer
         Particles.Add((ground, baseHeight, lift));
     }
 
+    public bool IsThreeD => false;
+
+    public void DrawVisualElevated(in VisualDescriptor visual, Vector2 position, float rotation, float elevation)
+    {
+    }
+
+    public void DrawGlowWall(Vector2 from, Vector2 to, float height, Color color)
+    {
+    }
+
+    public void DrawShadow(Vector2 position, float height, float radius)
+    {
+    }
+
+    public void DrawBar(Vector2 from, Vector2 to, float thickness, float bottom, float top, Color color)
+    {
+    }
+
+    public void FillRectRaised(Vector2 topLeft, Vector2 size, float height, Color color)
+    {
+    }
+
+    public void DrawVisualRaised(in VisualDescriptor visual, Vector2 position, float rotation, float height)
+    {
+    }
+
     public void FillBox(Vector2 topLeft, Vector2 size, float height, Color color)
     {
     }
@@ -50,6 +76,10 @@ public sealed class RecordingRenderer : IRenderer
     }
 
     public void DrawLine(Vector2 from, Vector2 to, float thickness, Color color)
+    {
+    }
+
+    public void DrawTextCentered(string text, Vector2 center, float size, Color color)
     {
     }
 

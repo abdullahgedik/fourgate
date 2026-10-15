@@ -122,6 +122,39 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
         DrawLine(from, to, thickness, color);
     }
 
+    public bool IsThreeD => false;
+
+    public void DrawVisualElevated(in VisualDescriptor visual, Vector2 position, float rotation, float elevation)
+    {
+        // Seen from above: a shadow on the ground, and the body larger the higher it is.
+        FillCircle(position, visual.Radius, new Color(0, 0, 0) * 0.35f);
+        var lifted = new VisualDescriptor(visual.Shape, visual.Radius * (1f + elevation * 0.0025f), visual.Color);
+        DrawVisual(lifted, position, rotation);
+    }
+
+    public void DrawGlowWall(Vector2 from, Vector2 to, float height, Color color)
+    {
+    }
+
+    public void DrawShadow(Vector2 position, float height, float radius)
+    {
+    }
+
+    public void DrawBar(Vector2 from, Vector2 to, float thickness, float bottom, float top, Color color)
+    {
+        DrawLine(from, to, thickness, color);
+    }
+
+    public void FillRectRaised(Vector2 topLeft, Vector2 size, float height, Color color)
+    {
+        FillRect(topLeft, size, color);
+    }
+
+    public void DrawVisualRaised(in VisualDescriptor visual, Vector2 position, float rotation, float height)
+    {
+        DrawVisual(visual, position, rotation);
+    }
+
     public void DrawParticle(Vector2 ground, float baseHeight, float lift, float radius, Color color)
     {
         FillCircle(new Vector2(ground.X, ground.Y - lift), radius, color);
@@ -140,6 +173,16 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
         var rotation = MathF.Atan2(delta.Y, delta.X);
         var scale = new Vector2(delta.Length(), thickness);
         _spriteBatch.Draw(_pixel, from, null, color, rotation, new Vector2(0f, 0.5f), scale, SpriteEffects.None, 0f);
+    }
+
+    public void DrawTextCentered(string text, Vector2 center, float size, Color color)
+    {
+        // Centered on the letters actually drawn, not on the font's line box (which has room for
+        // accents above and descenders below, so caps would sit high).
+        var font = _fonts.GetFont(size);
+        var bounds = font.TextBounds(text, Vector2.Zero);
+        var middle = new Vector2((bounds.X + bounds.X2) / 2f, (bounds.Y + bounds.Y2) / 2f);
+        _spriteBatch.DrawString(font, text, center - middle, color);
     }
 
     public void DrawText(string text, Vector2 position, float size, Color color, TextAlign align = TextAlign.Left)

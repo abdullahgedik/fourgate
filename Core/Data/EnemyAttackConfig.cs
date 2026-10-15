@@ -32,6 +32,12 @@ public sealed class EnemyAttackConfig
     /// <summary>Angle (degrees) to each side of the aim the outer fireballs of a volley fly.</summary>
     public float SpreadDegrees { get; init; }
 
+    /// <summary>Throws per attack after the wind-up, one after another along the locked aim (a stream).</summary>
+    public int Bursts { get; init; } = 1;
+
+    /// <summary>Seconds between those throws.</summary>
+    public float BurstInterval { get; init; }
+
     /// <summary>
     /// World units per second it sidesteps between throws, keeping its distance; 0 to stand
     /// still. It never moves during a wind-up.
@@ -53,5 +59,7 @@ public sealed class EnemyAttackConfig
         DataLoadException.Require(
             SpreadDegrees >= 0 && SpreadDegrees < 90, file, $"{path}.spreadDegrees", "must be from 0 up to (not including) 90");
         DataLoadException.Require(StrafeSpeed >= 0, file, $"{path}.strafeSpeed", "must not be negative");
+        DataLoadException.Require(Bursts >= 1, file, $"{path}.bursts", "must be 1 or greater");
+        DataLoadException.Require(BurstInterval >= 0, file, $"{path}.burstInterval", "must not be negative");
     }
 }

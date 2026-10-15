@@ -67,10 +67,51 @@ public class EliteZombieTests
         Assert.True(elite.Attack.SpreadDegrees > 0f);
         Assert.True(elite.Attack.StrafeSpeed > 0f);
         Assert.True(elite.Attack.TelegraphSeconds >= 0.5f);
+        Assert.NotNull(elite.SecondAttack);
+        Assert.Equal(1, elite.SecondAttack!.Count);
+        Assert.True(elite.SecondAttack.Bursts > 1);
+        Assert.True(elite.SecondAttack.TelegraphSeconds >= 0.5f);
         Assert.Equal(ShapeKind.Hexagon, elite.Shape);
     }
 
-    private static EnemyConfig Elite(float strafeSpeed)
+    [Fact]
+    public void Elite_TakesTurns_BetweenItsVolleyAndAStraightStream()
+    {
+        var fireballs = new EnemyShotSystem();
+        var enemies = new EnemySystem(new NullAudioManager()) { Fireballs = fireballs };
+        var players = new List<Player> { Player(new Vector2(1400, 1000)) };
+        var stream = new EnemyAttackConfig
+        {
+            Type = EnemyAttackType.Fireball, Damage = 8, Range = 500, TelegraphSeconds = 0.5f, CooldownSeconds = 1.4f,
+            ProjectileSpeed = 460, ProjectileRadius = 10, ProjectileRange = 750, Count = 1, Bursts = 6, BurstInterval = 0.12f,
+        };
+        enemies.Spawn(Elite(strafeSpeed: 0f, stream), new Vector2(1000, 1000));
+
+        // Fireballs are not moved here, so the count only ever grows.
+        RunEnemies(enemies, players, 0.55f);
+        Assert.Equal(3, fireballs.FireballCount);
+
+        // The next attack is the stream: one throw after its wind-up, then five more along the same line.
+        RunEnemies(enemies, players, 1.95f);
+        Assert.InRange(fireballs.FireballCount, 4, 9);
+        RunEnemies(enemies, players, 0.8f);
+        Assert.Equal(9, fireballs.FireballCount);
+
+        // Then the volley again.
+        RunEnemies(enemies, players, 2.2f);
+        Assert.Equal(12, fireballs.FireballCount);
+    }
+
+    private static void RunEnemies(EnemySystem enemies, List<Player> players, float seconds)
+    {
+        var steps = (int)MathF.Round(seconds / Step);
+        for (var i = 0; i < steps; i++)
+        {
+            enemies.Update(Step, players, TestArena);
+        }
+    }
+
+    private static EnemyConfig Elite(float strafeSpeed, EnemyAttackConfig? secondAttack = null)
     {
         return new EnemyConfig
         {
@@ -82,6 +123,7 @@ public class EliteZombieTests
                 ProjectileSpeed = 380, ProjectileRadius = 12, ProjectileRange = 750,
                 Count = 3, SpreadDegrees = 15, StrafeSpeed = strafeSpeed,
             },
+            SecondAttack = secondAttack,
         };
     }
 

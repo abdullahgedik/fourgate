@@ -9,7 +9,6 @@ public sealed class MenuList
 {
     private const float TextSize = 40f;
     private const float Border = 4f;
-    private const float TextTop = 14f;
 
     private static readonly Color ButtonColor = new(30, 33, 44);
     private static readonly Color ButtonSelectedColor = new(46, 52, 72);
@@ -65,9 +64,8 @@ public sealed class MenuList
             renderer.FillRect(
                 topLeft + new Vector2(Border), size - new Vector2(Border * 2f), isSelected ? ButtonSelectedColor : ButtonColor);
             var greyed = disabled is not null && disabled[i];
-            renderer.DrawText(
-                labels[i], new Vector2(topLeft.X + Width / 2f, topLeft.Y + TextTop), TextSize,
-                greyed ? DisabledTextColor : TextColor, TextAlign.Center);
+            renderer.DrawTextCentered(
+                labels[i], topLeft + size / 2f, TextSize, greyed ? DisabledTextColor : TextColor);
         }
     }
 

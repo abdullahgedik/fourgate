@@ -27,15 +27,14 @@ public sealed class GameplayScene : IScene
     private const float WallHeight = 90f;
     private const float PillarHeight = 120f;
     private const float GateInset = 2f;
+    private const float GunBottom = 14f;
+    private const float GunTop = 22f;
     private const float FacingLineLength = 14f;
     private const float FacingLineThickness = 6f;
     private const float DualBarrelOffset = 7f;
     private const float DualBarrelThickness = 5f;
     private const float CrosshairArm = 14f;
     private const float CrosshairThickness = 2f;
-    private const float ReloadBarExtraWidth = 12f;
-    private const float ReloadBarHeight = 6f;
-    private const float ReloadBarGap = 10f;
     private const float DoorHaloDepth = 110f;
     private const float DoorHaloOpacity = 0.3f;
     private const float EdgeIndicatorInset = 40f;
@@ -74,8 +73,6 @@ public sealed class GameplayScene : IScene
     private static readonly Color WeaponCrateIndicatorColor = new(60, 170, 230);
     private static readonly Color FacingColor = new(225, 230, 240);
     private static readonly Color CrosshairColor = new(240, 240, 240);
-    private static readonly Color ReloadBarBackColor = new(12, 13, 18);
-    private static readonly Color ReloadBarFillColor = new(255, 225, 120);
     private static readonly Color DebugNoticeColor = new(255, 225, 120);
     private static readonly Color SplitLineColor = new(10, 10, 14);
     private static readonly Color DownedNoticeColor = new(255, 120, 100);
@@ -196,6 +193,8 @@ public sealed class GameplayScene : IScene
         // Visual only, with its own random source so effects never change a seeded run.
         _particles = new ParticleSystem(_visualRandom);
         _shots.Particles = _particles;
+        _bosses.Particles = _particles;
+        _bosses.Impact = OnExplosion;
         _explosives.Exploded = OnExplosion;
         _hazards.Particles = _particles;
         _explosives.Particles = _particles;
@@ -769,6 +768,19 @@ public sealed class GameplayScene : IScene
         }
     }
 
+    /// <summary>Debug helper: every weapon of every player (carried or not) to the top level.</summary>
+    public void DebugMaxAllWeapons()
+    {
+        var weapons = _data.Weapons;
+        for (var i = 0; i < _players.Count; i++)
+        {
+            for (var w = 0; w < weapons.Count; w++)
+            {
+                _players[i].SetWeaponLevel(weapons[w].Id, WeaponConfig.MaxLevel);
+            }
+        }
+    }
+
     /// <summary>Debug helper: raises the level of every player's gun in hand and active equipment by one.</summary>
     public void DebugLevelUpCurrentWeapons()
     {
@@ -1108,29 +1120,14 @@ public sealed class GameplayScene : IScene
             {
                 // Two barrels for a dual-wielded weapon.
                 var side = new Vector2(-player.AimDirection.Y, player.AimDirection.X) * DualBarrelOffset;
-                renderer.DrawLine(muzzle + side, muzzle + side + barrel, DualBarrelThickness, FacingColor);
-                renderer.DrawLine(muzzle - side, muzzle - side + barrel, DualBarrelThickness, FacingColor);
+                renderer.DrawBar(muzzle + side, muzzle + side + barrel, DualBarrelThickness, GunBottom, GunTop, FacingColor);
+                renderer.DrawBar(muzzle - side, muzzle - side + barrel, DualBarrelThickness, GunBottom, GunTop, FacingColor);
             }
             else
             {
-                renderer.DrawLine(muzzle, muzzle + barrel, FacingLineThickness, FacingColor);
-            }
-
-            var weapon = player.CurrentWeapon;
-            if (weapon is { IsReloading: true })
-            {
-                DrawReloadBar(renderer, player, weapon.ReloadProgress);
+                renderer.DrawBar(muzzle, muzzle + barrel, FacingLineThickness, GunBottom, GunTop, FacingColor);
             }
         }
-    }
-
-    private static void DrawReloadBar(IRenderer renderer, Player player, float progress)
-    {
-        var size = new Vector2(player.Radius * 2f + ReloadBarExtraWidth, ReloadBarHeight);
-        var topLeft = player.Position + new Vector2(-size.X / 2f, player.Radius + ReloadBarGap);
-
-        renderer.FillRect(topLeft, size, ReloadBarBackColor);
-        renderer.FillRect(topLeft, new Vector2(size.X * progress, size.Y), ReloadBarFillColor);
     }
 
     // The floor grid shows the cells barrels snap to, so a player can see where one will go.

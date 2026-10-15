@@ -174,9 +174,18 @@ public sealed class ExplosiveSystem
         for (var i = 0; i < _thrown.Count; i++)
         {
             var thrown = _thrown[i];
-            renderer.FillCircle(thrown.Position, thrown.Shot.VisualRadius, ShadowColor);
             var visual = thrown.Visual;
-            renderer.FillCircleRaised(thrown.Position, ThrowPeakHeight * thrown.ArcHeight + visual.Radius, visual.Radius, visual.Color);
+            var height = ThrowPeakHeight * thrown.ArcHeight + visual.Radius;
+            if (renderer.IsThreeD)
+            {
+                renderer.DrawShadow(thrown.Position, height, thrown.Shot.VisualRadius);
+            }
+            else
+            {
+                renderer.FillCircle(thrown.Position, thrown.Shot.VisualRadius, ShadowColor);
+            }
+
+            renderer.FillCircleRaised(thrown.Position, height, visual.Radius, visual.Color);
         }
     }
 

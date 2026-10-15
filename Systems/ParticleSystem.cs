@@ -264,6 +264,142 @@ public sealed class ParticleSystem
         }
     }
 
+    /// <summary>Sparks and smoke boiling off where a beam strikes; call every frame it does.</summary>
+    public void BeamImpact(Vector2 point, float height, Color hot, Color cool, float deltaSeconds)
+    {
+        var sparks = Spawns(70f * deltaSeconds);
+        for (var i = 0; i < sparks; i++)
+        {
+            Add(new Particle
+            {
+                Position = point,
+                BaseHeight = height,
+                Velocity = RandomDirection() * _random.Range(120f, 320f),
+                Climb = _random.Range(20f, 120f),
+                Drag = 4f,
+                Rise = -60f,
+                Life = _random.Range(0.15f, 0.35f),
+                SizeStart = _random.Range(2.5f, 4.5f),
+                SizeEnd = 1f,
+                ColorStart = hot,
+                ColorEnd = cool,
+                AlphaStart = 1f,
+            });
+        }
+
+        var smoke = Spawns(8f * deltaSeconds);
+        for (var i = 0; i < smoke; i++)
+        {
+            Add(new Particle
+            {
+                Position = point + RandomInDisc(12f),
+                Velocity = RandomDirection() * _random.Range(10f, 30f),
+                Climb = _random.Range(30f, 60f),
+                Drag = 1f,
+                Rise = 10f,
+                Life = _random.Range(0.7f, 1.2f),
+                SizeStart = 8f,
+                SizeEnd = 22f,
+                ColorStart = SmokeDark,
+                ColorEnd = SmokeLight,
+                AlphaStart = 0.35f,
+            });
+        }
+    }
+
+    /// <summary>Glints drifting off the length of a beam; call every frame it is on.</summary>
+    public void AlongBeam(Vector2 from, Vector2 to, float height, Color hot, Color cool, float deltaSeconds)
+    {
+        var length = Vector2.Distance(from, to);
+        var glints = Spawns(length * 0.12f * deltaSeconds);
+        for (var i = 0; i < glints; i++)
+        {
+            Add(new Particle
+            {
+                Position = Vector2.Lerp(from, to, _random.NextFloat()),
+                BaseHeight = height,
+                Velocity = RandomDirection() * _random.Range(10f, 40f),
+                Climb = _random.Range(10f, 50f),
+                Drag = 2f,
+                Life = _random.Range(0.2f, 0.4f),
+                SizeStart = _random.Range(3f, 5f),
+                SizeEnd = 1f,
+                ColorStart = hot,
+                ColorEnd = cool,
+                AlphaStart = 0.9f,
+            });
+        }
+    }
+
+    /// <summary>A one-off burst along a beam that just fired, and a flash where it ended.</summary>
+    public void BeamFlash(Vector2 from, Vector2 to, float height, Color hot, Color cool)
+    {
+        var length = Vector2.Distance(from, to);
+        var count = (int)Math.Clamp(length / 30f, 6f, 80f);
+        for (var i = 0; i < count; i++)
+        {
+            Add(new Particle
+            {
+                Position = Vector2.Lerp(from, to, _random.NextFloat()),
+                BaseHeight = height,
+                Velocity = RandomDirection() * _random.Range(20f, 90f),
+                Climb = _random.Range(-20f, 40f),
+                Drag = 3f,
+                Life = _random.Range(0.25f, 0.5f),
+                SizeStart = _random.Range(2.5f, 5f),
+                SizeEnd = 1f,
+                ColorStart = hot,
+                ColorEnd = cool,
+                AlphaStart = 1f,
+            });
+        }
+
+        for (var i = 0; i < 14; i++)
+        {
+            Add(new Particle
+            {
+                Position = to,
+                BaseHeight = height,
+                Velocity = RandomDirection() * _random.Range(100f, 300f),
+                Climb = _random.Range(0f, 120f),
+                Drag = 4f,
+                Rise = -60f,
+                Life = _random.Range(0.2f, 0.4f),
+                SizeStart = _random.Range(3f, 6f),
+                SizeEnd = 1f,
+                ColorStart = hot,
+                ColorEnd = cool,
+                AlphaStart = 1f,
+            });
+        }
+    }
+
+    /// <summary>Flames rising along a stream of fire; call every frame it burns.</summary>
+    public void FireAlong(Vector2 from, Vector2 to, float height, float deltaSeconds)
+    {
+        var length = Vector2.Distance(from, to);
+        var flames = Spawns(length * 0.25f * deltaSeconds);
+        for (var i = 0; i < flames; i++)
+        {
+            var t = _random.NextFloat();
+            Add(new Particle
+            {
+                Position = Vector2.Lerp(from, to, t) + RandomInDisc(10f + 20f * t),
+                BaseHeight = height,
+                Velocity = RandomDirection() * _random.Range(0f, 20f),
+                Climb = _random.Range(30f, 80f),
+                Drag = 0.5f,
+                Rise = 50f,
+                Life = _random.Range(0.25f, 0.5f),
+                SizeStart = _random.Range(6f, 12f) * (0.6f + t),
+                SizeEnd = 1.5f,
+                ColorStart = FlameHot,
+                ColorEnd = FlameCool,
+                AlphaStart = 0.85f,
+            });
+        }
+    }
+
     public void Update(float deltaSeconds)
     {
         for (var i = _count - 1; i >= 0; i--)

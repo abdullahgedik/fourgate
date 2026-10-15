@@ -619,6 +619,7 @@ public class BossTests
         {
             BossPatternType.LineCharge, BossPatternType.GroundSlamRing, BossPatternType.FireballRing,
             BossPatternType.FireballSpiral, BossPatternType.Teleport, BossPatternType.FireStream, BossPatternType.Summon,
+            BossPatternType.LeapSlam, BossPatternType.MissileRain, BossPatternType.FireballStream,
         })
         {
             Assert.Contains(all, p => p.Type == borrowed);
@@ -695,6 +696,82 @@ public class BossTests
 
         world.Run(2.5f);
         Assert.True(player.Hp < 100f);
+    }
+
+    [Fact]
+    public void LeapSlam_JumpsOntoWhereThePlayerStood_AndHurtsOnlyThoseNearTheLanding()
+    {
+        var leap = new BossPatternConfig
+        {
+            Type = BossPatternType.LeapSlam, TelegraphSeconds = 1f, Damage = 35, Radius = 170, Distance = 650, Seconds = 0.7f,
+        };
+        var world = new World(leap);
+        var near = world.AddPlayer(new Vector2(1400, 1000));
+        var far = world.AddPlayer(new Vector2(1000, 1500));
+        var boss = world.SpawnBoss(new Vector2(1000, 1000));
+
+        // Warning from 1 s to 2 s, then 0.7 s in the air.
+        world.Run(1.9f);
+        Assert.Equal(BossPatternType.LeapSlam, world.Bosses.CurrentPattern);
+        Assert.Equal(0f, boss.Elevation);
+        world.Run(0.4f);
+        Assert.True(boss.Elevation > 0f);
+        Assert.Equal(100f, near.Hp);
+
+        world.Run(0.6f);
+        Assert.Equal(0f, boss.Elevation);
+        Assert.Equal(1400f - 50f - near.Radius, boss.Position.X, 1);
+        Assert.Equal(65f, near.Hp);
+        Assert.Equal(100f, far.Hp);
+    }
+
+    [Fact]
+    public void MissileRain_HitsTheMarkedSpots_OnlyWhenTheMissilesLand()
+    {
+        var missiles = new BossPatternConfig
+        {
+            Type = BossPatternType.MissileRain, TelegraphSeconds = 1f, Damage = 25, Radius = 110, Count = 1,
+            SpawnRadius = 0, Seconds = 0.8f,
+        };
+        var world = new World(missiles);
+        var player = world.AddPlayer(new Vector2(1600, 1000));
+        world.SpawnBoss(new Vector2(1000, 1000));
+        var impacts = 0;
+        world.Bosses.Impact = (_, _) => impacts++;
+
+        // Warning from 1 s to 2 s, then 0.8 s of falling.
+        world.Run(2.6f);
+        Assert.Equal(100f, player.Hp);
+        Assert.Equal(0, impacts);
+
+        world.Run(0.4f);
+        Assert.Equal(75f, player.Hp);
+        Assert.Equal(1, impacts);
+    }
+
+    [Fact]
+    public void FireballStream_ThrowsALongLine_ThatTurnsSlowlyAfterThePlayer()
+    {
+        var stream = new BossPatternConfig
+        {
+            Type = BossPatternType.FireballStream, TelegraphSeconds = 0.7f, Damage = 10, Seconds = 1f, Interval = 0.1f,
+            SpinDegreesPerSecond = 60, ProjectileSpeed = 420, ProjectileRadius = 12, ProjectileRange = 1000,
+        };
+        var world = new World(stream);
+        var first = world.AddPlayer(new Vector2(1600, 1000));
+        world.AddPlayer(new Vector2(1000, 1700));
+        var boss = world.SpawnBoss(new Vector2(1000, 1000));
+
+        world.Run(1.7f);
+        Assert.Equal(BossPatternType.FireballStream, world.Bosses.CurrentPattern);
+
+        // The nearer player falls, so it turns a quarter round to the other: only 60 degrees a second.
+        first.TakeDamage(1000f);
+        world.Run(0.5f);
+        Assert.InRange(MathHelper.ToDegrees(boss.Facing), 20f, 40f);
+
+        world.Run(0.6f);
+        Assert.InRange(world.Fireballs.FireballCount, 9, 11);
     }
 
     private static int StartWave(GameData shipped, int wave)

@@ -223,33 +223,34 @@ public sealed class DropSystem
         return false;
     }
 
-    // Simple marks so crate types can be told apart without relying on color alone.
+    // Simple marks so crate types can be told apart without relying on color alone; on the lid in 3D.
     private static void DrawGlyph(IRenderer renderer, Crate crate)
     {
         var center = crate.Position;
+        var lid = Depth3D.BodyHeight(Crate.HalfSize) + 0.5f;
         switch (crate.Type)
         {
             case CrateType.Health:
-                renderer.FillRect(center - new Vector2(10f, 3f), new Vector2(20f, 6f), GlyphColor);
-                renderer.FillRect(center - new Vector2(3f, 10f), new Vector2(6f, 20f), GlyphColor);
+                renderer.FillRectRaised(center - new Vector2(10f, 3f), new Vector2(20f, 6f), lid, GlyphColor);
+                renderer.FillRectRaised(center - new Vector2(3f, 10f), new Vector2(6f, 20f), lid, GlyphColor);
                 break;
 
             case CrateType.Upgrade:
-                renderer.FillRect(center - new Vector2(3f, 2f), new Vector2(6f, 12f), GlyphColor);
-                renderer.FillRect(center - new Vector2(9f, 6f), new Vector2(18f, 5f), GlyphColor);
-                renderer.FillRect(center - new Vector2(4f, 11f), new Vector2(8f, 5f), GlyphColor);
+                renderer.FillRectRaised(center - new Vector2(3f, 2f), new Vector2(6f, 12f), lid, GlyphColor);
+                renderer.FillRectRaised(center - new Vector2(9f, 6f), new Vector2(18f, 5f), lid, GlyphColor);
+                renderer.FillRectRaised(center - new Vector2(4f, 11f), new Vector2(8f, 5f), lid, GlyphColor);
                 break;
 
             case CrateType.Weapon:
                 // A small gun: barrel and grip.
-                renderer.FillRect(center + new Vector2(-11f, -6f), new Vector2(22f, 7f), GlyphColor);
-                renderer.FillRect(center + new Vector2(-9f, 1f), new Vector2(7f, 9f), GlyphColor);
+                renderer.FillRectRaised(center + new Vector2(-11f, -6f), new Vector2(22f, 7f), lid, GlyphColor);
+                renderer.FillRectRaised(center + new Vector2(-9f, 1f), new Vector2(7f, 9f), lid, GlyphColor);
                 break;
 
             default:
                 for (var i = -1; i <= 1; i++)
                 {
-                    renderer.FillRect(center + new Vector2(i * 8f - 2.5f, -9f), new Vector2(5f, 18f), GlyphColor);
+                    renderer.FillRectRaised(center + new Vector2(i * 8f - 2.5f, -9f), new Vector2(5f, 18f), lid, GlyphColor);
                 }
 
                 break;

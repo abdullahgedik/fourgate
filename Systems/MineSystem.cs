@@ -242,8 +242,9 @@ public sealed class MineSystem : IHittableSource, IObstacleSource
         for (var i = 0; i < _mines.Count; i++)
         {
             var mine = _mines[i];
-            renderer.DrawVisual(mine.BodyVisual, mine.Position, 0f);
-            renderer.DrawVisual(mine.LightVisual, mine.Position, 0f);
+            var body = mine.BodyVisual;
+            renderer.DrawVisual(body, mine.Position, 0f);
+            renderer.DrawVisualRaised(mine.LightVisual, mine.Position, 0f, Depth3D.BodyHeight(body.Radius) + 0.5f);
         }
     }
 

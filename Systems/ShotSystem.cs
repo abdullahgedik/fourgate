@@ -181,6 +181,7 @@ public sealed class ShotSystem
         }
 
         _beams.Add(new BeamFlash(shot.Origin, end, shot.Width, 0f));
+        Particles?.BeamFlash(shot.Origin, end, ShotHeight, BeamCoreColor, BeamGlowColor);
         if (blockedAt >= 0f)
         {
             AddSpark(end);
@@ -273,6 +274,13 @@ public sealed class ShotSystem
         {
             var beam = _beams[i];
             var fade = 1f - beam.Age / BeamFadeSeconds;
+            if (renderer.IsThreeD)
+            {
+                // A wide soft halo and light on the floor below (3D only).
+                renderer.DrawLine(beam.From, beam.To, beam.Width * 7f * fade, BeamGlowColor * (0.14f * fade));
+                renderer.DrawLineRaised(beam.From, beam.To, ShotHeight, beam.Width * 6f * fade, BeamGlowColor * (0.18f * fade));
+            }
+
             renderer.DrawLineRaised(
                 beam.From, beam.To, ShotHeight, beam.Width * BeamGlowScale * fade, BeamGlowColor * (0.6f * fade));
             renderer.DrawLineRaised(beam.From, beam.To, ShotHeight, beam.Width * fade, BeamCoreColor * fade);
@@ -287,7 +295,8 @@ public sealed class ShotSystem
                 continue;
             }
 
-            // A rocket: a short, thick body with a flame behind it.
+            // A rocket: a short, thick body with a flame behind it, and its shadow below in 3D.
+            renderer.DrawShadow(bullet.GetTail(RocketLength * 0.5f), ShotHeight, RocketThickness);
             var tail = bullet.GetTail(RocketLength);
             renderer.DrawLineRaised(bullet.GetTail(RocketLength * 1.8f), tail, ShotHeight, RocketThickness * 0.7f, RocketFlameColor);
             renderer.DrawLineRaised(tail, bullet.Position, ShotHeight, RocketThickness, RocketColor);

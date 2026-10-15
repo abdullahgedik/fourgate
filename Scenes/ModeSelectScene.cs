@@ -314,9 +314,7 @@ public sealed class ModeSelectScene : IScene
         renderer.FillRect(topLeft, size, selected ? BorderSelectedColor : BorderColor);
         var fill = on ? ToggleOnColor : selected ? CardSelectedColor : CardColor;
         renderer.FillRect(topLeft + new Vector2(Border), size - new Vector2(Border * 2f), fill);
-        renderer.DrawText(
-            _toggleLabels[index], new Vector2(topLeft.X + CardWidth / 2f, topLeft.Y + 20f), ToggleTextSize,
-            on ? ToggleOnTextColor : TextColor, TextAlign.Center);
+        renderer.DrawTextCentered(_toggleLabels[index], topLeft + size / 2f, ToggleTextSize, on ? ToggleOnTextColor : TextColor);
     }
 
     // Cards and toggles share the same two columns.
@@ -343,9 +341,7 @@ public sealed class ModeSelectScene : IScene
         var size = new Vector2(ButtonWidth, ToggleHeight);
         renderer.FillRect(topLeft, size, selected ? BorderSelectedColor : BorderColor);
         renderer.FillRect(topLeft + new Vector2(Border), size - new Vector2(Border * 2f), selected ? CardSelectedColor : CardColor);
-        renderer.DrawText(
-            "BACK", new Vector2(topLeft.X + ButtonWidth / 2f, topLeft.Y + 20f), ToggleTextSize, TextColor,
-            TextAlign.Center);
+        renderer.DrawTextCentered("BACK", topLeft + size / 2f, ToggleTextSize, TextColor);
     }
 
     private int CardAt(Vector2 screen)

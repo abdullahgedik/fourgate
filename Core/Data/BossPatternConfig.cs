@@ -143,6 +143,30 @@ public sealed class BossPatternConfig
                     SpreadDegrees >= 0 && SpreadDegrees < 90, file, $"{path}.spreadDegrees", "must be from 0 up to 90");
                 break;
 
+            case BossPatternType.LeapSlam:
+                RequireAreaTelegraph(file, path);
+                DataLoadException.Require(Damage > 0, file, $"{path}.damage", "must be greater than 0");
+                DataLoadException.Require(Radius > 0, file, $"{path}.radius", "must be greater than 0 (landing area)");
+                DataLoadException.Require(Distance > 0, file, $"{path}.distance", "must be greater than 0 (longest leap)");
+                DataLoadException.Require(Seconds > 0, file, $"{path}.seconds", "must be greater than 0 (time in the air)");
+                break;
+
+            case BossPatternType.MissileRain:
+                RequireAreaTelegraph(file, path);
+                DataLoadException.Require(Damage > 0, file, $"{path}.damage", "must be greater than 0");
+                DataLoadException.Require(Radius > 0, file, $"{path}.radius", "must be greater than 0 (blast of one missile)");
+                DataLoadException.Require(Count >= 1, file, $"{path}.count", "must be 1 or greater");
+                DataLoadException.Require(SpawnRadius >= 0, file, $"{path}.spawnRadius", "must not be negative (scatter)");
+                DataLoadException.Require(Seconds > 0, file, $"{path}.seconds", "must be greater than 0 (fall time)");
+                break;
+
+            case BossPatternType.FireballStream:
+                RequireProjectileTelegraph(file, path);
+                RequireFireballs(file, path);
+                DataLoadException.Require(Seconds > 0, file, $"{path}.seconds", "must be greater than 0");
+                DataLoadException.Require(Interval > 0, file, $"{path}.interval", "must be greater than 0");
+                break;
+
             case BossPatternType.LaserSweep:
             case BossPatternType.FireStream:
                 RequireAreaTelegraph(file, path);

@@ -27,6 +27,16 @@ public sealed class PlayerHud
     private const float WeaponListGap = 14f;
     private const float EquipmentSize = 28f;
 
+    // The reload bar under "RELOADING", and the drawn infinity sign (the font has no ∞).
+    private const float ReloadBarWidth = 230f;
+    private const float ReloadBarHeight = 8f;
+    private const float ReloadBarGap = 4f;
+    private const float InfinityWidth = 44f;
+    private const float InfinityHeight = 20f;
+    private const float InfinityThickness = 4f;
+    private const float InfinityGap = 10f;
+    private const int InfinitySegments = 28;
+
     private static readonly Color PanelColor = new(8, 9, 12, 200);
     private static readonly Color HpColor = new(215, 60, 60);
     private static readonly Color HpLowColor = new(255, 150, 60);
@@ -154,22 +164,59 @@ public sealed class PlayerHud
             _reloadingShown = weapon.IsReloading;
 
             _weaponName = $"{weapon.Config.DisplayName.ToUpperInvariant()}   LV {weapon.Level}";
-            var reserve = weapon.HasInfiniteReserve ? "INF" : weapon.Reserve.ToString();
+            // An unlimited reserve is shown as a drawn ∞ after the text.
+            var reserve = weapon.HasInfiniteReserve ? string.Empty : weapon.Reserve.ToString();
             _ammoText = weapon.IsReloading
                 ? "RELOADING"
-                : weapon.UsesMagazine ? $"{weapon.Magazine} / {reserve}" : reserve;
+                : weapon.UsesMagazine ? $"{weapon.Magazine} / {reserve}".TrimEnd() : reserve;
         }
 
         var right = view.Right - Margin;
         var ammoTop = view.Bottom - Margin - AmmoSize;
+        var infinite = weapon.HasInfiniteReserve && !weapon.IsReloading;
+        var textRight = infinite ? right - InfinityWidth - InfinityGap : right;
         renderer.DrawText(
-            _ammoText, new Vector2(right, ammoTop), AmmoSize,
+            _ammoText, new Vector2(textRight, ammoTop), AmmoSize,
             weapon.IsReloading ? HighlightTextColor : TextColor, TextAlign.Right);
+        if (infinite)
+        {
+            DrawInfinity(renderer, new Vector2(right - InfinityWidth / 2f, ammoTop + AmmoSize * 0.55f), TextColor);
+        }
+
+        if (weapon.IsReloading)
+        {
+            var barTopLeft = new Vector2(right - ReloadBarWidth, ammoTop + AmmoSize + ReloadBarGap);
+            renderer.FillRect(barTopLeft, new Vector2(ReloadBarWidth, ReloadBarHeight), PanelColor);
+            renderer.FillRect(
+                barTopLeft, new Vector2(ReloadBarWidth * weapon.ReloadProgress, ReloadBarHeight), HighlightTextColor);
+        }
         renderer.DrawText(
             _weaponName, new Vector2(right, ammoTop - WeaponNameSize), WeaponNameSize, DimTextColor, TextAlign.Right);
 
         var listTop = DrawGunList(renderer, player, right, ammoTop - WeaponNameSize - WeaponListGap);
         DrawEquipment(renderer, player, right, listTop - WeaponListGap);
+    }
+
+    // A lemniscate (figure of eight on its side) drawn from short line pieces.
+    private static void DrawInfinity(IRenderer renderer, Vector2 center, Color color)
+    {
+        var halfWidth = InfinityWidth / 2f;
+        var previous = Lemniscate(0f, halfWidth);
+        for (var i = 1; i <= InfinitySegments; i++)
+        {
+            var point = Lemniscate(MathHelper.TwoPi * i / InfinitySegments, halfWidth);
+            renderer.DrawLine(center + previous, center + point, InfinityThickness, color);
+            previous = point;
+        }
+    }
+
+    private static Vector2 Lemniscate(float t, float halfWidth)
+    {
+        var sin = MathF.Sin(t);
+        var cos = MathF.Cos(t);
+        var scale = 1f / (1f + sin * sin);
+        // The bare curve is half as tall as wide; stretch it to the wanted height.
+        return new Vector2(halfWidth * cos * scale, InfinityHeight * sin * cos * scale);
     }
 
     // The active equipment, with the button that uses it and how many are left.

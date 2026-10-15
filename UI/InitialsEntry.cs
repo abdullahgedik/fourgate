@@ -79,9 +79,7 @@ public sealed class InitialsEntry
             var size = new Vector2(BoxSize);
             renderer.FillRect(topLeft, size, i == _slot ? SelectedColor : BorderColor);
             renderer.FillRect(topLeft + new Vector2(Border), size - new Vector2(Border * 2f), BoxColor);
-            renderer.DrawText(
-                _letterTexts[i], new Vector2(topLeft.X + BoxSize / 2f, topLeft.Y + 4f), LetterSize, LetterColor,
-                TextAlign.Center);
+            renderer.DrawTextCentered(_letterTexts[i], topLeft + size / 2f, LetterSize, LetterColor);
         }
     }
 

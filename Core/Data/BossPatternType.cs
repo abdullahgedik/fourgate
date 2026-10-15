@@ -32,4 +32,13 @@ public enum BossPatternType
 
     /// <summary>Fires a long thin beam that sweeps across where the player stood.</summary>
     LaserSweep,
+
+    /// <summary>Leaps into the air and slams down where the player stood, hurting everyone near.</summary>
+    LeapSlam,
+
+    /// <summary>Calls missiles down from the sky onto marked spots round the player.</summary>
+    MissileRain,
+
+    /// <summary>Throws a long line of fireballs one after another, slowly following the player.</summary>
+    FireballStream,
 }

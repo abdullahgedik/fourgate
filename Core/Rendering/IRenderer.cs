@@ -37,6 +37,39 @@ public interface IRenderer
     /// </summary>
     void DrawParticle(Vector2 ground, float baseHeight, float lift, float radius, Color color);
 
+    /// <summary>
+    /// A solid bar along a line between two heights (a shield band, a gun barrel, a shockwave
+    /// ring piece): a line in 2D, a block from <paramref name="bottom"/> to <paramref name="top"/> in 3D.
+    /// </summary>
+    void DrawBar(Vector2 from, Vector2 to, float thickness, float bottom, float top, Color color);
+
+    /// <summary>
+    /// A glowing wall standing on a floor line, fading out towards its top (the rising edges of an
+    /// attack warning): nothing in 2D, where the floor marking alone shows the warning.
+    /// </summary>
+    void DrawGlowWall(Vector2 from, Vector2 to, float height, Color color);
+
+    /// <summary>
+    /// A body in the air (a leaping boss): in 2D drawn larger the higher it is, over a shadow; in
+    /// 3D lifted to <paramref name="elevation"/> with its shadow on the floor.
+    /// </summary>
+    void DrawVisualElevated(in VisualDescriptor visual, Vector2 position, float rotation, float elevation);
+
+    /// <summary>True for the 3D look, for the few things drawn differently there.</summary>
+    bool IsThreeD { get; }
+
+    /// <summary>
+    /// The floor shadow of something flying at <paramref name="height"/> (a grenade, a rocket): in 3D
+    /// a soft dark disc thrown away from the light; nothing in 2D.
+    /// </summary>
+    void DrawShadow(Vector2 position, float height, float radius);
+
+    /// <summary>A rectangle lying flat at a height (marks on top of a crate, a bar over a head): flat in 2D.</summary>
+    void FillRectRaised(Vector2 topLeft, Vector2 size, float height, Color color);
+
+    /// <summary>A shape lying flat at a height (a light on top of a mine): drawn like any visual in 2D.</summary>
+    void DrawVisualRaised(in VisualDescriptor visual, Vector2 position, float rotation, float height);
+
     /// <summary>A block standing on the floor (walls, pillars); flat like a rectangle in 2D.</summary>
     void FillBox(Vector2 topLeft, Vector2 size, float height, Color color);
 
@@ -51,4 +84,7 @@ public interface IRenderer
     /// <param name="color">Text color.</param>
     /// <param name="align">Horizontal alignment relative to <paramref name="position"/>.</param>
     void DrawText(string text, Vector2 position, float size, Color color, TextAlign align = TextAlign.Left);
+
+    /// <summary>Text whose visible letters are centered on a point, both ways (button labels).</summary>
+    void DrawTextCentered(string text, Vector2 center, float size, Color color);
 }
