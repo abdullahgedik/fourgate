@@ -53,6 +53,9 @@ public interface IPlayerInput
     /// <summary>Move the menu selection one step right.</summary>
     bool MenuRightPressed { get; }
 
+    /// <summary>Pause or resume a run (Esc, gamepad Start).</summary>
+    bool PausePressed { get; }
+
     /// <summary>Leave a menu or screen (Esc, gamepad B).</summary>
     bool BackPressed { get; }
 

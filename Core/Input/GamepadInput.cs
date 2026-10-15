@@ -58,6 +58,8 @@ public sealed class GamepadInput : IPlayerInput
 
     public bool BackPressed { get; private set; }
 
+    public bool PausePressed { get; private set; }
+
     public bool MenuUpPressed { get; private set; }
 
     public bool MenuDownPressed { get; private set; }
@@ -130,6 +132,7 @@ public sealed class GamepadInput : IPlayerInput
             || (stickX > MenuStickThreshold && previousStickX <= MenuStickThreshold);
 
         BackPressed = state.IsButtonDown(Buttons.B) && _previous.IsButtonUp(Buttons.B);
+        PausePressed = state.IsButtonDown(Buttons.Start) && _previous.IsButtonUp(Buttons.Start);
 
         // Stick Y points up.
         var stickY = state.ThumbSticks.Left.Y;

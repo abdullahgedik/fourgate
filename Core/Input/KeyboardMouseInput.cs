@@ -61,6 +61,8 @@ public sealed class KeyboardMouseInput : IPlayerInput
 
     public bool BackPressed { get; private set; }
 
+    public bool PausePressed => BackPressed;
+
     public bool MenuUpPressed { get; private set; }
 
     public bool MenuDownPressed { get; private set; }

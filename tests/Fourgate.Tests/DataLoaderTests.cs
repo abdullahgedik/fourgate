@@ -14,6 +14,7 @@ public class DataLoaderTests
           "arena": { "x": 0, "y": 0, "size": 2000, "doorWidth": 280, "wallThickness": 24 },
           "camera": { "zoom": 1.15, "leadFraction": 0.35, "leadMaxDistance": 260, "smoothing": 10, "edgeMargin": 120 },
           "maxAliveEnemies": 60,
+          "campaignWaves": 50,
           "restCountdownSeconds": 5,
           "xp": { "base": 60, "exponent": 1.35, "sharedFullToAllPlayers": true },
           "crates": {

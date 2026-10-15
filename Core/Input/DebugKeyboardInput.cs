@@ -50,6 +50,8 @@ public sealed class DebugKeyboardInput : IPlayerInput
 
     public bool BackPressed => false;
 
+    public bool PausePressed => false;
+
     public bool MenuUpPressed { get; private set; }
 
     public bool MenuDownPressed { get; private set; }

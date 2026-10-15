@@ -30,6 +30,9 @@ public sealed class GameOverOverlay
     private string _detailText = string.Empty;
     private string _listTitle = string.Empty;
 
+    /// <summary>Heading of the screen ("GAME OVER", or the waves-survived title after a finished campaign).</summary>
+    public string Title { get; set; } = "GAME OVER";
+
     /// <summary>Sets the numbers to show; call once when the run ends.</summary>
     public void SetStats(int wave, int kills, float elapsedSeconds, int score, string modeName)
     {
@@ -54,7 +57,7 @@ public sealed class GameOverOverlay
 
         var center = screenWidth / 2f;
         var top = screenHeight * 0.07f;
-        renderer.DrawText("GAME OVER", new Vector2(center, top), TitleSize, TitleColor, TextAlign.Center);
+        renderer.DrawText(Title, new Vector2(center, top), TitleSize, TitleColor, TextAlign.Center);
         renderer.DrawText(_scoreText, new Vector2(center, top + 130f), StatSize, ScoreColor, TextAlign.Center);
         renderer.DrawText(_detailText, new Vector2(center, top + 185f), DetailSize, StatColor, TextAlign.Center);
 

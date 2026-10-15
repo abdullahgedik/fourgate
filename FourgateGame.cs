@@ -45,6 +45,9 @@ public sealed class FourgateGame : Game
     private readonly SettingsStore _settingsStore = new(SettingsStore.DefaultPath);
     private GameSettings _settings = new();
 
+    // A paused run waiting while its settings are open.
+    private GameplayScene? _suspendedRun;
+
     // The run in progress, for the debug hotkeys; null on the start screen.
     private GameplayScene? CurrentRun => _scene as GameplayScene;
 
@@ -160,7 +163,30 @@ public sealed class FourgateGame : Game
         if (_scene is SettingsScene { IsDone: true })
         {
             _settingsStore.Save(_settings);
-            _scene = new MainMenuScene(_playerOneInput, _data.Game, MainMenuChoice.Settings);
+            if (_suspendedRun is not null)
+            {
+                _suspendedRun.ReturnFromSettings();
+                _scene = _suspendedRun;
+                _suspendedRun = null;
+            }
+            else
+            {
+                _scene = new MainMenuScene(_playerOneInput, _data.Game, MainMenuChoice.Settings);
+            }
+
+            return;
+        }
+
+        if (_scene is GameplayScene { SettingsRequested: true } paused)
+        {
+            _suspendedRun = paused;
+            _scene = new SettingsScene(_playerOneInput, _data.Game, _settings, _display.AvailableResolutions, ApplyDisplay);
+            return;
+        }
+
+        if (_scene is GameplayScene { QuitRequested: true })
+        {
+            _scene = new MainMenuScene(_playerOneInput, _data.Game);
             return;
         }
 

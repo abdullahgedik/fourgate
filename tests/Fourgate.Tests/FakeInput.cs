@@ -43,6 +43,8 @@ public sealed class FakeInput : IPlayerInput
 
     public bool BackPressed { get; set; }
 
+    public bool PausePressed { get; set; }
+
     public bool MenuUpPressed { get; set; }
 
     public bool MenuDownPressed { get; set; }

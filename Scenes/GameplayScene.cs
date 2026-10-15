@@ -96,6 +96,12 @@ public sealed class GameplayScene : IScene
     private readonly HighScoreTable? _highScores;
     private readonly HighScoreStore? _highScoreStore;
     private InitialsEntry? _initials;
+    private readonly PauseOverlay _pauseOverlay;
+    private readonly VictoryOverlay _victoryOverlay;
+    private int _pausedBy = -1;
+    private bool _justResumed;
+    private bool _victoryOpen;
+    private bool _victoryShown;
     private int _newEntryPlace = -1;
     private string _debugNotice = string.Empty;
     private float _debugNoticeLeft;
@@ -171,6 +177,8 @@ public sealed class GameplayScene : IScene
         _drops = new DropSystem(config.Crates, _random, audio, _unlocks);
         _upgrades = new UpgradeSystem(data.Upgrades, _unlocks, _random, audio);
         _upgradeScreen = new UpgradeScreen(_upgrades);
+        _pauseOverlay = new PauseOverlay(config.VirtualWidth, config.VirtualHeight);
+        _victoryOverlay = new VictoryOverlay(config.VirtualWidth, config.VirtualHeight);
         _highScores = highScores;
         _highScoreStore = highScoreStore;
         _rules = new ModeRules(data.Modes, mode);
@@ -232,6 +240,24 @@ public sealed class GameplayScene : IScene
             return;
         }
 
+        if (_victoryOpen)
+        {
+            UpdateVictory();
+            return;
+        }
+
+        if (IsPaused)
+        {
+            UpdatePause();
+            return;
+        }
+
+        // Opening the menu takes the whole frame; it starts reading choices on the next one.
+        if (TryPause())
+        {
+            return;
+        }
+
         // An unplugged controller stops everything until it is back.
         if (UpdateDisconnected())
         {
@@ -259,6 +285,13 @@ public sealed class GameplayScene : IScene
         {
             _score.AddClearedWave();
             ReviveDownedPlayers();
+            if (!_victoryShown && _waves!.Wave - 1 >= _data.Game.CampaignWaves)
+            {
+                // The last boss wave is cleared: the run stops here until the players decide.
+                _victoryShown = true;
+                _victoryOpen = true;
+                _victoryOverlay.Open(_waves.Wave - 1, _score.Total);
+            }
         }
 
         _lastWavePhase = _waves?.Phase;
@@ -292,13 +325,7 @@ public sealed class GameplayScene : IScene
         LayOutViews();
         if (!AnyPlayerAlive())
         {
-            IsGameOver = true;
-            _gameOverOverlay.SetStats(_waves?.Wave ?? 0, _enemies.KillCount, _elapsedSeconds, _score.Total, _rules.Mode.Name);
-            if (_highScores is not null && _highScores.Qualifies(_rules.Mode.Key, _score.Total))
-            {
-                _initials = new InitialsEntry();
-            }
-
+            EndRun("GAME OVER");
             _audio.PlaySfx(SfxIds.GameOver);
         }
     }
@@ -329,6 +356,103 @@ public sealed class GameplayScene : IScene
         }
 
         return DisconnectedPlayer >= 0;
+    }
+
+    /// <summary>True while the pause menu is open; the world is frozen.</summary>
+    public bool IsPaused => _pausedBy >= 0;
+
+    /// <summary>True while the waves-survived screen waits for the players' choice.</summary>
+    public bool IsShowingVictory => _victoryOpen;
+
+    /// <summary>Set when the pause menu asked for the settings; the game shows them, then comes back.</summary>
+    public bool SettingsRequested { get; private set; }
+
+    /// <summary>Set when the pause menu asked to quit to the main menu.</summary>
+    public bool QuitRequested { get; private set; }
+
+    /// <summary>Call when coming back from the settings; the run stays paused.</summary>
+    public void ReturnFromSettings()
+    {
+        SettingsRequested = false;
+    }
+
+    // Either player can pause (Esc / Start); the inputs were read last frame.
+    private bool TryPause()
+    {
+        // The key that resumed is still marked as pressed until the inputs are read again.
+        if (_justResumed)
+        {
+            _justResumed = false;
+            return false;
+        }
+
+        for (var i = 0; i < _players.Count; i++)
+        {
+            if (_players[i].Input.PausePressed)
+            {
+                _pausedBy = i;
+                _pauseOverlay.Open();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // The player who paused drives the menu.
+    private void UpdatePause()
+    {
+        if (_pausedBy < 0)
+        {
+            return;
+        }
+
+        var player = _players[_pausedBy];
+        player.Input.Update(player.Position, _cameras[_pausedBy]);
+        switch (_pauseOverlay.Update(player.Input))
+        {
+            case PauseChoice.Resume:
+                _pausedBy = -1;
+                _justResumed = true;
+                break;
+
+            case PauseChoice.Settings:
+                SettingsRequested = true;
+                break;
+
+            case PauseChoice.QuitToMenu:
+                QuitRequested = true;
+                break;
+        }
+    }
+
+    // Player 1 answers for the team: carry on with ever harder waves, or end the run in triumph.
+    private void UpdateVictory()
+    {
+        var playerOne = _players[0];
+        playerOne.Input.Update(playerOne.Position, _cameras[0]);
+        var choice = _victoryOverlay.Update(playerOne.Input);
+        if (choice is null)
+        {
+            return;
+        }
+
+        _victoryOpen = false;
+        if (choice == false)
+        {
+            EndRun($"{_waves!.Wave - 1} WAVES SURVIVED");
+        }
+    }
+
+    private void EndRun(string title)
+    {
+        IsGameOver = true;
+        _gameOverOverlay.Title = title;
+        _gameOverOverlay.SetStats(_waves?.Wave ?? 0, _enemies.KillCount, _elapsedSeconds, _score.Total, _rules.Mode.Name);
+        if (_highScores is not null && _highScores.Qualifies(_rules.Mode.Key, _score.Total))
+        {
+            _initials = new InitialsEntry();
+        }
     }
 
     private void UpdateGameOver()
@@ -717,6 +841,14 @@ public sealed class GameplayScene : IScene
             _gameOverOverlay.Draw(
                 renderer, _data.Game.VirtualWidth, _data.Game.VirtualHeight, _initials,
                 _highScores?.Get(_rules.Mode.Key), _highScores?.Version ?? 0, _newEntryPlace);
+        }
+        else if (_victoryOpen)
+        {
+            _victoryOverlay.Draw(renderer);
+        }
+        else if (IsPaused)
+        {
+            _pauseOverlay.Draw(renderer);
         }
         else if (DisconnectedPlayer >= 0)
         {

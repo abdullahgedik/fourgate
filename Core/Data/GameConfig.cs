@@ -31,6 +31,9 @@ public sealed class GameConfig
     /// <summary>Most enemies allowed in the arena at once; further spawns wait at the doors.</summary>
     public required int MaxAliveEnemies { get; init; }
 
+    /// <summary>Clearing this wave (the last boss wave) shows the waves-survived screen.</summary>
+    public required int CampaignWaves { get; init; }
+
     /// <summary>Seconds of rest between waves, and before the first one.</summary>
     public required float RestCountdownSeconds { get; init; }
 
@@ -47,6 +50,7 @@ public sealed class GameConfig
         DataLoadException.Require(VirtualHeight > 0, file, "virtualHeight", "must be greater than 0");
 
         DataLoadException.Require(MaxAliveEnemies >= 1, file, "maxAliveEnemies", "must be 1 or greater");
+        DataLoadException.Require(CampaignWaves >= 1, file, "campaignWaves", "must be 1 or greater");
         DataLoadException.Require(RestCountdownSeconds >= 0, file, "restCountdownSeconds", "must not be negative");
         DataLoadException.Require(
             Debug is not null && Debug.StartWave >= 1, file, "debug.startWave", "must be 1 or greater");

@@ -15,7 +15,8 @@ public static class TestData
         float reloadMultiplier = 1f,
         bool dashIFrames = true,
         int maxAlive = 60,
-        int startWave = 1)
+        int startWave = 1,
+        int campaignWaves = 50)
     {
         return new GameConfig
         {
@@ -37,6 +38,7 @@ public static class TestData
                 Dash = new DashConfig { Cooldown = 2f, Duration = 0.18f, Distance = 200, IFrames = dashIFrames },
             },
             MaxAliveEnemies = maxAlive,
+            CampaignWaves = campaignWaves,
             RestCountdownSeconds = 5,
             Debug = new DebugConfig { StartWave = startWave },
             Xp = Xp(),
