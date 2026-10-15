@@ -21,6 +21,7 @@ local co-op and menus are still to come.
   wave 40 (summons every zombie kind, each followed by a matching attack; splits on death)
   and The Warden on wave 50 (three phases, borrowed attacks, a sweeping laser)
 - Knockback on hits
+- Particle effects: explosion bursts with smoke, flames over fire pools, burning enemies, ember trails
 - Nine guns (pistol, SMG, shotgun, marksman rifle, assault rifle, sniper rifle,
   flamethrower, rocket launcher, railgun) and four pieces of equipment (hand grenade, molotov, mine,
   explosive barrel), each with levels
@@ -44,7 +45,7 @@ local co-op and menus are still to come.
 
 ## Planned
 
-- Visual polish: particles, hit feedback, fire and explosion animations
+- Visual polish: hit feedback and optional screen shake
 - Sound and sprite art (the game currently draws geometric shapes and is silent)
 - Later: a 3D look in the style of Boxhead 2Play, with the same 2D gameplay
 
@@ -151,7 +152,5 @@ bars, and the simulation runs at a fixed 60 steps per second.
 
 ## Credits
 
-- Built with [MonoGame](https://monogame.net/) and
-  [FontStashSharp](https://github.com/FontStashSharp/FontStashSharp)
-- Text is set in Rajdhani by Indian Type Foundry, used under the SIL Open Font License; the
-  license text is in `Assets/Fonts/Rajdhani-OFL.txt`
+- Built with [MonoGame](https://monogame.net/) and [FontStashSharp](https://github.com/FontStashSharp/FontStashSharp)
+- Font: Rajdhani (SIL Open Font License)

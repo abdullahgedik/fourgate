@@ -13,11 +13,15 @@ public sealed class EnemyShotSystem
 {
     private const int InitialFireballs = 64;
     private const float GlowScale = 1.5f;
+    private const float FireballEmbersPerSecond = 35f;
 
     private static readonly Color CoreColor = new(255, 210, 90);
     private static readonly Color GlowColor = new(255, 90, 30);
 
     private readonly Pool<Fireball> _fireballs = new(InitialFireballs);
+
+    /// <summary>Where visual particles go; null draws none (tests).</summary>
+    public ParticleSystem? Particles { get; set; }
 
     public int FireballCount => _fireballs.Count;
 
@@ -43,6 +47,7 @@ public sealed class EnemyShotSystem
         {
             var fireball = _fireballs[i];
             fireball.Move(deltaSeconds);
+            Particles?.Embers(fireball.Position, FireballEmbersPerSecond, fireball.Radius * 0.5f, deltaSeconds);
             if (fireball.DistanceLeft <= 0f
                 || arena.IsSolid(fireball.Position)
                 || (arena.Obstacles?.StrikeTouching(fireball.Position, fireball.Radius, 0f) ?? false)

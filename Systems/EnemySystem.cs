@@ -54,6 +54,9 @@ public sealed class EnemySystem : IHittableSource
         return enemy;
     }
 
+    /// <summary>Where visual particles go; null draws none (tests).</summary>
+    public ParticleSystem? Particles { get; set; }
+
     /// <summary>Multiplies how fast zombies walk (Nightmare); bosses keep their own pace.</summary>
     public float SpeedMultiplier { get; set; } = 1f;
 
@@ -71,6 +74,11 @@ public sealed class EnemySystem : IHittableSource
         {
             var enemy = _enemies[i];
             enemy.Tick(deltaSeconds);
+            if (enemy.IsBurning)
+            {
+                Particles?.Burning(enemy.Position, enemy.Radius, deltaSeconds);
+            }
+
             if (enemy.ConsumeHit())
             {
                 _audio.PlaySfx(SfxIds.EnemyHit);

@@ -58,6 +58,9 @@ public sealed class HazardSystem
         _pools.Rent().Start(position, radius, seconds, damagePerSecond, ownerIndex, igniteSeconds, hurtsPlayers);
     }
 
+    /// <summary>Where visual particles go; null draws none (tests).</summary>
+    public ParticleSystem? Particles { get; set; }
+
     public void Update(float deltaSeconds, IReadOnlyList<Player> players)
     {
         for (var i = _pools.Count - 1; i >= 0; i--)
@@ -68,6 +71,7 @@ public sealed class HazardSystem
             var burnSeconds = Math.Min(deltaSeconds, Math.Max(0f, pool.SecondsLeft));
             Burn(pool, burnSeconds, players);
 
+            Particles?.FirePool(pool.Position, pool.Radius, pool.Fade, deltaSeconds);
             pool.Tick(deltaSeconds);
             if (pool.IsFinished)
             {

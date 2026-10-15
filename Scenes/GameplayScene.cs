@@ -89,6 +89,7 @@ public sealed class GameplayScene : IScene
     private readonly EnemyShotSystem _fireballs = new();
     private readonly BossHud _bossHud = new();
     private readonly BossSystem _bosses;
+    private readonly ParticleSystem _particles;
     private readonly ModeRules _rules;
     private readonly string _modeLabel;
     private readonly ScoreSystem _score;
@@ -169,6 +170,14 @@ public sealed class GameplayScene : IScene
         _explosives.AddSource(_mines);
         _hazards.AddSource(_mines);
         _flames = new FlameSystem(_arena, _hazards);
+
+        // Visual only, with its own random source so effects never change a seeded run.
+        _particles = new ParticleSystem(new GameRandom(Environment.TickCount));
+        _hazards.Particles = _particles;
+        _explosives.Particles = _particles;
+        _enemies.Particles = _particles;
+        _fireballs.Particles = _particles;
+        _flames.Particles = _particles;
         _flames.AddSource(_enemies);
         _flames.AddSource(_mines);
         _flames.OneShotKills = config.Debug.OneShotKills;
@@ -320,6 +329,7 @@ public sealed class GameplayScene : IScene
         _hazards.Update(deltaSeconds, _players);
         _mines.Update(deltaSeconds, _players);
         _flames.Update(deltaSeconds);
+        _particles.Update(deltaSeconds);
         _drops.Update(deltaSeconds, _players);
 
         LayOutViews();
@@ -766,6 +776,7 @@ public sealed class GameplayScene : IScene
             _shots.Draw(renderer);
             _flames.Draw(renderer);
             _explosives.Draw(renderer);
+            _particles.Draw(renderer);
             DrawPlayers(renderer);
             renderer.End();
         }

@@ -11,6 +11,9 @@ namespace Fourgate.Systems;
 /// <summary>Owns the flames of stream weapons: their flight, the burning, and the fire trail they leave.</summary>
 public sealed class FlameSystem
 {
+    // Embers flying off each flame of a flamethrower stream.
+    private const float FlameEmbersPerSecond = 6f;
+
     private const int InitialFlames = 128;
 
     private readonly Arena _arena;
@@ -48,12 +51,16 @@ public sealed class FlameSystem
         _flames.Rent().Launch(shot);
     }
 
+    /// <summary>Where visual particles go; null draws none (tests).</summary>
+    public ParticleSystem? Particles { get; set; }
+
     public void Update(float deltaSeconds)
     {
         for (var i = _flames.Count - 1; i >= 0; i--)
         {
             var flame = _flames[i];
             flame.Advance(deltaSeconds);
+            Particles?.Embers(flame.Position, FlameEmbersPerSecond, flame.Radius * 0.25f, deltaSeconds);
 
             if (HitsWall(flame))
             {

@@ -48,7 +48,8 @@ public sealed class FirePool
         }
     }
 
-    private float Fade => Math.Clamp(SecondsLeft / FadeSeconds, 0f, 1f);
+    /// <summary>1 while burning fully, falling to 0 as the pool dies out.</summary>
+    public float Fade => Math.Clamp(SecondsLeft / FadeSeconds, 0f, 1f);
 
     public void Start(
         Vector2 position,
