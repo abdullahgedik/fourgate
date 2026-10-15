@@ -416,6 +416,7 @@ public sealed class ShotSystem
         {
             // The rest of this frame's travel is dropped; the bullet continues next frame.
             Particles?.Sparks(bullet.Position);
+            _audio?.PlaySfx(SfxIds.BulletRicochet);
             bullet.Bounce(Reflect(direction, wallNormal));
         }
         else if (atWall || outOfRange)

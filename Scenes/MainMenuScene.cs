@@ -1,3 +1,4 @@
+using Fourgate.Core.Audio;
 using Fourgate.Core.Data;
 using Fourgate.Core.Input;
 using Fourgate.Core.Rendering;
@@ -22,6 +23,7 @@ public sealed class MainMenuScene : IScene
         MainMenuChoice.Play, MainMenuChoice.HighScores, MainMenuChoice.Settings, MainMenuChoice.Quit,
     };
 
+    private readonly IAudioManager _audio;
     private readonly IPlayerInput _input;
     private readonly Camera2D _camera;
     private readonly int _screenWidth;
@@ -29,9 +31,12 @@ public sealed class MainMenuScene : IScene
     private readonly MenuList _menu;
     private int _selected;
 
-    public MainMenuScene(IPlayerInput input, GameConfig config, MainMenuChoice highlighted = MainMenuChoice.Play)
+    public MainMenuScene(
+        IPlayerInput input, GameConfig config, MainMenuChoice highlighted = MainMenuChoice.Play, IAudioManager? audio = null)
     {
         _input = input;
+        _audio = audio ?? new NullAudioManager();
+        _audio.PlayMusic(MusicIds.Menu);
         _screenWidth = config.VirtualWidth;
         _screenHeight = config.VirtualHeight;
         _camera = new Camera2D(new Rectangle(0, 0, _screenWidth, _screenHeight), config.Camera);
@@ -43,6 +48,20 @@ public sealed class MainMenuScene : IScene
     public MainMenuChoice? Choice { get; private set; }
 
     public void Update(float deltaSeconds)
+    {
+        var before = _selected;
+        UpdateMenu(deltaSeconds);
+        if (Choice is not null)
+        {
+            _audio.PlaySfx(SfxIds.UiConfirm);
+        }
+        else if (_selected != before)
+        {
+            _audio.PlaySfx(SfxIds.UiMove);
+        }
+    }
+
+    private void UpdateMenu(float deltaSeconds)
     {
         _input.Update(_camera.ViewCenter, _camera);
         if (_input.MenuUpPressed)

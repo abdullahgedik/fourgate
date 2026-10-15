@@ -326,6 +326,8 @@ public sealed class BossSystem
     /// </summary>
     public void OnBossDied(in EnemyDeath death, Arena arena)
     {
+        _audio.PlaySfx(SfxIds.BossDeath);
+        _audio.PlayMusic(MusicIds.Gameplay);
         var config = FindConfig(death.Config);
         var spawn = config?.DeathSpawn;
         if (spawn is null)
@@ -340,8 +342,6 @@ public sealed class BossSystem
             var point = death.Position + Direction(angle) * spawn.SpawnRadius;
             _enemies.Spawn(enemy, arena.ResolveMovement(point, enemy.Radius));
         }
-
-        _audio.PlaySfx(SfxIds.BossAttack);
     }
 
     // A plate across the armored front, so players can see which side to avoid. Its inner edge
@@ -393,6 +393,8 @@ public sealed class BossSystem
         }
 
         Boss = found;
+        _audio.PlaySfx(SfxIds.BossAppear);
+        _audio.PlayMusic(MusicIds.Boss);
         Config = FindConfig(found.Config);
         found.ScaleHp(HpMultiplier);
         _state = State.Walking;
@@ -571,7 +573,7 @@ public sealed class BossSystem
         _lastFromRound = null;
         _nextInSequence = 0;
         boss.IsInvulnerable = true;
-        _audio.PlaySfx(SfxIds.BossTelegraph);
+        _audio.PlaySfx(SfxIds.BossPhase);
         return true;
     }
 

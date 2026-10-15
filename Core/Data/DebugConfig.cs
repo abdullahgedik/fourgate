@@ -18,6 +18,9 @@ public sealed class DebugConfig
     /// <summary>In co-op, player 2 can also be played from the keyboard (IJKL, U, O, P...) for testing without a gamepad.</summary>
     public bool KeyboardPlayerTwo { get; init; }
 
+    /// <summary>Lists the latest sound events on screen (there are no sounds yet).</summary>
+    public bool ShowAudioEvents { get; init; }
+
     /// <summary>Wave number the run starts at.</summary>
     public int StartWave { get; init; } = 1;
 

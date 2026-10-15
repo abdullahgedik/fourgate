@@ -7,6 +7,7 @@ using Fourgate.Core.Persistence;
 using Fourgate.Core.Rendering;
 using Fourgate.Scenes;
 using Fourgate.Systems;
+using Fourgate.UI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -28,7 +29,9 @@ public sealed class FourgateGame : Game
     private readonly WindowHotkeys _hotkeys = new();
     private readonly DebugHotkeys _debugHotkeys = new();
     private int _debugEnemyIndex;
-    private readonly IAudioManager _audio = new NullAudioManager();
+    private readonly IAudioManager _audio;
+    private readonly AudioEventLog? _audioLog;
+    private readonly AudioEventOverlay _audioOverlay = new();
     private readonly GameData _data;
 
     private SpriteBatch? _spriteBatch;
@@ -54,6 +57,17 @@ public sealed class FourgateGame : Game
     public FourgateGame()
     {
         _data = DataLoader.LoadAll(DataLoader.DefaultDirectory);
+
+        // No real sounds yet; with debug.showAudioEvents on, the latest sound events are listed on screen.
+        if (_data.Game.Debug.ShowAudioEvents)
+        {
+            _audioLog = new AudioEventLog(new NullAudioManager());
+            _audio = _audioLog;
+        }
+        else
+        {
+            _audio = new NullAudioManager();
+        }
         _display = new DisplayManager(new GraphicsDeviceManager(this));
 
         Content.RootDirectory = "Content";
@@ -86,7 +100,8 @@ public sealed class FourgateGame : Game
         _highScores = _highScoreStore.Load();
         _settings = _settingsStore.Load();
         ApplyDisplay(_settings);
-        _scene = new MainMenuScene(_playerOneInput, _data.Game);
+        ApplyVolumes();
+        _scene = new MainMenuScene(_playerOneInput, _data.Game, MainMenuChoice.Play, _audio);
     }
 
     protected override void UnloadContent()
@@ -140,16 +155,16 @@ public sealed class FourgateGame : Game
             switch (choice)
             {
                 case MainMenuChoice.Play:
-                    _scene = new ModeSelectScene(_playerOneInput, _data.Game, _lastChosenPlayers, _lastMode);
+                    _scene = new ModeSelectScene(_playerOneInput, _data.Game, _lastChosenPlayers, _lastMode, _audio);
                     break;
 
                 case MainMenuChoice.HighScores:
-                    _scene = new HighScoresScene(_playerOneInput, _highScores, _data.Game);
+                    _scene = new HighScoresScene(_playerOneInput, _highScores, _data.Game, _audio);
                     break;
 
                 case MainMenuChoice.Settings:
                     _scene = new SettingsScene(
-                        _playerOneInput, _data.Game, _settings, _display.AvailableResolutions, ApplyDisplay);
+                        _playerOneInput, _data.Game, _settings, _display.AvailableResolutions, ApplyDisplay, _audio);
                     break;
 
                 case MainMenuChoice.Quit:
@@ -163,6 +178,7 @@ public sealed class FourgateGame : Game
         if (_scene is SettingsScene { IsDone: true })
         {
             _settingsStore.Save(_settings);
+            ApplyVolumes();
             if (_suspendedRun is not null)
             {
                 _suspendedRun.ReturnFromSettings();
@@ -171,7 +187,7 @@ public sealed class FourgateGame : Game
             }
             else
             {
-                _scene = new MainMenuScene(_playerOneInput, _data.Game, MainMenuChoice.Settings);
+                _scene = new MainMenuScene(_playerOneInput, _data.Game, MainMenuChoice.Settings, _audio);
             }
 
             return;
@@ -180,20 +196,20 @@ public sealed class FourgateGame : Game
         if (_scene is GameplayScene { SettingsRequested: true } paused)
         {
             _suspendedRun = paused;
-            _scene = new SettingsScene(_playerOneInput, _data.Game, _settings, _display.AvailableResolutions, ApplyDisplay);
+            _scene = new SettingsScene(_playerOneInput, _data.Game, _settings, _display.AvailableResolutions, ApplyDisplay, _audio);
             return;
         }
 
         if (_scene is GameplayScene { QuitRequested: true })
         {
-            _scene = new MainMenuScene(_playerOneInput, _data.Game);
+            _scene = new MainMenuScene(_playerOneInput, _data.Game, MainMenuChoice.Play, _audio);
             return;
         }
 
         if (_scene is ModeSelectScene { BackRequested: true } back)
         {
             _lastMode = back.Mode;
-            _scene = new MainMenuScene(_playerOneInput, _data.Game);
+            _scene = new MainMenuScene(_playerOneInput, _data.Game, MainMenuChoice.Play, _audio);
             return;
         }
 
@@ -207,12 +223,18 @@ public sealed class FourgateGame : Game
         }
         else if (_scene is HighScoresScene { IsDone: true })
         {
-            _scene = new MainMenuScene(_playerOneInput, _data.Game, MainMenuChoice.HighScores);
+            _scene = new MainMenuScene(_playerOneInput, _data.Game, MainMenuChoice.HighScores, _audio);
         }
         else if (_scene is GameplayScene { RestartRequested: true })
         {
-            _scene = new ModeSelectScene(_playerOneInput, _data.Game, _lastChosenPlayers, _lastMode);
+            _scene = new ModeSelectScene(_playerOneInput, _data.Game, _lastChosenPlayers, _lastMode, _audio);
         }
+    }
+
+    private void ApplyVolumes()
+    {
+        var max = (float)GameSettings.MaxVolume;
+        _audio.SetVolumes(_settings.MasterVolume / max, _settings.MusicVolume / max, _settings.SfxVolume / max);
     }
 
     private void ApplyDisplay(GameSettings settings)
@@ -295,6 +317,10 @@ public sealed class FourgateGame : Game
 
         _screen.Begin(BackgroundColor);
         _scene.Draw(_renderer);
+        if (_audioLog is not null)
+        {
+            _audioOverlay.Draw(_renderer, _audioLog, _data.Game.VirtualHeight);
+        }
         _screen.Present(_spriteBatch);
 
         base.Draw(gameTime);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Fourgate.Core.Audio;
 using Fourgate.Core.Data;
 using Fourgate.Core.Input;
 using Fourgate.Core.Persistence;
@@ -32,6 +33,7 @@ public sealed class SettingsScene : IScene
     private static readonly Color TitleColor = new(240, 240, 245);
     private static readonly Color HintColor = new(150, 155, 170);
 
+    private readonly IAudioManager _audio;
     private readonly IPlayerInput _input;
     private readonly GameSettings _settings;
     private readonly IReadOnlyList<Point> _resolutions;
@@ -43,6 +45,7 @@ public sealed class SettingsScene : IScene
     private readonly string[] _labels = new string[RowCount];
     private readonly bool[] _disabled = new bool[RowCount];
     private int _selected;
+    private int _labelVersion;
 
     /// <param name="input">Player 1's input.</param>
     /// <param name="config">Game settings (screen size, camera).</param>
@@ -51,9 +54,10 @@ public sealed class SettingsScene : IScene
     /// <param name="applyDisplay">Applies the window mode and size right away.</param>
     public SettingsScene(
         IPlayerInput input, GameConfig config, GameSettings settings, IReadOnlyList<Point> resolutions,
-        Action<GameSettings> applyDisplay)
+        Action<GameSettings> applyDisplay, IAudioManager? audio = null)
     {
         _input = input;
+        _audio = audio ?? new NullAudioManager();
         _settings = settings;
         _resolutions = resolutions;
         _applyDisplay = applyDisplay;
@@ -68,6 +72,25 @@ public sealed class SettingsScene : IScene
     public bool IsDone { get; private set; }
 
     public void Update(float deltaSeconds)
+    {
+        var before = _selected;
+        var labelsBefore = _labelVersion;
+        UpdateMenu(deltaSeconds);
+        if (IsDone)
+        {
+            _audio.PlaySfx(SfxIds.UiBack);
+        }
+        else if (_labelVersion != labelsBefore)
+        {
+            _audio.PlaySfx(SfxIds.UiConfirm);
+        }
+        else if (_selected != before)
+        {
+            _audio.PlaySfx(SfxIds.UiMove);
+        }
+    }
+
+    private void UpdateMenu(float deltaSeconds)
     {
         _input.Update(_camera.ViewCenter, _camera);
         if (_input.BackPressed)
@@ -214,6 +237,7 @@ public sealed class SettingsScene : IScene
     // Built only when something changes, so drawing allocates nothing.
     private void RefreshLabels()
     {
+        _labelVersion++;
         var windowed = _settings.WindowMode == WindowMode.Windowed;
         _labels[WindowRow] = $"WINDOW:  {(windowed ? "WINDOWED" : "BORDERLESS FULLSCREEN")}";
         _labels[ResolutionRow] = $"WINDOW SIZE:  {_settings.ResolutionWidth} × {_settings.ResolutionHeight}";

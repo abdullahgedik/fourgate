@@ -10,7 +10,7 @@
     ]
   },
   "camera": { "zoom": 1.15, "leadFraction": 0.35, "leadMaxDistance": 260, "smoothing": 10, "edgeMargin": 120 },
-  "debug": { "hotkeys": true, "practiceTargets": false, "oneShotKills": false, "keyboardPlayerTwo": true },
+  "debug": { "hotkeys": true, "practiceTargets": false, "oneShotKills": false, "keyboardPlayerTwo": true, "showAudioEvents": false },
   "maxAliveEnemies": 60,
   "campaignWaves": 50,
   "restCountdownSeconds": 5,

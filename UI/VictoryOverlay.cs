@@ -24,6 +24,9 @@ public sealed class VictoryOverlay
     private string _scoreText = string.Empty;
     private int _selected;
 
+    /// <summary>The highlighted button.</summary>
+    public int Selected => _selected;
+
     public VictoryOverlay(int screenWidth, int screenHeight)
     {
         _screenWidth = screenWidth;

@@ -118,6 +118,7 @@ The `debug` section of `Data/game.json` has switches for testing:
 | `practiceTargets` | Adds a still and a moving dummy target |
 | `oneShotKills` | Every bullet kills what it hits |
 | `disableWaves` | Leaves the arena empty |
+| `showAudioEvents` | Lists the latest sound events on screen (the game has no sounds yet) |
 | `keyboardPlayerTwo` | In co-op, player 2 can also use IJKL to move, U fire, O dash, P reload, Y equipment, H next equipment, N / M guns |
 | `startWave` | Starts the run at the given wave |
 | `seed` | Fixes the random seed so a run can be reproduced |

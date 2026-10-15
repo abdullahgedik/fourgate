@@ -24,6 +24,9 @@ public sealed class Weapon
     private const float DualWieldOffset = 7f;
 
     private readonly GameConfig _rules;
+    // One sound id per weapon, built once.
+    private readonly string _fireSfx;
+    private readonly string _throwSfx;
     private readonly IAudioManager _audio;
     private readonly GameRandom? _random;
     private float _cooldown;
@@ -43,6 +46,8 @@ public sealed class Weapon
         Config = config;
         _rules = rules;
         _audio = audio;
+        _fireSfx = SfxIds.WeaponFireFor(config.Id);
+        _throwSfx = SfxIds.WeaponThrowFor(config.Id);
         _random = random;
 
         Level = 1;
@@ -190,7 +195,7 @@ public sealed class Weapon
             return;
         }
 
-        _audio.PlaySfx(SfxIds.WeaponFire);
+        _audio.PlaySfx(_fireSfx);
 
         if (_rules.ReloadsEnabled && Magazine == 0)
         {
@@ -356,7 +361,7 @@ public sealed class Weapon
             Stats.FireSeconds,
             Stats.Damage,
             Stats.IgniteSeconds));
-        _audio.PlaySfx(SfxIds.WeaponThrow);
+        _audio.PlaySfx(_throwSfx);
     }
 
     private void FireVolley(Vector2 muzzle, Vector2 direction, float damage, int ownerIndex, IShotHandler shots)

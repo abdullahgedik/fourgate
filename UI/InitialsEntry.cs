@@ -25,6 +25,9 @@ public sealed class InitialsEntry
     private readonly string[] _letterTexts = { "A", "A", "A" };
     private int _slot;
 
+    /// <summary>Goes up whenever a letter or the slot changes (for a menu sound).</summary>
+    public int Changes { get; private set; }
+
     /// <summary>True once confirmed.</summary>
     public bool IsDone { get; private set; }
 
@@ -50,11 +53,13 @@ public sealed class InitialsEntry
         if (input.MenuLeftPressed)
         {
             _slot = (_slot + Length - 1) % Length;
+            Changes++;
         }
 
         if (input.MenuRightPressed)
         {
             _slot = (_slot + 1) % Length;
+            Changes++;
         }
 
         if (input.ConfirmPressed)
@@ -86,5 +91,6 @@ public sealed class InitialsEntry
         letter = (letter + step + 26) % 26;
         _letters[_slot] = (char)('A' + letter);
         _letterTexts[_slot] = _letters[_slot].ToString();
+        Changes++;
     }
 }

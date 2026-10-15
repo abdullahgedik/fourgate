@@ -1,3 +1,4 @@
+using Fourgate.Core.Audio;
 using Fourgate.Core.Data;
 using Fourgate.Core.Input;
 using Fourgate.Core.Rendering;
@@ -52,6 +53,7 @@ public sealed class ModeSelectScene : IScene
     };
 
     private readonly Option[] _options;
+    private readonly IAudioManager _audio;
     private readonly IPlayerInput _input;
     private readonly Camera2D _camera;
     private readonly int _screenWidth;
@@ -68,8 +70,11 @@ public sealed class ModeSelectScene : IScene
     /// <param name="config">Game settings (screen size, camera).</param>
     /// <param name="selectedPlayers">The choice to highlight first, e.g. the last one made.</param>
     /// <param name="mode">The toggles as they were last time.</param>
-    public ModeSelectScene(IPlayerInput input, GameConfig config, int selectedPlayers = 1, RunMode mode = default)
+    public ModeSelectScene(
+        IPlayerInput input, GameConfig config, int selectedPlayers = 1, RunMode mode = default, IAudioManager? audio = null)
     {
+        _audio = audio ?? new NullAudioManager();
+        _audio.PlayMusic(MusicIds.Menu);
         _options = new Option[]
         {
             new(1, "1 PLAYER", "Keyboard + mouse or gamepad", null),
@@ -99,6 +104,25 @@ public sealed class ModeSelectScene : IScene
     public RunMode Mode => new(_fast, _nightmare);
 
     public void Update(float deltaSeconds)
+    {
+        var before = (_row, _selectedCard, _selectedToggle);
+        var modeBefore = Mode;
+        UpdateMenu(deltaSeconds);
+        if (ChosenPlayers is not null || Mode != modeBefore)
+        {
+            _audio.PlaySfx(SfxIds.UiConfirm);
+        }
+        else if (BackRequested)
+        {
+            _audio.PlaySfx(SfxIds.UiBack);
+        }
+        else if ((_row, _selectedCard, _selectedToggle) != before)
+        {
+            _audio.PlaySfx(SfxIds.UiMove);
+        }
+    }
+
+    private void UpdateMenu(float deltaSeconds)
     {
         _input.Update(_camera.ViewCenter, _camera);
         if (_input.BackPressed)

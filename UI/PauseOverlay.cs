@@ -22,6 +22,9 @@ public sealed class PauseOverlay
     private readonly int _screenHeight;
     private int _selected;
 
+    /// <summary>The highlighted button.</summary>
+    public int Selected => _selected;
+
     public PauseOverlay(int screenWidth, int screenHeight)
     {
         _screenWidth = screenWidth;

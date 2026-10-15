@@ -36,4 +36,37 @@ public static class SfxIds
     public const string WeaponEmpty = "weapon_empty";
     public const string WeaponReloadStart = "weapon_reload_start";
     public const string WeaponReloadEnd = "weapon_reload_end";
+
+    // Weapons: firing and throwing also have one id per weapon (see WeaponFireFor / WeaponThrowFor).
+    public const string BulletRicochet = "bullet_ricochet";
+    public const string WeaponUnlocked = "weapon_unlocked";
+    public const string BarrelStruck = "barrel_struck";
+
+    // Bosses.
+    public const string BossAppear = "boss_appear";
+    public const string BossPhase = "boss_phase";
+    public const string BossDeath = "boss_death";
+
+    // Run.
+    public const string Pause = "pause";
+    public const string Resume = "resume";
+    public const string WavesSurvived = "waves_survived";
+    public const string NewHighScore = "new_high_score";
+
+    // Menus.
+    public const string UiMove = "ui_move";
+    public const string UiConfirm = "ui_confirm";
+    public const string UiBack = "ui_back";
+
+    /// <summary>The fire sound of one weapon, e.g. <c>weapon_fire_shotgun</c>; build it once and keep it.</summary>
+    public static string WeaponFireFor(string weaponId)
+    {
+        return WeaponFire + "_" + weaponId;
+    }
+
+    /// <summary>The throw / place sound of one weapon, e.g. <c>weapon_throw_grenade</c>; build it once and keep it.</summary>
+    public static string WeaponThrowFor(string weaponId)
+    {
+        return WeaponThrow + "_" + weaponId;
+    }
 }

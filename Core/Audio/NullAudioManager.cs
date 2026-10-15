@@ -10,4 +10,8 @@ public sealed class NullAudioManager : IAudioManager
     public void PlayMusic(string id)
     {
     }
+
+    public void SetVolumes(float master, float music, float effects)
+    {
+    }
 }

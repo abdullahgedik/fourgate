@@ -125,6 +125,7 @@ public sealed class MineSystem : IHittableSource, IObstacleSource
             if (pushed != position)
             {
                 mine.Strike();
+                _audio.PlaySfx(SfxIds.BarrelStruck);
                 return true;
             }
         }

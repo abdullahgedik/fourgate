@@ -1,3 +1,4 @@
+using Fourgate.Core.Audio;
 using Fourgate.Core.Data;
 using Fourgate.Core.Input;
 using Fourgate.Core.Persistence;
@@ -23,6 +24,7 @@ public sealed class HighScoresScene : IScene
         new(false, false), new(true, false), new(false, true), new(true, true),
     };
 
+    private readonly IAudioManager _audio;
     private readonly IPlayerInput _input;
     private readonly HighScoreTable _table;
     private readonly Camera2D _camera;
@@ -30,9 +32,10 @@ public sealed class HighScoresScene : IScene
     private readonly int _screenHeight;
     private readonly HighScoreListView[] _views = new HighScoreListView[Modes.Length];
 
-    public HighScoresScene(IPlayerInput input, HighScoreTable table, GameConfig config)
+    public HighScoresScene(IPlayerInput input, HighScoreTable table, GameConfig config, IAudioManager? audio = null)
     {
         _input = input;
+        _audio = audio ?? new NullAudioManager();
         _table = table;
         _screenWidth = config.VirtualWidth;
         _screenHeight = config.VirtualHeight;
@@ -52,6 +55,7 @@ public sealed class HighScoresScene : IScene
         if (_input.ConfirmPressed || _input.BackPressed || (_input.HasPointer && _input.FirePressed))
         {
             IsDone = true;
+            _audio.PlaySfx(SfxIds.UiBack);
         }
     }
 

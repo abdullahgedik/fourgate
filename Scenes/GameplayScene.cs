@@ -205,6 +205,7 @@ public sealed class GameplayScene : IScene
         _drops = new DropSystem(config.Crates, _random, audio, _unlocks);
         _upgrades = new UpgradeSystem(data.Upgrades, _unlocks, _random, audio);
         _upgradeScreen = new UpgradeScreen(_upgrades);
+        audio.PlayMusic(MusicIds.Gameplay);
         _pauseOverlay = new PauseOverlay(config.VirtualWidth, config.VirtualHeight);
         _victoryOverlay = new VictoryOverlay(config.VirtualWidth, config.VirtualHeight);
         _settings = settings;
@@ -324,6 +325,7 @@ public sealed class GameplayScene : IScene
                 _victoryShown = true;
                 _victoryOpen = true;
                 _victoryOverlay.Open(_waves.Wave - 1, _score.Total);
+                _audio.PlaySfx(SfxIds.WavesSurvived);
             }
         }
 
@@ -428,6 +430,7 @@ public sealed class GameplayScene : IScene
             {
                 _pausedBy = i;
                 _pauseOverlay.Open();
+                _audio.PlaySfx(SfxIds.Pause);
                 return true;
             }
         }
@@ -445,19 +448,31 @@ public sealed class GameplayScene : IScene
 
         var player = _players[_pausedBy];
         player.Input.Update(player.Position, _cameras[_pausedBy]);
+        var before = _pauseOverlay.Selected;
         switch (_pauseOverlay.Update(player.Input))
         {
             case PauseChoice.Resume:
                 _pausedBy = -1;
                 _justResumed = true;
+                _audio.PlaySfx(SfxIds.Resume);
                 break;
 
             case PauseChoice.Settings:
                 SettingsRequested = true;
+                _audio.PlaySfx(SfxIds.UiConfirm);
                 break;
 
             case PauseChoice.QuitToMenu:
                 QuitRequested = true;
+                _audio.PlaySfx(SfxIds.UiConfirm);
+                break;
+
+            default:
+                if (_pauseOverlay.Selected != before)
+                {
+                    _audio.PlaySfx(SfxIds.UiMove);
+                }
+
                 break;
         }
     }
@@ -467,13 +482,20 @@ public sealed class GameplayScene : IScene
     {
         var playerOne = _players[0];
         playerOne.Input.Update(playerOne.Position, _cameras[0]);
+        var before = _victoryOverlay.Selected;
         var choice = _victoryOverlay.Update(playerOne.Input);
         if (choice is null)
         {
+            if (_victoryOverlay.Selected != before)
+            {
+                _audio.PlaySfx(SfxIds.UiMove);
+            }
+
             return;
         }
 
         _victoryOpen = false;
+        _audio.PlaySfx(SfxIds.UiConfirm);
         if (choice == false)
         {
             EndRun($"{_waves!.Wave - 1} WAVES SURVIVED");
@@ -485,9 +507,11 @@ public sealed class GameplayScene : IScene
         IsGameOver = true;
         _gameOverOverlay.Title = title;
         _gameOverOverlay.SetStats(_waves?.Wave ?? 0, _enemies.KillCount, _elapsedSeconds, _score.Total, _rules.Mode.Name);
+        _audio.PlayMusic(MusicIds.GameOver);
         if (_highScores is not null && _highScores.Qualifies(_rules.Mode.Key, _score.Total))
         {
             _initials = new InitialsEntry();
+            _audio.PlaySfx(SfxIds.NewHighScore);
         }
     }
 
@@ -498,10 +522,16 @@ public sealed class GameplayScene : IScene
         {
             var playerOne = _players[0];
             playerOne.Input.Update(playerOne.Position, _cameras[0]);
+            var changesBefore = _initials.Changes;
             _initials.Update(playerOne.Input);
             if (_initials.IsDone)
             {
                 RecordHighScore(_initials.Initials);
+                _audio.PlaySfx(SfxIds.UiConfirm);
+            }
+            else if (_initials.Changes != changesBefore)
+            {
+                _audio.PlaySfx(SfxIds.UiMove);
             }
 
             return;
@@ -682,6 +712,11 @@ public sealed class GameplayScene : IScene
             var position = _arena.Center + new Vector2(placed * WeaponCrateSpacing, 0f);
             _drops.SpawnWeaponCrate(weapons[i], _arena.PlaceOnFloor(position, Crate.HalfSize));
             placed++;
+        }
+
+        if (placed > 0)
+        {
+            _audio.PlaySfx(SfxIds.WeaponUnlocked);
         }
     }
 
