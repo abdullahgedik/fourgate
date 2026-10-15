@@ -39,14 +39,15 @@ public static class WaveMath
         IReadOnlyList<EnemyConfig> enemies,
         float newerTypeBias,
         GameRandom random,
-        List<EnemyConfig> result)
+        List<EnemyConfig> result,
+        float unlockWaveMultiplier = 1f)
     {
         while (true)
         {
             var totalWeight = 0f;
             for (var i = 0; i < enemies.Count; i++)
             {
-                totalWeight += Weight(enemies[i], wave, budget, enemies, newerTypeBias);
+                totalWeight += Weight(enemies[i], wave, budget, enemies, newerTypeBias, unlockWaveMultiplier);
             }
 
             if (totalWeight <= 0f)
@@ -58,7 +59,7 @@ public static class WaveMath
             EnemyConfig? pick = null;
             for (var i = 0; i < enemies.Count; i++)
             {
-                var weight = Weight(enemies[i], wave, budget, enemies, newerTypeBias);
+                var weight = Weight(enemies[i], wave, budget, enemies, newerTypeBias, unlockWaveMultiplier);
                 if (weight <= 0f)
                 {
                     continue;
@@ -82,11 +83,19 @@ public static class WaveMath
         }
     }
 
+    // The wave a type unlocks at, with a mode's unlock multiplier (rounded up, at least 1).
+    private static int UnlockWave(EnemyConfig enemy, float unlockWaveMultiplier)
+    {
+        return Math.Max(1, (int)MathF.Ceiling(enemy.UnlockWave * unlockWaveMultiplier - 0.0001f));
+    }
+
     // Zero when the type is locked or too expensive for what is left.
     private static float Weight(
-        EnemyConfig enemy, int wave, float budget, IReadOnlyList<EnemyConfig> enemies, float newerTypeBias)
+        EnemyConfig enemy, int wave, float budget, IReadOnlyList<EnemyConfig> enemies, float newerTypeBias,
+        float unlockWaveMultiplier)
     {
-        if (enemy.UnlockWave > wave || enemy.Cost > budget)
+        var unlock = UnlockWave(enemy, unlockWaveMultiplier);
+        if (unlock > wave || enemy.Cost > budget)
         {
             return 0f;
         }
@@ -95,7 +104,8 @@ public static class WaveMath
         var olderTypes = 0;
         for (var i = 0; i < enemies.Count; i++)
         {
-            if (enemies[i].UnlockWave <= wave && enemies[i].UnlockWave < enemy.UnlockWave)
+            var other = UnlockWave(enemies[i], unlockWaveMultiplier);
+            if (other <= wave && other < unlock)
             {
                 olderTypes++;
             }

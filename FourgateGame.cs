@@ -5,6 +5,7 @@ using Fourgate.Core.Data;
 using Fourgate.Core.Input;
 using Fourgate.Core.Rendering;
 using Fourgate.Scenes;
+using Fourgate.Systems;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -37,6 +38,7 @@ public sealed class FourgateGame : Game
     private IPlayerInput[] _singleInputs = Array.Empty<IPlayerInput>();
     private IPlayerInput[] _coopInputs = Array.Empty<IPlayerInput>();
     private int _lastChosenPlayers = 1;
+    private RunMode _lastMode;
 
     // The run in progress, for the debug hotkeys; null on the start screen.
     private GameplayScene? CurrentRun => _scene as GameplayScene;
@@ -118,14 +120,15 @@ public sealed class FourgateGame : Game
             return;
         }
 
-        if (_scene is ModeSelectScene { ChosenPlayers: { } players })
+        if (_scene is ModeSelectScene { ChosenPlayers: { } players } select)
         {
             _lastChosenPlayers = players;
-            _scene = new GameplayScene(_data, players == 2 ? _coopInputs : _singleInputs, _audio);
+            _lastMode = select.Mode;
+            _scene = new GameplayScene(_data, players == 2 ? _coopInputs : _singleInputs, _audio, _lastMode);
         }
         else if (_scene is GameplayScene { RestartRequested: true })
         {
-            _scene = new ModeSelectScene(_playerOneInput, _data.Game, _lastChosenPlayers);
+            _scene = new ModeSelectScene(_playerOneInput, _data.Game, _lastChosenPlayers, _lastMode);
         }
     }
 

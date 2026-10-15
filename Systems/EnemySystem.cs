@@ -54,6 +54,9 @@ public sealed class EnemySystem : IHittableSource
         return enemy;
     }
 
+    /// <summary>Multiplies how fast zombies walk (Nightmare); bosses keep their own pace.</summary>
+    public float SpeedMultiplier { get; set; } = 1f;
+
     /// <summary>Where ranged enemies' fireballs go; without it they wind up but throw nothing.</summary>
     public EnemyShotSystem? Fireballs { get; set; }
 
@@ -284,7 +287,7 @@ public sealed class EnemySystem : IHittableSource
         return nearest;
     }
 
-    private static void MoveTowardNearestPlayer(
+    private void MoveTowardNearestPlayer(
         Enemy enemy, IReadOnlyList<Player> players, Arena arena, float deltaSeconds)
     {
         Player? target = null;
@@ -318,7 +321,7 @@ public sealed class EnemySystem : IHittableSource
             if (cornerDistance > 0.0001f)
             {
                 enemy.Facing = MathF.Atan2(toCorner.Y, toCorner.X);
-                enemy.Position += toCorner / cornerDistance * Math.Min(enemy.Config.Speed * deltaSeconds, cornerDistance);
+                enemy.Position += toCorner / cornerDistance * Math.Min(enemy.Config.Speed * SpeedMultiplier * deltaSeconds, cornerDistance);
             }
 
             return;
@@ -332,7 +335,7 @@ public sealed class EnemySystem : IHittableSource
             return;
         }
 
-        var step = Math.Min(enemy.Config.Speed * deltaSeconds, gap);
+        var step = Math.Min(enemy.Config.Speed * SpeedMultiplier * deltaSeconds, gap);
         enemy.Facing = MathF.Atan2(target.Position.Y - enemy.Position.Y, target.Position.X - enemy.Position.X);
         enemy.Position += (target.Position - enemy.Position) / distance * step;
     }

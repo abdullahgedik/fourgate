@@ -33,12 +33,13 @@ local co-op and menus are still to come.
 - Upgrade cards between waves: three random cards per pick, covering weapon levels and
   player stats
 - Health, ammo, upgrade and weapon crates
-- A start screen to choose 1 player or 2-player local co-op (vertical split-screen; player 2 on a gamepad)
+- A start screen to choose 1 player or 2-player local co-op (vertical split-screen; player 2 on a
+  gamepad), with Fast and Nightmare mode toggles
 - A game over screen with wave reached, kills and time
 
 ## Planned
 
-- Fast and Nightmare modes, a score, local high scores, a main menu, pause and settings
+- A score, local high scores, a main menu, pause and settings
 - Visual polish: particles, hit feedback, fire and explosion animations
 - Sound and sprite art (the game currently draws geometric shapes and is silent)
 - Later: a 3D look in the style of Boxhead 2Play, with the same 2D gameplay
@@ -77,7 +78,7 @@ dotnet test tests/Fourgate.Tests
 | Use equipment (grenade) | G | Left trigger |
 | Next equipment | T | D-pad left / right |
 | Choose an upgrade card | Click, or A / D then Enter | Left / right, then A |
-| Choose on the start screen | A / D or arrows, Enter or click | D-pad, A |
+| Start screen | Arrows / WASD to move, Enter to start (on a card) or switch a mode toggle, or click | D-pad or left stick, A |
 | Back to the start screen after game over | Enter | A or Start |
 | Borderless fullscreen | F11 | |
 | Cycle window size | F9 | |
@@ -96,6 +97,7 @@ game can be tuned without touching code:
 | `enemies.json` | Enemy types |
 | `bosses.json` | Bosses, the wave each leads and their attack patterns |
 | `waves.json` | Spawn budget curve and wave pacing |
+| `modes.json` | Fast and Nightmare mode rules |
 | `upgrades.json` | Upgrade cards |
 
 A bad value is reported at startup with the file, the field and the reason.

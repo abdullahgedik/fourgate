@@ -53,6 +53,10 @@ public interface IPlayerInput
     /// <summary>Move the menu selection one step right.</summary>
     bool MenuRightPressed { get; }
 
+    bool MenuUpPressed { get; }
+
+    bool MenuDownPressed { get; }
+
     /// <summary>True when any control of this device was used this frame.</summary>
     bool HasActivity { get; }
 

@@ -1,0 +1,10 @@
+{
+  "fast": { "unlockWaveMultiplier": 0.5, "budgetMultiplier": 1.5, "spawnIntervalMultiplier": 0.75 },
+  "nightmare": {
+    "difficultyWaveOffset": 14,
+    "budgetMultiplier": 1.3,
+    "enemySpeedMultiplier": 1.15,
+    "healthCrateChanceMultiplier": 0.6,
+    "allWeaponsAtStart": true
+  }
+}

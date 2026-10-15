@@ -48,6 +48,10 @@ public sealed class DebugKeyboardInput : IPlayerInput
 
     public bool MenuRightPressed { get; private set; }
 
+    public bool MenuUpPressed { get; private set; }
+
+    public bool MenuDownPressed { get; private set; }
+
     public bool HasActivity { get; private set; }
 
     public bool IsConnected => true;
@@ -97,6 +101,8 @@ public sealed class DebugKeyboardInput : IPlayerInput
         ConfirmPressed = FirePressed;
         MenuLeftPressed = WasPressed(keyboard, Keys.J);
         MenuRightPressed = WasPressed(keyboard, Keys.L);
+        MenuUpPressed = WasPressed(keyboard, Keys.I);
+        MenuDownPressed = WasPressed(keyboard, Keys.K);
 
         HasActivity = move != Vector2.Zero || FireHeld || DashPressed || ReloadPressed || EquipmentHeld
             || EquipmentCycle != 0 || WeaponCycle != 0;

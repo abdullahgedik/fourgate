@@ -54,6 +54,10 @@ public sealed class SwitchingInput : IPlayerInput
 
     public bool MenuRightPressed => _current.MenuRightPressed;
 
+    public bool MenuUpPressed => _current.MenuUpPressed;
+
+    public bool MenuDownPressed => _current.MenuDownPressed;
+
     public bool HasActivity => _current.HasActivity;
 
     // Either device will do.

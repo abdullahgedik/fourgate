@@ -35,20 +35,24 @@ public sealed class DropSystem
 
     public int Count => _crates.Count;
 
+    /// <summary>Multiplies the chance that a drop is a health crate (Nightmare lowers it).</summary>
+    public float HealthChanceMultiplier { get; set; } = 1f;
+
     public Crate this[int index] => _crates[index];
 
     /// <summary>
     /// Picks the crate type for a drop from two random rolls (each 0–1): upgrade crates are
     /// rare, and health becomes far more likely while a player is low on HP.
     /// </summary>
-    public static CrateType ChooseType(CratesConfig config, bool anyPlayerLowHp, float upgradeRoll, float healthRoll)
+    public static CrateType ChooseType(
+        CratesConfig config, bool anyPlayerLowHp, float upgradeRoll, float healthRoll, float healthChanceMultiplier = 1f)
     {
         if (upgradeRoll < config.UpgradeCrateChance)
         {
             return CrateType.Upgrade;
         }
 
-        var healthChance = anyPlayerLowHp ? config.HealthChanceLowHp : config.HealthChanceNormal;
+        var healthChance = (anyPlayerLowHp ? config.HealthChanceLowHp : config.HealthChanceNormal) * healthChanceMultiplier;
         return healthRoll < healthChance ? CrateType.Health : CrateType.Ammo;
     }
 
@@ -60,7 +64,8 @@ public sealed class DropSystem
             return;
         }
 
-        var type = ChooseType(_config, AnyLivingPlayerLowOnHp(players), _random.NextFloat(), _random.NextFloat());
+        var type = ChooseType(
+            _config, AnyLivingPlayerLowOnHp(players), _random.NextFloat(), _random.NextFloat(), HealthChanceMultiplier);
 
         // An ammo crate nobody could pick up would only clutter the floor.
         if (type == CrateType.Ammo && !AnyLivingPlayerCanUseAmmoCrate(players))

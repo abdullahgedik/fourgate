@@ -35,6 +35,8 @@ public sealed class GameplayScene : IScene
     private const float EdgeIndicatorRadius = 18f;
     private const float WeaponCrateSpacing = 70f;
     private const float DebugNoticeSeconds = 2f;
+    private const float ModeLabelY = 8f;
+    private const float ModeLabelSize = 22f;
     private const float PlayerSpawnSpacing = 90f;
     private const float BossCrateSpacing = 70f;
     private const float BossIndicatorRadius = 24f;
@@ -58,6 +60,7 @@ public sealed class GameplayScene : IScene
     private static readonly Color ReloadBarBackColor = new(12, 13, 18);
     private static readonly Color ReloadBarFillColor = new(255, 225, 120);
     private static readonly Color DebugNoticeColor = new(255, 225, 120);
+    private static readonly Color ModeLabelColor = new(255, 140, 110);
     private static readonly Color SplitLineColor = new(10, 10, 14);
     private static readonly Color DownedNoticeColor = new(255, 120, 100);
     private static readonly Color BossIndicatorColor = new(230, 50, 45);
@@ -87,6 +90,8 @@ public sealed class GameplayScene : IScene
     private readonly EnemyShotSystem _fireballs = new();
     private readonly BossHud _bossHud = new();
     private readonly BossSystem _bosses;
+    private readonly ModeRules _rules;
+    private readonly string _modeLabel;
     private string _debugNotice = string.Empty;
     private float _debugNoticeLeft;
     private string _disconnectedNotice = string.Empty;
@@ -112,7 +117,8 @@ public sealed class GameplayScene : IScene
     /// <param name="data">All game data.</param>
     /// <param name="inputs">One input per player: one for single-player, two for co-op.</param>
     /// <param name="audio">Audio events.</param>
-    public GameplayScene(GameData data, IReadOnlyList<IPlayerInput> inputs, IAudioManager audio)
+    /// <param name="mode">Fast / Nightmare toggles; Normal when left out.</param>
+    public GameplayScene(GameData data, IReadOnlyList<IPlayerInput> inputs, IAudioManager audio, RunMode mode = default)
     {
         _data = data;
         _floorCellSize = FloorCellSize(data);
@@ -156,7 +162,11 @@ public sealed class GameplayScene : IScene
         _drops = new DropSystem(config.Crates, _random, audio, _unlocks);
         _upgrades = new UpgradeSystem(data.Upgrades, _unlocks, _random, audio);
         _upgradeScreen = new UpgradeScreen(_upgrades);
-        _waves = config.Debug.DisableWaves ? null : new WaveSystem(data, _enemies, _arena, _random, audio);
+        _rules = new ModeRules(data.Modes, mode);
+        _modeLabel = mode == default ? string.Empty : mode.Name;
+        _enemies.SpeedMultiplier = _rules.EnemySpeedMultiplier;
+        _drops.HealthChanceMultiplier = _rules.HealthCrateChanceMultiplier;
+        _waves = config.Debug.DisableWaves ? null : new WaveSystem(data, _enemies, _arena, _random, audio) { Rules = _rules };
 
         var startingWeapon = data.GetWeapon(config.Player.StartingWeapon);
         _startingWeapon = startingWeapon;
@@ -172,6 +182,11 @@ public sealed class GameplayScene : IScene
             var player = new Player(i, inputs[i], config.Player, audio, _arena.Center + new Vector2(offset, 0f));
             _unlocks.Grant(player, startingWeapon);
             AddPlayer(player, new Rectangle(i * viewWidth, 0, viewWidth, config.VirtualHeight), config.Camera);
+        }
+
+        if (_rules.AllWeaponsAtStart)
+        {
+            GiveEveryWeapon();
         }
 
         _lastWavePhase = _waves?.Phase;
@@ -407,7 +422,7 @@ public sealed class GameplayScene : IScene
         var weapons = _data.Weapons;
         for (var i = 0; i < weapons.Count; i++)
         {
-            if (weapons[i].UnlockWave > wave || !_unlocks.Unlock(weapons[i]))
+            if (_rules.UnlockWave(weapons[i].UnlockWave) > wave || !_unlocks.Unlock(weapons[i]))
             {
                 continue;
             }
@@ -443,6 +458,12 @@ public sealed class GameplayScene : IScene
 
     /// <summary>Debug helper: unlocks every weapon and gives it to every player.</summary>
     public void DebugGrantAllWeapons()
+    {
+        GiveEveryWeapon();
+    }
+
+    // Nightmare starts with this; the debug key uses it too.
+    private void GiveEveryWeapon()
     {
         var weapons = _data.Weapons;
         for (var i = 0; i < weapons.Count; i++)
@@ -609,6 +630,13 @@ public sealed class GameplayScene : IScene
         if (_bosses is { Boss: { } boss, Config: { } bossConfig })
         {
             _bossHud.Draw(renderer, bossConfig.DisplayName, boss, _data.Game.VirtualWidth);
+        }
+
+        if (_modeLabel.Length > 0)
+        {
+            renderer.DrawText(
+                _modeLabel, new Vector2(_data.Game.VirtualWidth / 2f, ModeLabelY), ModeLabelSize, ModeLabelColor,
+                TextAlign.Center);
         }
 
         if (_debugNoticeLeft > 0f)

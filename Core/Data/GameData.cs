@@ -15,8 +15,10 @@ public sealed class GameData
         IReadOnlyList<EnemyConfig> enemies,
         WavesConfig waves,
         UpgradesConfig upgrades,
-        IReadOnlyList<BossConfig>? bosses = null)
+        IReadOnlyList<BossConfig>? bosses = null,
+        ModesConfig? modes = null)
     {
+        Modes = modes ?? ModesConfig.Neutral;
         Bosses = bosses ?? new List<BossConfig>();
         Waves = waves;
         Upgrades = upgrades;
@@ -85,6 +87,9 @@ public sealed class GameData
     public UpgradesConfig Upgrades { get; }
 
     public IReadOnlyList<BossConfig> Bosses { get; }
+
+    /// <summary>Rules of the Fast and Nightmare toggles.</summary>
+    public ModesConfig Modes { get; }
 
     /// <summary>The boss leading a wave, or null for a normal wave.</summary>
     public BossConfig? GetBossForWave(int wave)

@@ -59,6 +59,10 @@ public sealed class KeyboardMouseInput : IPlayerInput
 
     public bool MenuRightPressed { get; private set; }
 
+    public bool MenuUpPressed { get; private set; }
+
+    public bool MenuDownPressed { get; private set; }
+
     public bool HasActivity { get; private set; }
 
     public bool IsConnected => true;
@@ -136,6 +140,8 @@ public sealed class KeyboardMouseInput : IPlayerInput
         }
         MenuLeftPressed = WasPressed(keyboard, Keys.A) || WasPressed(keyboard, Keys.Left);
         MenuRightPressed = WasPressed(keyboard, Keys.D) || WasPressed(keyboard, Keys.Right);
+        MenuUpPressed = WasPressed(keyboard, Keys.W) || WasPressed(keyboard, Keys.Up);
+        MenuDownPressed = WasPressed(keyboard, Keys.S) || WasPressed(keyboard, Keys.Down);
 
         HasActivity = move != Vector2.Zero
             || FireHeld
@@ -148,6 +154,8 @@ public sealed class KeyboardMouseInput : IPlayerInput
             || EquipmentCycle != 0
             || MenuLeftPressed
             || MenuRightPressed
+            || MenuUpPressed
+            || MenuDownPressed
             || mouse.X != _previousMouse.X
             || mouse.Y != _previousMouse.Y;
 

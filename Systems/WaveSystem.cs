@@ -34,6 +34,12 @@ public sealed class WaveSystem
     /// <summary>Multiplies every wave's enemy budget (co-op scaling); 1 for one player.</summary>
     public float BudgetMultiplier { get; set; } = 1f;
 
+    /// <summary>Every enemy planned for the current wave, spawned or not.</summary>
+    public IReadOnlyList<EnemyConfig> Composition => _composition;
+
+    /// <summary>Fast / Nightmare rules for this run.</summary>
+    public ModeRules Rules { get; set; } = ModeRules.Normal;
+
     /// <summary>The wave being fought, or the one about to start during a rest.</summary>
     public int Wave { get; private set; }
 
@@ -73,8 +79,10 @@ public sealed class WaveSystem
         var waves = _data.Waves;
 
         // A boss wave sends the boss first, with a smaller budget of other enemies alongside.
+        // Nightmare builds each wave as if it were a later one; bosses keep their own waves.
         _composition.Clear();
-        var budget = WaveMath.Budget(Wave, waves) * BudgetMultiplier;
+        var difficultyWave = Wave + Rules.DifficultyWaveOffset;
+        var budget = WaveMath.Budget(difficultyWave, waves) * BudgetMultiplier * Rules.BudgetMultiplier;
         var boss = _data.GetBossForWave(Wave);
         if (boss is not null)
         {
@@ -82,8 +90,12 @@ public sealed class WaveSystem
             budget *= boss.AddsBudgetFraction;
         }
 
-        WaveMath.Compose(Wave, budget, _data.Enemies, waves.NewerTypeBias, _random, _composition);
-        Spawner.Begin(_composition, WaveMath.SpawnInterval(Wave, waves), WaveMath.GroupSize(Wave, waves));
+        WaveMath.Compose(
+            difficultyWave, budget, _data.Enemies, waves.NewerTypeBias, _random, _composition, Rules.UnlockWaveMultiplier);
+        Spawner.Begin(
+            _composition,
+            WaveMath.SpawnInterval(difficultyWave, waves) * Rules.SpawnIntervalMultiplier,
+            WaveMath.GroupSize(difficultyWave, waves));
 
         Phase = WavePhase.Active;
         HighestStartedWave = Math.Max(HighestStartedWave, Wave);

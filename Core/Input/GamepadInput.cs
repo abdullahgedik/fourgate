@@ -56,6 +56,10 @@ public sealed class GamepadInput : IPlayerInput
 
     public bool MenuRightPressed { get; private set; }
 
+    public bool MenuUpPressed { get; private set; }
+
+    public bool MenuDownPressed { get; private set; }
+
     public bool HasActivity { get; private set; }
 
     public void Update(Vector2 playerPosition, Camera2D camera)
@@ -123,8 +127,16 @@ public sealed class GamepadInput : IPlayerInput
         MenuRightPressed = (state.IsButtonDown(Buttons.DPadRight) && _previous.IsButtonUp(Buttons.DPadRight))
             || (stickX > MenuStickThreshold && previousStickX <= MenuStickThreshold);
 
+        // Stick Y points up.
+        var stickY = state.ThumbSticks.Left.Y;
+        var previousStickY = _previous.ThumbSticks.Left.Y;
+        MenuUpPressed = (state.IsButtonDown(Buttons.DPadUp) && _previous.IsButtonUp(Buttons.DPadUp))
+            || (stickY > MenuStickThreshold && previousStickY <= MenuStickThreshold);
+        MenuDownPressed = (state.IsButtonDown(Buttons.DPadDown) && _previous.IsButtonUp(Buttons.DPadDown))
+            || (stickY < -MenuStickThreshold && previousStickY >= -MenuStickThreshold);
+
         HasActivity = move != Vector2.Zero || aim != Vector2.Zero || FireHeld || DashPressed || ReloadPressed
-            || ConfirmPressed || MenuLeftPressed || MenuRightPressed || WeaponCycle != 0
+            || ConfirmPressed || MenuLeftPressed || MenuRightPressed || MenuUpPressed || MenuDownPressed || WeaponCycle != 0
             || EquipmentHeld || EquipmentCycle != 0;
 
         _previous = state;

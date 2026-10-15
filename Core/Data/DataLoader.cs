@@ -15,6 +15,7 @@ public static class DataLoader
     public const string WavesFileName = "waves.json";
     public const string UpgradesFileName = "upgrades.json";
     public const string BossesFileName = "bosses.json";
+    public const string ModesFileName = "modes.json";
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -36,7 +37,8 @@ public static class DataLoader
         var waves = ParseWaves(ReadFile(dataDirectory, WavesFileName), WavesFileName);
         var upgrades = ParseUpgrades(ReadFile(dataDirectory, UpgradesFileName), UpgradesFileName);
         var bosses = ParseBosses(ReadFile(dataDirectory, BossesFileName), BossesFileName);
-        return new GameData(game, weapons, enemies, waves, upgrades, bosses);
+        var modes = ParseModes(ReadFile(dataDirectory, ModesFileName), ModesFileName);
+        return new GameData(game, weapons, enemies, waves, upgrades, bosses, modes);
     }
 
     /// <summary>Parses and validates <c>upgrades.json</c> content; <paramref name="file"/> is only used in error messages.</summary>
@@ -51,6 +53,14 @@ public static class DataLoader
     public static WavesConfig ParseWaves(string json, string file)
     {
         var config = Parse<WavesConfig>(json, file);
+        config.Validate(file);
+        return config;
+    }
+
+    /// <summary>Parses and validates <c>modes.json</c> content; <paramref name="file"/> is only used in error messages.</summary>
+    public static ModesConfig ParseModes(string json, string file)
+    {
+        var config = Parse<ModesConfig>(json, file);
         config.Validate(file);
         return config;
     }

@@ -1,13 +1,14 @@
 using Fourgate.Core.Data;
 using Fourgate.Core.Input;
 using Fourgate.Core.Rendering;
+using Fourgate.Systems;
 using Microsoft.Xna.Framework;
 
 namespace Fourgate.Scenes;
 
 /// <summary>
-/// Start screen: choose one player or two-player co-op. Grows into the full mode select
-/// (Fast, Nightmare) later.
+/// Start screen: one player or two-player co-op, plus the Fast and Nightmare toggles. Picking
+/// a player card starts the run; the toggles row sits underneath.
 /// </summary>
 public sealed class ModeSelectScene : IScene
 {
@@ -15,11 +16,18 @@ public sealed class ModeSelectScene : IScene
     private const float SubtitleSize = 34f;
     private const float OptionTitleSize = 48f;
     private const float OptionTextSize = 26f;
+    private const float ToggleTextSize = 36f;
     private const float HintSize = 26f;
     private const float CardWidth = 440f;
-    private const float CardHeight = 260f;
+    private const float CardHeight = 240f;
+    private const float ToggleHeight = 80f;
     private const float CardGap = 80f;
     private const float Border = 4f;
+    private const float CardsTop = 0.34f;
+    private const float TogglesTop = 0.61f;
+
+    private const int CardsRow = 0;
+    private const int TogglesRow = 1;
 
     private static readonly Color BackgroundColor = new(20, 21, 28);
     private static readonly Color TitleColor = new(240, 240, 245);
@@ -31,19 +39,32 @@ public sealed class ModeSelectScene : IScene
     private static readonly Color TextColor = new(200, 205, 220);
     private static readonly Color NoteColor = new(130, 134, 150);
     private static readonly Color HintColor = new(150, 155, 170);
+    private static readonly Color ToggleOnColor = new(120, 40, 40);
+    private static readonly Color ToggleOnTextColor = new(255, 170, 140);
+
+    private static readonly Toggle[] Toggles =
+    {
+        new("FAST", "Fast: weapons and enemies unlock about twice as early, more enemies come quicker"),
+        new("NIGHTMARE", "Nightmare: every weapon from the start, waves as hard as wave 15 from wave 1"),
+    };
 
     private readonly Option[] _options;
-
     private readonly IPlayerInput _input;
     private readonly Camera2D _camera;
     private readonly int _screenWidth;
     private readonly int _screenHeight;
-    private int _selected;
+    private readonly string[] _toggleLabels = new string[Toggles.Length];
+    private int _row;
+    private int _selectedCard;
+    private int _selectedToggle;
+    private bool _fast;
+    private bool _nightmare;
 
     /// <param name="input">Player 1's input; drives the menu.</param>
     /// <param name="config">Game settings (screen size, camera).</param>
     /// <param name="selectedPlayers">The choice to highlight first, e.g. the last one made.</param>
-    public ModeSelectScene(IPlayerInput input, GameConfig config, int selectedPlayers = 1)
+    /// <param name="mode">The toggles as they were last time.</param>
+    public ModeSelectScene(IPlayerInput input, GameConfig config, int selectedPlayers = 1, RunMode mode = default)
     {
         _options = new Option[]
         {
@@ -58,39 +79,76 @@ public sealed class ModeSelectScene : IScene
         _screenWidth = config.VirtualWidth;
         _screenHeight = config.VirtualHeight;
         _camera = new Camera2D(new Rectangle(0, 0, _screenWidth, _screenHeight), config.Camera);
-        _selected = selectedPlayers == 2 ? 1 : 0;
+        _selectedCard = selectedPlayers == 2 ? 1 : 0;
+        _fast = mode.Fast;
+        _nightmare = mode.Nightmare;
+        RefreshToggleLabels();
     }
 
     /// <summary>Number of players chosen; null until a choice is confirmed.</summary>
     public int? ChosenPlayers { get; private set; }
 
+    /// <summary>The toggles as they are set now.</summary>
+    public RunMode Mode => new(_fast, _nightmare);
+
     public void Update(float deltaSeconds)
     {
         _input.Update(_camera.ViewCenter, _camera);
+        if (_input.MenuUpPressed)
+        {
+            _row = CardsRow;
+        }
+
+        if (_input.MenuDownPressed)
+        {
+            _row = TogglesRow;
+        }
+
         if (_input.MenuLeftPressed)
         {
-            _selected = 0;
+            SelectInRow(0);
         }
 
         if (_input.MenuRightPressed)
         {
-            _selected = _options.Length - 1;
+            SelectInRow(1);
         }
 
-        var clicked = false;
         if (_input.HasPointer)
         {
-            var hovered = OptionAt(_input.AimScreen);
-            if (hovered >= 0)
+            var card = CardAt(_input.AimScreen);
+            var toggle = ToggleAt(_input.AimScreen);
+            if (card >= 0)
             {
-                _selected = hovered;
-                clicked = _input.FirePressed;
+                _row = CardsRow;
+                _selectedCard = card;
+                if (_input.FirePressed)
+                {
+                    ChosenPlayers = _options[card].Players;
+                    return;
+                }
+            }
+            else if (toggle >= 0)
+            {
+                _row = TogglesRow;
+                _selectedToggle = toggle;
+                if (_input.FirePressed)
+                {
+                    Flip(toggle);
+                }
             }
         }
 
-        if (clicked || _input.ConfirmPressed)
+        if (_input.ConfirmPressed)
         {
-            ChosenPlayers = _options[_selected].Players;
+            if (_row == CardsRow)
+            {
+                ChosenPlayers = _options[_selectedCard].Players;
+            }
+            else
+            {
+                Flip(_selectedToggle);
+            }
         }
     }
 
@@ -100,19 +158,31 @@ public sealed class ModeSelectScene : IScene
         renderer.FillRect(Vector2.Zero, new Vector2(_screenWidth, _screenHeight), BackgroundColor);
 
         var center = _screenWidth / 2f;
-        renderer.DrawText("FOURGATE", new Vector2(center, _screenHeight * 0.18f), TitleSize, TitleColor, TextAlign.Center);
+        renderer.DrawText("FOURGATE", new Vector2(center, _screenHeight * 0.12f), TitleSize, TitleColor, TextAlign.Center);
         renderer.DrawText(
-            "Choose players", new Vector2(center, _screenHeight * 0.18f + 140f), SubtitleSize, SubtitleColor, TextAlign.Center);
+            "Choose players and mode", new Vector2(center, _screenHeight * 0.12f + 140f), SubtitleSize, SubtitleColor,
+            TextAlign.Center);
 
         for (var i = 0; i < _options.Length; i++)
         {
-            DrawOption(renderer, i);
+            DrawCard(renderer, i);
         }
 
+        for (var i = 0; i < Toggles.Length; i++)
+        {
+            DrawToggle(renderer, i);
+        }
+
+        // Explains the highlighted toggle; on the cards row, the mode that will be played.
+        var line = _row == TogglesRow ? Toggles[_selectedToggle].Description : $"Mode: {Mode.Name}";
+        renderer.DrawText(
+            line, new Vector2(center, _screenHeight * TogglesTop + ToggleHeight + 30f), OptionTextSize, NoteColor,
+            TextAlign.Center);
+
         var hint = _input.HasPointer
-            ? "A / D or arrows to choose  ·  Enter or click to start"
-            : "D-pad to choose  ·  A to start";
-        renderer.DrawText(hint, new Vector2(center, _screenHeight * 0.85f), HintSize, HintColor, TextAlign.Center);
+            ? "Arrows / WASD to move  ·  Enter: start on a card, switch on a toggle  ·  or click"
+            : "D-pad to move  ·  A: start on a card, switch on a toggle";
+        renderer.DrawText(hint, new Vector2(center, _screenHeight * 0.9f), HintSize, HintColor, TextAlign.Center);
 
         if (_input.HasPointer)
         {
@@ -123,40 +193,104 @@ public sealed class ModeSelectScene : IScene
         renderer.End();
     }
 
-    private void DrawOption(IRenderer renderer, int index)
+    private void SelectInRow(int index)
+    {
+        if (_row == CardsRow)
+        {
+            _selectedCard = index;
+        }
+        else
+        {
+            _selectedToggle = index;
+        }
+    }
+
+    private void Flip(int toggle)
+    {
+        if (toggle == 0)
+        {
+            _fast = !_fast;
+        }
+        else
+        {
+            _nightmare = !_nightmare;
+        }
+
+        RefreshToggleLabels();
+    }
+
+    // Built only when a toggle changes, so drawing allocates nothing.
+    private void RefreshToggleLabels()
+    {
+        _toggleLabels[0] = $"{Toggles[0].Name}: {(_fast ? "ON" : "OFF")}";
+        _toggleLabels[1] = $"{Toggles[1].Name}: {(_nightmare ? "ON" : "OFF")}";
+    }
+
+    private bool IsOn(int toggle)
+    {
+        return toggle == 0 ? _fast : _nightmare;
+    }
+
+    private void DrawCard(IRenderer renderer, int index)
     {
         var option = _options[index];
-        var selected = index == _selected;
-        var topLeft = CardTopLeft(index);
+        var selected = _row == CardsRow && index == _selectedCard;
+        var topLeft = SlotTopLeft(index, CardsTop);
         var size = new Vector2(CardWidth, CardHeight);
 
         renderer.FillRect(topLeft, size, selected ? BorderSelectedColor : BorderColor);
         renderer.FillRect(topLeft + new Vector2(Border), size - new Vector2(Border * 2f), selected ? CardSelectedColor : CardColor);
 
         var middle = topLeft.X + CardWidth / 2f;
-        renderer.DrawText(option.Title, new Vector2(middle, topLeft.Y + 70f), OptionTitleSize, TitleColor, TextAlign.Center);
+        renderer.DrawText(option.Title, new Vector2(middle, topLeft.Y + 60f), OptionTitleSize, TitleColor, TextAlign.Center);
         renderer.DrawText(
-            option.Description, new Vector2(middle, topLeft.Y + 140f), OptionTextSize, TextColor, TextAlign.Center);
+            option.Description, new Vector2(middle, topLeft.Y + 130f), OptionTextSize, TextColor, TextAlign.Center);
         if (option.Note is not null)
         {
-            renderer.DrawText(option.Note, new Vector2(middle, topLeft.Y + 190f), OptionTextSize, NoteColor, TextAlign.Center);
+            renderer.DrawText(option.Note, new Vector2(middle, topLeft.Y + 175f), OptionTextSize, NoteColor, TextAlign.Center);
         }
     }
 
-    private Vector2 CardTopLeft(int index)
+    private void DrawToggle(IRenderer renderer, int index)
     {
-        var totalWidth = _options.Length * CardWidth + (_options.Length - 1) * CardGap;
-        var left = (_screenWidth - totalWidth) / 2f + index * (CardWidth + CardGap);
-        return new Vector2(left, _screenHeight * 0.42f);
+        var selected = _row == TogglesRow && index == _selectedToggle;
+        var on = IsOn(index);
+        var topLeft = SlotTopLeft(index, TogglesTop);
+        var size = new Vector2(CardWidth, ToggleHeight);
+
+        renderer.FillRect(topLeft, size, selected ? BorderSelectedColor : BorderColor);
+        var fill = on ? ToggleOnColor : selected ? CardSelectedColor : CardColor;
+        renderer.FillRect(topLeft + new Vector2(Border), size - new Vector2(Border * 2f), fill);
+        renderer.DrawText(
+            _toggleLabels[index], new Vector2(topLeft.X + CardWidth / 2f, topLeft.Y + 20f), ToggleTextSize,
+            on ? ToggleOnTextColor : TextColor, TextAlign.Center);
     }
 
-    private int OptionAt(Vector2 screen)
+    // Cards and toggles share the same two columns.
+    private Vector2 SlotTopLeft(int index, float topShare)
     {
-        for (var i = 0; i < _options.Length; i++)
+        var totalWidth = 2 * CardWidth + CardGap;
+        var left = (_screenWidth - totalWidth) / 2f + index * (CardWidth + CardGap);
+        return new Vector2(left, _screenHeight * topShare);
+    }
+
+    private int CardAt(Vector2 screen)
+    {
+        return SlotAt(screen, CardsTop, CardHeight, _options.Length);
+    }
+
+    private int ToggleAt(Vector2 screen)
+    {
+        return SlotAt(screen, TogglesTop, ToggleHeight, Toggles.Length);
+    }
+
+    private int SlotAt(Vector2 screen, float topShare, float height, int count)
+    {
+        for (var i = 0; i < count; i++)
         {
-            var topLeft = CardTopLeft(i);
+            var topLeft = SlotTopLeft(i, topShare);
             if (screen.X >= topLeft.X && screen.X <= topLeft.X + CardWidth
-                && screen.Y >= topLeft.Y && screen.Y <= topLeft.Y + CardHeight)
+                && screen.Y >= topLeft.Y && screen.Y <= topLeft.Y + height)
             {
                 return i;
             }
@@ -166,4 +300,6 @@ public sealed class ModeSelectScene : IScene
     }
 
     private readonly record struct Option(int Players, string Title, string Description, string? Note);
+
+    private readonly record struct Toggle(string Name, string Description);
 }
