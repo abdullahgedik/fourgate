@@ -14,7 +14,7 @@ public sealed class VirtualScreen : IDisposable
     {
         _device = device;
         _target = new RenderTarget2D(
-            device, width, height, false, SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.DiscardContents);
+            device, width, height, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents);
     }
 
     /// <summary>Current placement inside the window; follows window resizes.</summary>

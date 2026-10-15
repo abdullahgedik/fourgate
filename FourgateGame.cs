@@ -37,6 +37,8 @@ public sealed class FourgateGame : Game
     private SpriteBatch? _spriteBatch;
     private VirtualScreen? _screen;
     private ShapeRenderer? _renderer;
+    private Renderer3D? _renderer3D;
+    private bool _use3D;
     private IScene? _scene;
     private IPlayerInput? _playerOneInput;
     private IPlayerInput[] _singleInputs = Array.Empty<IPlayerInput>();
@@ -85,6 +87,7 @@ public sealed class FourgateGame : Game
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _screen = new VirtualScreen(GraphicsDevice, _data.Game.VirtualWidth, _data.Game.VirtualHeight);
         _renderer = new ShapeRenderer(GraphicsDevice, _spriteBatch, File.ReadAllBytes(FontPath));
+        _renderer3D = new Renderer3D(GraphicsDevice, _renderer);
 
         // Single-player: keyboard+mouse or the first gamepad, whichever was used last.
         // Co-op: player 1 on keyboard+mouse, player 2 on the gamepad (and, for testing, debug keys).
@@ -106,6 +109,7 @@ public sealed class FourgateGame : Game
 
     protected override void UnloadContent()
     {
+        _renderer3D?.Dispose();
         _renderer?.Dispose();
         _screen?.Dispose();
         _spriteBatch?.Dispose();
@@ -121,6 +125,11 @@ public sealed class FourgateGame : Game
             {
                 _display.ToggleWindowMode();
                 RememberDisplay();
+            }
+
+            if (_hotkeys.ToggleRendererPressed)
+            {
+                _use3D = !_use3D;
             }
 
             if (_hotkeys.CycleResolutionPressed)
@@ -316,7 +325,7 @@ public sealed class FourgateGame : Game
         }
 
         _screen.Begin(BackgroundColor);
-        _scene.Draw(_renderer);
+        _scene.Draw(_use3D && _renderer3D is not null ? _renderer3D : _renderer);
         if (_audioLog is not null)
         {
             _audioOverlay.Draw(_renderer, _audioLog, _data.Game.VirtualHeight);

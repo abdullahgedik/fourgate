@@ -21,6 +21,25 @@ public interface IRenderer
 
     void FillRect(Vector2 topLeft, Vector2 size, Color color);
 
+    /// <summary>
+    /// Something flying off the floor (a fireball, a thrown grenade): drawn at its position in 2D,
+    /// lifted to <paramref name="height"/> and facing the camera in 3D.
+    /// </summary>
+    void FillCircleRaised(Vector2 position, float height, float radius, Color color);
+
+    /// <summary>A streak flying off the floor (bullets, beams): flat in 2D, lifted to <paramref name="height"/> in 3D.</summary>
+    void DrawLineRaised(Vector2 from, Vector2 to, float height, float thickness, Color color);
+
+    /// <summary>
+    /// A particle over the floor point <paramref name="ground"/>, born at <paramref name="baseHeight"/>
+    /// and risen <paramref name="lift"/> since: in 2D only the rise shows (drawn that far up the screen),
+    /// in 3D it floats at both together, facing the camera.
+    /// </summary>
+    void DrawParticle(Vector2 ground, float baseHeight, float lift, float radius, Color color);
+
+    /// <summary>A block standing on the floor (walls, pillars); flat like a rectangle in 2D.</summary>
+    void FillBox(Vector2 topLeft, Vector2 size, float height, Color color);
+
     void FillCircle(Vector2 center, float radius, Color color);
 
     void DrawLine(Vector2 from, Vector2 to, float thickness, Color color);

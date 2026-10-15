@@ -14,8 +14,9 @@ public sealed class ParticleSystem
 {
     private const int Capacity = 4000;
 
-    // Screen "up" is world -Y; flames and smoke drift that way.
-    private static readonly Vector2 Up = new(0f, -1f);
+    // Starting heights (3D only) of things born in the air: shot impacts and dust.
+    private const float ShotHeight = 18f;
+    private const float DustHeight = 4f;
 
     private static readonly Color FlameHot = new(255, 230, 140);
     private static readonly Color FlameCool = new(210, 45, 10);
@@ -51,6 +52,7 @@ public sealed class ParticleSystem
             {
                 Position = center + direction * _random.Range(0f, radius * 0.25f),
                 Velocity = direction * speed,
+                Climb = _random.Range(0f, 50f),
                 Drag = 5f,
                 Rise = 30f,
                 Life = _random.Range(0.35f, 0.7f),
@@ -87,7 +89,8 @@ public sealed class ParticleSystem
             Add(new Particle
             {
                 Position = center + direction * _random.Range(0f, radius * 0.5f),
-                Velocity = direction * _random.Range(20f, 60f) + Up * _random.Range(10f, 40f),
+                Velocity = direction * _random.Range(20f, 60f),
+                Climb = _random.Range(10f, 40f),
                 Drag = 1.5f,
                 Rise = 15f,
                 Life = _random.Range(0.9f, 1.6f),
@@ -113,7 +116,8 @@ public sealed class ParticleSystem
             Add(new Particle
             {
                 Position = center + RandomInDisc(radius * 0.9f),
-                Velocity = Up * _random.Range(25f, 70f) + RandomDirection() * _random.Range(0f, 12f),
+                Velocity = RandomDirection() * _random.Range(0f, 12f),
+                Climb = _random.Range(25f, 70f),
                 Drag = 0.5f,
                 Rise = 50f,
                 Life = _random.Range(0.35f, 0.75f),
@@ -131,7 +135,7 @@ public sealed class ParticleSystem
             Add(new Particle
             {
                 Position = center + RandomInDisc(radius * 0.7f),
-                Velocity = Up * _random.Range(20f, 45f),
+                Climb = _random.Range(20f, 45f),
                 Drag = 0.5f,
                 Rise = 10f,
                 Life = _random.Range(1f, 1.6f),
@@ -153,7 +157,9 @@ public sealed class ParticleSystem
             Add(new Particle
             {
                 Position = center + RandomInDisc(radius * 0.8f),
-                Velocity = Up * _random.Range(40f, 90f) + RandomDirection() * _random.Range(0f, 15f),
+                BaseHeight = radius * 0.6f,
+                Velocity = RandomDirection() * _random.Range(0f, 15f),
+                Climb = _random.Range(40f, 90f),
                 Drag = 0.5f,
                 Rise = 60f,
                 Life = _random.Range(0.25f, 0.5f),
@@ -168,10 +174,11 @@ public sealed class ParticleSystem
 
     /// <summary>Glowing embers left behind something hot that is moving; call every frame.</summary>
     /// <param name="position">Where it is now.</param>
+    /// <param name="height">How high it flies (3D only).</param>
     /// <param name="perSecond">How many embers a second.</param>
     /// <param name="size">Size of a fresh ember.</param>
     /// <param name="deltaSeconds">Frame time.</param>
-    public void Embers(Vector2 position, float perSecond, float size, float deltaSeconds)
+    public void Embers(Vector2 position, float height, float perSecond, float size, float deltaSeconds)
     {
         var embers = Spawns(perSecond * deltaSeconds);
         for (var i = 0; i < embers; i++)
@@ -179,7 +186,9 @@ public sealed class ParticleSystem
             Add(new Particle
             {
                 Position = position + RandomInDisc(size),
-                Velocity = RandomDirection() * _random.Range(5f, 30f) + Up * 20f,
+                BaseHeight = height,
+                Velocity = RandomDirection() * _random.Range(5f, 30f),
+                Climb = 20f,
                 Drag = 1f,
                 Rise = 20f,
                 Life = _random.Range(0.2f, 0.45f),
@@ -200,6 +209,7 @@ public sealed class ParticleSystem
             Add(new Particle
             {
                 Position = position,
+                BaseHeight = ShotHeight,
                 Velocity = Turn(shotDirection, _random.Range(-0.8f, 0.8f)) * _random.Range(80f, 240f),
                 Drag = 6f,
                 Life = _random.Range(0.2f, 0.35f),
@@ -220,6 +230,7 @@ public sealed class ParticleSystem
             Add(new Particle
             {
                 Position = position,
+                BaseHeight = DustHeight,
                 Velocity = RandomDirection() * _random.Range(30f, 90f),
                 Drag = 5f,
                 Life = _random.Range(0.2f, 0.35f),
@@ -240,6 +251,7 @@ public sealed class ParticleSystem
             Add(new Particle
             {
                 Position = position,
+                BaseHeight = ShotHeight,
                 Velocity = RandomDirection() * _random.Range(150f, 350f),
                 Drag = 5f,
                 Life = _random.Range(0.12f, 0.25f),
@@ -265,9 +277,12 @@ public sealed class ParticleSystem
                 continue;
             }
 
-            particle.Velocity *= MathF.Max(0f, 1f - particle.Drag * deltaSeconds);
-            particle.Velocity += Up * (particle.Rise * deltaSeconds);
+            // Movement over the floor and climbing are kept apart, so 3D can show real height.
+            var keep = MathF.Max(0f, 1f - particle.Drag * deltaSeconds);
+            particle.Velocity *= keep;
+            particle.Climb = particle.Climb * keep + particle.Rise * deltaSeconds;
             particle.Position += particle.Velocity * deltaSeconds;
+            particle.Lift += particle.Climb * deltaSeconds;
         }
     }
 
@@ -279,7 +294,8 @@ public sealed class ParticleSystem
             var t = particle.Age / particle.Life;
             var size = MathHelper.Lerp(particle.SizeStart, particle.SizeEnd, t);
             var color = Color.Lerp(particle.ColorStart, particle.ColorEnd, t);
-            renderer.FillCircle(particle.Position, size, color * (particle.AlphaStart * (1f - t)));
+            renderer.DrawParticle(
+                particle.Position, particle.BaseHeight, particle.Lift, size, color * (particle.AlphaStart * (1f - t)));
         }
     }
 
@@ -320,6 +336,9 @@ public sealed class ParticleSystem
     {
         public Vector2 Position;
         public Vector2 Velocity;
+        public float BaseHeight;
+        public float Lift;
+        public float Climb;
         public float Age;
         public float Life;
         public float Drag;

@@ -15,6 +15,12 @@ public sealed class Camera2D
     private const float MaxShakePixels = 32f;
     private const float TraumaDrainPerSecond = 1.8f;
 
+    // The 3D view: how steeply it looks down (90 = straight down) and its field of view.
+    private const float PitchDegrees = 70f;
+    private const float FieldOfViewDegrees = 40f;
+    private const float NearPlane = 10f;
+    private const float FarPlane = 30000f;
+
     private readonly CameraConfig _config;
     private float _trauma;
     private Vector2 _boundsMin;
@@ -67,13 +73,71 @@ public sealed class Camera2D
 
     public Vector2 WorldToScreen(Vector2 world)
     {
-        return ViewCenter + (world - Position) * Zoom;
+        if (!Is3D)
+        {
+            return ViewCenter + (world - Position) * Zoom;
+        }
+
+        var clip = Vector4.Transform(new Vector4(world.X, 0f, world.Y, 1f), BuildView(withShake: false) * Projection3D);
+        if (clip.W <= 0.0001f)
+        {
+            return ViewCenter;
+        }
+
+        return new Vector2(
+            ViewRect.X + (clip.X / clip.W + 1f) * 0.5f * ViewRect.Width,
+            ViewRect.Y + (1f - clip.Y / clip.W) * 0.5f * ViewRect.Height);
     }
 
     /// <summary>Converts a virtual-screen position (e.g. the mouse) to world coordinates.</summary>
     public Vector2 ScreenToWorld(Vector2 screen)
     {
-        return Position + (screen - ViewCenter) / Zoom;
+        if (!Is3D)
+        {
+            return Position + (screen - ViewCenter) / Zoom;
+        }
+
+        // A ray through the pixel, from the camera onto the floor (height 0).
+        var x = (screen.X - ViewRect.X) / ViewRect.Width * 2f - 1f;
+        var y = 1f - (screen.Y - ViewRect.Y) / ViewRect.Height * 2f;
+        var inverse = Matrix.Invert(BuildView(withShake: false) * Projection3D);
+        var near = Vector4.Transform(new Vector4(x, y, 0f, 1f), inverse);
+        var far = Vector4.Transform(new Vector4(x, y, 1f, 1f), inverse);
+        var from = new Vector3(near.X, near.Y, near.Z) / near.W;
+        var to = new Vector3(far.X, far.Y, far.Z) / far.W;
+        var direction = to - from;
+        if (MathF.Abs(direction.Y) < 0.0001f)
+        {
+            return Position + (screen - ViewCenter) / Zoom;
+        }
+
+        var hit = from + direction * (-from.Y / direction.Y);
+        return new Vector2(hit.X, hit.Z);
+    }
+
+    /// <summary>
+    /// True while the 3D renderer draws this view: a tilted perspective camera over the same
+    /// spot, and screen/world conversions (aiming) go through it. Set by the renderer.
+    /// </summary>
+    public bool Is3D { get; set; }
+
+    /// <summary>The 3D camera, shake included (for drawing).</summary>
+    public Matrix View3D => BuildView(withShake: true);
+
+    public Matrix Projection3D =>
+        Matrix.CreatePerspectiveFieldOfView(
+            MathHelper.ToRadians(FieldOfViewDegrees), ViewRect.Width / (float)ViewRect.Height, NearPlane, FarPlane);
+
+    // World (x, y) is (x, 0, y) in 3D; the camera looks down from the +z side, so screen up is
+    // still world -y. Its distance shows about as much floor as the 2D view at this zoom.
+    private Matrix BuildView(bool withShake)
+    {
+        var shake = withShake ? ShakeOffset / Zoom : Vector2.Zero;
+        var target = new Vector3(Position.X + shake.X, 0f, Position.Y + shake.Y);
+        var distance = ViewRect.Height / Zoom / 2f / MathF.Tan(MathHelper.ToRadians(FieldOfViewDegrees) / 2f);
+        var pitch = MathHelper.ToRadians(PitchDegrees);
+        var eye = target + new Vector3(0f, distance * MathF.Sin(pitch), distance * MathF.Cos(pitch));
+        return Matrix.CreateLookAt(eye, target, Vector3.Up);
     }
 
     public Matrix GetTransform()

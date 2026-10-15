@@ -15,6 +15,9 @@ public sealed class EnemyShotSystem
     private const float GlowScale = 1.5f;
     private const float FireballEmbersPerSecond = 35f;
 
+    // How high fireballs fly in the 3D view; ignored in 2D.
+    private const float FlightHeight = 22f;
+
     private static readonly Color CoreColor = new(255, 210, 90);
     private static readonly Color GlowColor = new(255, 90, 30);
 
@@ -47,7 +50,7 @@ public sealed class EnemyShotSystem
         {
             var fireball = _fireballs[i];
             fireball.Move(deltaSeconds);
-            Particles?.Embers(fireball.Position, FireballEmbersPerSecond, fireball.Radius * 0.5f, deltaSeconds);
+            Particles?.Embers(fireball.Position, FlightHeight, FireballEmbersPerSecond, fireball.Radius * 0.5f, deltaSeconds);
             if (fireball.DistanceLeft <= 0f
                 || arena.IsSolid(fireball.Position)
                 || (arena.Obstacles?.StrikeTouching(fireball.Position, fireball.Radius, 0f) ?? false)
@@ -63,8 +66,8 @@ public sealed class EnemyShotSystem
         for (var i = 0; i < _fireballs.Count; i++)
         {
             var fireball = _fireballs[i];
-            renderer.FillCircle(fireball.Position, fireball.Radius * GlowScale, GlowColor * 0.5f);
-            renderer.FillCircle(fireball.Position, fireball.Radius, CoreColor);
+            renderer.FillCircleRaised(fireball.Position, FlightHeight, fireball.Radius * GlowScale, GlowColor * 0.5f);
+            renderer.FillCircleRaised(fireball.Position, FlightHeight, fireball.Radius, CoreColor);
         }
     }
 

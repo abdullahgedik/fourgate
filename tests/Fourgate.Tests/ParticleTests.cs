@@ -65,4 +65,34 @@ public class ParticleTests
 
         Assert.InRange(particles.Count, 1, 4000);
     }
+
+    [Fact]
+    public void Flames_RiseOffTheFloor_AsTheyLive()
+    {
+        var particles = new ParticleSystem(new GameRandom(2));
+        particles.FirePool(new Vector2(500, 500), 100f, 1f, 0.5f);
+        for (var i = 0; i < 10; i++)
+        {
+            particles.Update(Step);
+        }
+
+        var drawn = new RecordingRenderer();
+        particles.Draw(drawn);
+
+        Assert.NotEmpty(drawn.Particles);
+        Assert.All(drawn.Particles, p => Assert.True(p.Lift > 0f));
+    }
+
+    [Fact]
+    public void HitPuffs_StartAtShotHeight_WithoutRisingYet()
+    {
+        var particles = new ParticleSystem(new GameRandom(2));
+        particles.HitPuff(new Vector2(500, 500), Vector2.UnitX);
+
+        var drawn = new RecordingRenderer();
+        particles.Draw(drawn);
+
+        Assert.Equal(5, drawn.Particles.Count);
+        Assert.All(drawn.Particles, p => Assert.True(p.BaseHeight > 0f && p.Lift == 0f));
+    }
 }

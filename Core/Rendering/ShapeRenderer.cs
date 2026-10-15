@@ -48,6 +48,7 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
 
     public void BeginWorld(Camera2D camera)
     {
+        camera.Is3D = false;
         _device.ScissorRectangle = camera.ViewRect;
         _spriteBatch.Begin(
             SpriteSortMode.Deferred,
@@ -104,6 +105,26 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
     public void FillRect(Vector2 topLeft, Vector2 size, Color color)
     {
         _spriteBatch.Draw(_pixel, topLeft, null, color, 0f, Vector2.Zero, size, SpriteEffects.None, 0f);
+    }
+
+    public void FillBox(Vector2 topLeft, Vector2 size, float height, Color color)
+    {
+        FillRect(topLeft, size, color);
+    }
+
+    public void FillCircleRaised(Vector2 position, float height, float radius, Color color)
+    {
+        FillCircle(position, radius, color);
+    }
+
+    public void DrawLineRaised(Vector2 from, Vector2 to, float height, float thickness, Color color)
+    {
+        DrawLine(from, to, thickness, color);
+    }
+
+    public void DrawParticle(Vector2 ground, float baseHeight, float lift, float radius, Color color)
+    {
+        FillCircle(new Vector2(ground.X, ground.Y - lift), radius, color);
     }
 
     public void FillCircle(Vector2 center, float radius, Color color)

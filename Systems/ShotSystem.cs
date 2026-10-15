@@ -39,6 +39,9 @@ public sealed class ShotSystem
     private const float BeamFadeSeconds = 0.3f;
     private const float BeamGlowScale = 3f;
 
+    // How high shots fly in the 3D view (chest height); ignored in 2D.
+    private const float ShotHeight = 18f;
+
     private readonly Arena _arena;
     private readonly IAudioManager? _audio;
     private readonly Pool<Bullet> _bullets = new(InitialBullets);
@@ -254,14 +257,14 @@ public sealed class ShotSystem
             var t = spark.Age / SparkSeconds;
             var fade = 1f - t;
             var radius = MathHelper.Lerp(SparkStartRadius, SparkEndRadius, t);
-            renderer.FillCircle(spark.Position, radius, SparkColor * (0.6f * fade));
-            renderer.FillCircle(spark.Position, radius * 0.4f, SparkCoreColor * fade);
+            renderer.FillCircleRaised(spark.Position, ShotHeight, radius, SparkColor * (0.6f * fade));
+            renderer.FillCircleRaised(spark.Position, ShotHeight, radius * 0.4f, SparkCoreColor * fade);
             for (var r = 0; r < SparkLines; r++)
             {
                 var angle = MathHelper.TwoPi * r / SparkLines + 0.4f;
                 var ray = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
-                renderer.DrawLine(
-                    spark.Position + ray * radius, spark.Position + ray * (radius + SparkLineLength * fade), 2f,
+                renderer.DrawLineRaised(
+                    spark.Position + ray * radius, spark.Position + ray * (radius + SparkLineLength * fade), ShotHeight, 2f,
                     SparkColor * fade);
             }
         }
@@ -270,8 +273,9 @@ public sealed class ShotSystem
         {
             var beam = _beams[i];
             var fade = 1f - beam.Age / BeamFadeSeconds;
-            renderer.DrawLine(beam.From, beam.To, beam.Width * BeamGlowScale * fade, BeamGlowColor * (0.6f * fade));
-            renderer.DrawLine(beam.From, beam.To, beam.Width * fade, BeamCoreColor * fade);
+            renderer.DrawLineRaised(
+                beam.From, beam.To, ShotHeight, beam.Width * BeamGlowScale * fade, BeamGlowColor * (0.6f * fade));
+            renderer.DrawLineRaised(beam.From, beam.To, ShotHeight, beam.Width * fade, BeamCoreColor * fade);
         }
 
         for (var i = 0; i < _bullets.Count; i++)
@@ -279,14 +283,14 @@ public sealed class ShotSystem
             var bullet = _bullets[i];
             if (bullet.Rocket is null)
             {
-                renderer.DrawLine(bullet.GetTail(StreakLength), bullet.Position, StreakThickness, BulletColor);
+                renderer.DrawLineRaised(bullet.GetTail(StreakLength), bullet.Position, ShotHeight, StreakThickness, BulletColor);
                 continue;
             }
 
             // A rocket: a short, thick body with a flame behind it.
             var tail = bullet.GetTail(RocketLength);
-            renderer.DrawLine(bullet.GetTail(RocketLength * 1.8f), tail, RocketThickness * 0.7f, RocketFlameColor);
-            renderer.DrawLine(tail, bullet.Position, RocketThickness, RocketColor);
+            renderer.DrawLineRaised(bullet.GetTail(RocketLength * 1.8f), tail, ShotHeight, RocketThickness * 0.7f, RocketFlameColor);
+            renderer.DrawLineRaised(tail, bullet.Position, ShotHeight, RocketThickness, RocketColor);
         }
     }
 

@@ -22,6 +22,11 @@ public sealed class GameplayScene : IScene
     // Floor grid spacing when no weapon snaps to a grid.
     private const float GridSpacing = 100f;
     private const float GridLineThickness = 2f;
+
+    // Heights for the 3D look (ignored in 2D).
+    private const float WallHeight = 90f;
+    private const float PillarHeight = 120f;
+    private const float GateInset = 2f;
     private const float FacingLineLength = 14f;
     private const float FacingLineThickness = 6f;
     private const float DualBarrelOffset = 7f;
@@ -1150,7 +1155,12 @@ public sealed class GameplayScene : IScene
         var floorTopLeft = new Vector2(_arena.Left, _arena.Top);
         var floorSize = new Vector2(_arena.Size);
 
-        renderer.FillRect(floorTopLeft - wall, floorSize + wall * 2f, WallColor);
+        // Four walls round the floor (boxes in 3D, flat in 2D), then the floor.
+        var outer = floorSize + wall * 2f;
+        renderer.FillBox(floorTopLeft - wall, new Vector2(outer.X, wall.Y), WallHeight, WallColor);
+        renderer.FillBox(floorTopLeft + new Vector2(-wall.X, floorSize.Y), new Vector2(outer.X, wall.Y), WallHeight, WallColor);
+        renderer.FillBox(floorTopLeft - new Vector2(wall.X, 0f), new Vector2(wall.X, floorSize.Y), WallHeight, WallColor);
+        renderer.FillBox(floorTopLeft + new Vector2(floorSize.X, 0f), new Vector2(wall.X, floorSize.Y), WallHeight, WallColor);
         renderer.FillRect(floorTopLeft, floorSize, FloorColor);
 
         // Floor grid: gives the eye a reference for camera and player movement.
@@ -1169,7 +1179,7 @@ public sealed class GameplayScene : IScene
         var pillars = _arena.Pillars;
         for (var i = 0; i < pillars.Count; i++)
         {
-            renderer.FillRect(pillars[i].Center - pillars[i].HalfSize, pillars[i].HalfSize * 2f, WallColor);
+            renderer.FillBox(pillars[i].Center - pillars[i].HalfSize, pillars[i].HalfSize * 2f, PillarHeight, WallColor);
         }
 
         var doors = _arena.Doors;
@@ -1181,7 +1191,10 @@ public sealed class GameplayScene : IScene
                 DrawDoorHalo(renderer, doors[i], glow);
             }
 
-            renderer.FillRect(doors[i].TopLeft, doors[i].Size, Color.Lerp(GateColor, GateGlowColor, glow));
+            // A gate block slightly proud of the wall, so it shows in front of it in 3D.
+            renderer.FillBox(
+                doors[i].TopLeft - new Vector2(GateInset), doors[i].Size + new Vector2(GateInset * 2f), WallHeight + GateInset,
+                Color.Lerp(GateColor, GateGlowColor, glow));
         }
     }
 

@@ -14,6 +14,9 @@ public sealed class FlameSystem
     // Embers flying off each flame of a flamethrower stream.
     private const float FlameEmbersPerSecond = 6f;
 
+    // How high the stream flies in the 3D view; ignored in 2D.
+    private const float FlameHeight = 16f;
+
     private const int InitialFlames = 128;
 
     private readonly Arena _arena;
@@ -60,7 +63,7 @@ public sealed class FlameSystem
         {
             var flame = _flames[i];
             flame.Advance(deltaSeconds);
-            Particles?.Embers(flame.Position, FlameEmbersPerSecond, flame.Radius * 0.25f, deltaSeconds);
+            Particles?.Embers(flame.Position, FlameHeight, FlameEmbersPerSecond, flame.Radius * 0.25f, deltaSeconds);
 
             if (HitsWall(flame))
             {
@@ -84,7 +87,8 @@ public sealed class FlameSystem
         for (var i = 0; i < _flames.Count; i++)
         {
             var flame = _flames[i];
-            renderer.DrawVisual(flame.Visual, flame.Position, 0f);
+            var visual = flame.Visual;
+            renderer.FillCircleRaised(flame.Position, FlameHeight, visual.Radius, visual.Color);
         }
     }
 

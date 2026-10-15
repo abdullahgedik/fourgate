@@ -16,6 +16,9 @@ namespace Fourgate.Systems;
 /// <summary>Owns thrown explosives in flight and resolves their blasts against enemies and players.</summary>
 public sealed class ExplosiveSystem
 {
+    // How high a throw goes in the 3D view (2D shows the arc by size instead).
+    private const float ThrowPeakHeight = 140f;
+
     private const int InitialThrown = 32;
     private const int InitialEffects = 32;
 
@@ -172,7 +175,8 @@ public sealed class ExplosiveSystem
         {
             var thrown = _thrown[i];
             renderer.FillCircle(thrown.Position, thrown.Shot.VisualRadius, ShadowColor);
-            renderer.DrawVisual(thrown.Visual, thrown.Position, 0f);
+            var visual = thrown.Visual;
+            renderer.FillCircleRaised(thrown.Position, ThrowPeakHeight * thrown.ArcHeight + visual.Radius, visual.Radius, visual.Color);
         }
     }
 

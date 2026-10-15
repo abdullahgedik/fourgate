@@ -35,6 +35,9 @@ public sealed class ThrownExplosive
         }
     }
 
+    /// <summary>0 on the ground, 1 at the top of the throw.</summary>
+    public float ArcHeight => MathF.Sin(MathF.PI * Progress);
+
     public void Launch(in ExplosiveShot shot)
     {
         Shot = shot;
