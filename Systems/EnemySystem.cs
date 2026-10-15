@@ -14,6 +14,12 @@ namespace Fourgate.Systems;
 /// <summary>Owns all enemies: movement toward players, keeping them apart, and removal on death.</summary>
 public sealed class EnemySystem : IHittableSource
 {
+    // Ambling once the players are gone: slower than a chase, in short legs, sometimes standing still.
+    private const float WanderSpeedShare = 0.3f;
+    private const float WanderMinSeconds = 1.2f;
+    private const float WanderMaxSeconds = 3f;
+    private const float WanderPauseChance = 0.3f;
+
     private const int InitialEnemies = 128;
     private const float CellSize = 96f;
 
@@ -62,6 +68,12 @@ public sealed class EnemySystem : IHittableSource
 
     /// <summary>Where ranged enemies' fireballs go; without it they wind up but throw nothing.</summary>
     public EnemyShotSystem? Fireballs { get; set; }
+
+    /// <summary>
+    /// When true, zombies with nobody alive to chase amble about aimlessly (after the players
+    /// have died); otherwise they stand still.
+    /// </summary>
+    public bool WanderWhenAlone { get; set; }
 
     /// <summary>Share of an enemy's remaining knockback applied per second; 0 applies it at once.</summary>
     public float KnockbackDamping { get; set; }
@@ -357,6 +369,11 @@ public sealed class EnemySystem : IHittableSource
 
         if (target is null)
         {
+            if (WanderWhenAlone)
+            {
+                Wander(enemy, deltaSeconds);
+            }
+
             return;
         }
 
@@ -386,6 +403,43 @@ public sealed class EnemySystem : IHittableSource
         var step = Math.Min(enemy.Config.Speed * SpeedMultiplier * deltaSeconds, gap);
         enemy.Facing = MathF.Atan2(target.Position.Y - enemy.Position.Y, target.Position.X - enemy.Position.X);
         enemy.Position += (target.Position - enemy.Position) / distance * step;
+    }
+
+    // Slow ambles in random directions, now and then standing still a while.
+    private void Wander(Enemy enemy, float deltaSeconds)
+    {
+        enemy.WanderLeft -= deltaSeconds;
+        if (enemy.WanderLeft <= 0f)
+        {
+            var roll = Hash01(enemy.Id * 7919 + enemy.WanderLegs * 104729);
+            var angle = Hash01(enemy.Id * 31337 + enemy.WanderLegs * 2741) * MathHelper.TwoPi;
+            enemy.WanderLegs++;
+            enemy.WanderHeading = roll < WanderPauseChance
+                ? Vector2.Zero
+                : new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+            enemy.WanderLeft = MathHelper.Lerp(WanderMinSeconds, WanderMaxSeconds, roll);
+        }
+
+        if (enemy.WanderHeading == Vector2.Zero)
+        {
+            return;
+        }
+
+        enemy.Facing = MathF.Atan2(enemy.WanderHeading.Y, enemy.WanderHeading.X);
+        enemy.Position += enemy.WanderHeading * (enemy.Config.Speed * WanderSpeedShare * deltaSeconds);
+    }
+
+    // A repeatable 0–1 value from a whole number, so wandering needs no shared random source.
+    private static float Hash01(int seed)
+    {
+        unchecked
+        {
+            var x = (uint)seed * 2654435761u;
+            x ^= x >> 15;
+            x *= 2246822519u;
+            x ^= x >> 13;
+            return (x & 0xFFFFu) / 65536f;
+        }
     }
 
     // Each overlapping pair is seen once from each side and each side moves half the

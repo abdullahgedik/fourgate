@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Fourgate.Core;
 using Fourgate.Core.Audio;
 using Fourgate.Core.Data;
 using Fourgate.Core.Input;
@@ -37,6 +38,29 @@ public sealed class GameplayScene : IScene
     private const float CrosshairThickness = 2f;
     private const float DoorHaloDepth = 110f;
     private const float DoorHaloOpacity = 0.3f;
+
+    // The 3D door warning: pulses that quicken as the enemies near, a curtain of light in the
+    // opening, lamps on the gate posts and light spilled deeper onto the floor.
+    private const float DoorPulseSlow = 4f;
+    private const float DoorPulseFast = 14f;
+    private const float DoorCurtainOpacity = 0.35f;
+    private const float DoorLampRadius = 16f;
+    private const float DoorFloorLightDepth = 260f;
+    private const int DoorFloorLightBands = 5;
+
+    // Once its enemies are out, a door's warning fades over this long instead of vanishing.
+    private const float DoorFadeSeconds = 0.4f;
+
+    // After the last player dies: "YOU DIED" grows in over a red tint, the world carries on, and
+    // the results screen fades in a little later (its choices are read once it is in).
+    private const float DeathScreenDelay = 2.2f;
+    private const float DeathTextFadeSeconds = 0.9f;
+    private const float DeathTextSize = 150f;
+    private const float DeathTextStartScale = 1.3f;
+    private const float DeathTintOpacity = 0.35f;
+    private const float GameOverFadeSeconds = 0.6f;
+    private static readonly Color DeathTintColor = new(80, 0, 0);
+    private static readonly Color DeathTextColor = new(220, 40, 40);
     private const float EdgeIndicatorInset = 40f;
     private const float EdgeIndicatorRadius = 18f;
     private const float WeaponCrateSpacing = 70f;
@@ -107,6 +131,18 @@ public sealed class GameplayScene : IScene
     private readonly ParticleSystem _particles;
     private readonly GameRandom _visualRandom = new(Environment.TickCount);
     private readonly GameSettings? _settings;
+    private float _doorPulseTime;
+
+    // -1 while someone is alive; then seconds since the last player died.
+    private float _deathSeconds = -1f;
+    private float _gameOverSeconds;
+    private readonly float[] _doorGlow;
+
+    /// <summary>Blood that stays on the floor for the whole run; painted by the game before each frame.</summary>
+    public FloorStains FloorStains { get; }
+
+    /// <summary>Soot left by explosions on the floor and on walls and pillars.</summary>
+    public ScorchSystem Scorches { get; }
     private readonly List<float> _lastHp = new();
     private readonly List<float> _hurtFlashLeft = new();
     private readonly ModeRules _rules;
@@ -161,6 +197,9 @@ public sealed class GameplayScene : IScene
         var config = data.Game;
         _random = new GameRandom(config.Debug.Seed ?? Environment.TickCount);
         _arena = new Arena(config.Arena);
+        _doorGlow = new float[_arena.Doors.Count];
+        FloorStains = new FloorStains(new Vector2(_arena.Left, _arena.Top), _arena.Size);
+        Scorches = new ScorchSystem(_arena, FloorStains, WallHeight, PillarHeight);
         _enemies = new EnemySystem(audio) { KnockbackDamping = config.Knockback.Damping, Fireballs = _fireballs };
         _bosses = new BossSystem(_enemies, data, _random, audio)
         {
@@ -192,6 +231,7 @@ public sealed class GameplayScene : IScene
 
         // Visual only, with its own random source so effects never change a seeded run.
         _particles = new ParticleSystem(_visualRandom);
+        _particles.Stains = FloorStains;
         _shots.Particles = _particles;
         _bosses.Particles = _particles;
         _bosses.Impact = OnExplosion;
@@ -219,6 +259,7 @@ public sealed class GameplayScene : IScene
         _score = new ScoreSystem(config.Score, _rules.ScoreMultiplier);
         _modeLabel = mode == default ? string.Empty : mode.Name;
         _enemies.SpeedMultiplier = _rules.EnemySpeedMultiplier;
+        _enemies.WanderWhenAlone = true;
         _drops.HealthChanceMultiplier = _rules.HealthCrateChanceMultiplier;
         _waves = config.Debug.DisableWaves ? null : new WaveSystem(data, _enemies, _arena, _random, audio) { Rules = _rules };
 
@@ -259,8 +300,14 @@ public sealed class GameplayScene : IScene
         }
     }
 
-    /// <summary>True once every player is dead; the simulation is frozen from then on.</summary>
+    /// <summary>
+    /// True once the run has ended and the game over screen is up. After a death the world keeps
+    /// going behind it (zombies wander off); after a finished campaign it stands still.
+    /// </summary>
     public bool IsGameOver { get; private set; }
+
+    /// <summary>True between the last player's death and the game over screen ("YOU DIED").</summary>
+    public bool IsDying => _deathSeconds >= 0f && !IsGameOver;
 
     /// <summary>True when a player asked to start over from the game over screen.</summary>
     public bool RestartRequested { get; private set; }
@@ -274,7 +321,31 @@ public sealed class GameplayScene : IScene
         }
         if (IsGameOver)
         {
-            UpdateGameOver();
+            if (_deathSeconds >= 0f)
+            {
+                _deathSeconds += deltaSeconds;
+                UpdateWorldWithoutPlayers(deltaSeconds);
+            }
+
+            // Choices are read once the screen has faded in.
+            _gameOverSeconds += deltaSeconds;
+            if (_gameOverSeconds >= GameOverFadeSeconds)
+            {
+                UpdateGameOver();
+            }
+
+            return;
+        }
+
+        if (_deathSeconds >= 0f)
+        {
+            _deathSeconds += deltaSeconds;
+            UpdateWorldWithoutPlayers(deltaSeconds);
+            if (_deathSeconds >= DeathScreenDelay)
+            {
+                EndRun("GAME OVER");
+            }
+
             return;
         }
 
@@ -309,6 +380,9 @@ public sealed class GameplayScene : IScene
             _upgradeScreen.Update(deltaSeconds, _players, _cameras);
             return;
         }
+
+        // After the last pick the cards fade out while play has already resumed.
+        _upgradeScreen.Tick(deltaSeconds);
 
         _elapsedSeconds += deltaSeconds;
         _score.AddTime(deltaSeconds);
@@ -361,15 +435,51 @@ public sealed class GameplayScene : IScene
         _hazards.Update(deltaSeconds, _players);
         _mines.Update(deltaSeconds, _players);
         _flames.Update(deltaSeconds);
+        UpdateDoorGlows(deltaSeconds);
         _particles.Update(deltaSeconds);
         _drops.Update(deltaSeconds, _players);
 
         LayOutViews();
         if (!AnyPlayerAlive())
         {
-            EndRun("GAME OVER");
+            // Not over at once: "YOU DIED" first, with the world still going, then the results.
+            _deathSeconds = 0f;
             _audio.PlaySfx(SfxIds.GameOver);
         }
+    }
+
+    // After the players are gone the arena carries on: zombies wander, fire burns out, mines
+    // and barrels still go off. Nothing is scored any more and no new zombies come in.
+    private void UpdateWorldWithoutPlayers(float deltaSeconds)
+    {
+        _enemies.Update(deltaSeconds, _players, _arena);
+        _bosses.Update(deltaSeconds, _players, _arena);
+        _fireballs.Update(deltaSeconds, _players, _arena);
+        _shots.Update(deltaSeconds);
+        _explosives.Update(deltaSeconds, _players);
+        _hazards.Update(deltaSeconds, _players);
+        _mines.Update(deltaSeconds, _players);
+        _flames.Update(deltaSeconds);
+        UpdateDoorGlows(deltaSeconds);
+        _particles.Update(deltaSeconds);
+        for (var i = 0; i < _cameras.Count; i++)
+        {
+            _cameras[i].UpdateShake(deltaSeconds, _visualRandom.Range(-1f, 1f), _visualRandom.Range(-1f, 1f));
+        }
+    }
+
+    // "YOU DIED" grows into place over a reddening view, and gives way to the results screen.
+    private void DrawDeath(IRenderer renderer)
+    {
+        var shown = Ease.OutCubic(_deathSeconds / DeathTextFadeSeconds);
+        var results = IsGameOver ? Ease.OutCubic(_gameOverSeconds / GameOverFadeSeconds) : 0f;
+        var width = _data.Game.VirtualWidth;
+        var height = _data.Game.VirtualHeight;
+        renderer.FillRect(Vector2.Zero, new Vector2(width, height), DeathTintColor * (DeathTintOpacity * shown));
+        var text = _players.Count > 1 ? "YOU ALL DIED" : "YOU DIED";
+        var size = MathHelper.Lerp(DeathTextSize * DeathTextStartScale, DeathTextSize, shown);
+        renderer.DrawTextCentered(
+            text, new Vector2(width / 2f, height * 0.45f), size, DeathTextColor * (shown * (1f - results)));
     }
 
     /// <summary>Index of a player whose controller is unplugged, or -1; the game is paused while there is one.</summary>
@@ -509,6 +619,7 @@ public sealed class GameplayScene : IScene
     private void EndRun(string title)
     {
         IsGameOver = true;
+        _gameOverSeconds = 0f;
         _gameOverOverlay.Title = title;
         _gameOverOverlay.SetStats(_waves?.Wave ?? 0, _enemies.KillCount, _elapsedSeconds, _score.Total, _rules.Mode.Name);
         _audio.PlayMusic(MusicIds.GameOver);
@@ -528,7 +639,11 @@ public sealed class GameplayScene : IScene
             playerOne.Input.Update(playerOne.Position, _cameras[0]);
             var changesBefore = _initials.Changes;
             _initials.Update(playerOne.Input);
-            if (_initials.IsDone)
+            if (_initials.IsSkipped)
+            {
+                _audio.PlaySfx(SfxIds.UiBack);
+            }
+            else if (_initials.IsDone)
             {
                 RecordHighScore(_initials.Initials);
                 _audio.PlaySfx(SfxIds.UiConfirm);
@@ -623,6 +738,7 @@ public sealed class GameplayScene : IScene
     // Each view shakes with the blasts near its own player, more for bigger and closer ones.
     private void OnExplosion(Vector2 center, float radius)
     {
+        Scorches.AddBlast(center, radius);
         if (_settings is { ScreenShake: false })
         {
             return;
@@ -893,6 +1009,8 @@ public sealed class GameplayScene : IScene
 
             renderer.BeginWorld(_cameras[i]);
             DrawArena(renderer);
+            Scorches.Draw(renderer);
+            _particles.DrawFloor(renderer);
             _hazards.Draw(renderer);
             _mines.Draw(renderer);
             for (var t = 0; t < _practiceTargets.Count; t++)
@@ -966,7 +1084,7 @@ public sealed class GameplayScene : IScene
                 DebugNoticeColor * Math.Min(1f, _debugNoticeLeft), TextAlign.Center);
         }
 
-        if (_upgrades.AnyOfferOpen && !IsGameOver)
+        if ((_upgrades.AnyOfferOpen || _upgradeScreen.IsAnimating) && !IsGameOver)
         {
             _upgradeScreen.Draw(renderer, _players, _cameras);
         }
@@ -975,17 +1093,23 @@ public sealed class GameplayScene : IScene
         for (var i = 0; i < _players.Count; i++)
         {
             var input = _players[i].Input;
-            if (input.HasPointer && !IsGameOver)
+            if (input.HasPointer && !IsGameOver && !IsDying)
             {
                 DrawCrosshair(renderer, input.AimScreen);
             }
+        }
+
+        if (_deathSeconds >= 0f)
+        {
+            DrawDeath(renderer);
         }
 
         if (IsGameOver)
         {
             _gameOverOverlay.Draw(
                 renderer, _data.Game.VirtualWidth, _data.Game.VirtualHeight, _initials,
-                _highScores?.Get(_rules.Mode.Key), _highScores?.Version ?? 0, _newEntryPlace);
+                _highScores?.Get(_rules.Mode.Key), _highScores?.Version ?? 0, _newEntryPlace,
+                Ease.OutCubic(_gameOverSeconds / GameOverFadeSeconds));
         }
         else if (_victoryOpen)
         {
@@ -1161,6 +1285,7 @@ public sealed class GameplayScene : IScene
         renderer.FillRect(floorTopLeft, floorSize, FloorColor);
 
         // Floor grid: gives the eye a reference for camera and player movement.
+        // (Blood stains go on after it, so they darken the grid lines too.)
         for (var offset = _floorCellSize; offset < _arena.Size; offset += _floorCellSize)
         {
             renderer.FillRect(
@@ -1173,6 +1298,8 @@ public sealed class GameplayScene : IScene
                 GridColor);
         }
 
+        renderer.DrawFloorStains(floorTopLeft, floorSize);
+
         var pillars = _arena.Pillars;
         for (var i = 0; i < pillars.Count; i++)
         {
@@ -1182,17 +1309,101 @@ public sealed class GameplayScene : IScene
         var doors = _arena.Doors;
         for (var i = 0; i < doors.Count; i++)
         {
-            var glow = _waves?.Spawner.GetDoorGlow(i) ?? 0f;
-            if (glow > 0f)
+            var glow = _doorGlow[i];
+            if (glow > 0f && !renderer.IsThreeD)
             {
                 DrawDoorHalo(renderer, doors[i], glow);
             }
 
-            // A gate block slightly proud of the wall, so it shows in front of it in 3D.
+            // A gate block slightly proud of the wall, so it shows in front of it in 3D; set into
+            // the wall, it casts no shadow of its own. In 3D it throbs while it warns.
+            var shown = renderer.IsThreeD && glow > 0f ? glow * DoorPulse(glow) : glow;
             renderer.FillBox(
                 doors[i].TopLeft - new Vector2(GateInset), doors[i].Size + new Vector2(GateInset * 2f), WallHeight + GateInset,
-                Color.Lerp(GateColor, GateGlowColor, glow));
+                Color.Lerp(GateColor, GateGlowColor, shown), castShadow: false);
+            if (renderer.IsThreeD && glow > 0f)
+            {
+                DrawDoorWarning3D(renderer, doors[i], glow);
+            }
         }
+    }
+
+    // 0.55–1: a throb that quickens as the door's enemies get closer.
+    private float DoorPulse(float glow)
+    {
+        var speed = MathHelper.Lerp(DoorPulseSlow, DoorPulseFast, glow);
+        return 0.775f + 0.225f * MathF.Sin(_doorPulseTime * speed);
+    }
+
+    // In 3D: light spilled onto the floor, fading smoothly away from the door, a curtain of
+    // light standing in the opening and lamps on both gate posts, all throbbing with the gate.
+    private void DrawDoorWarning3D(IRenderer renderer, Door door, float glow)
+    {
+        var strength = glow * DoorPulse(glow);
+        DoorInnerEdge(door, out var from, out var to);
+        DrawDoorFloorLight(renderer, door, strength);
+        renderer.DrawGlowWall(from, to, WallHeight * (0.4f + 0.6f * glow), GateGlowColor * (DoorCurtainOpacity * strength));
+        var lampHeight = WallHeight + GateInset + DoorLampRadius * 0.5f;
+        var lampRadius = DoorLampRadius * (0.6f + 0.6f * strength);
+        renderer.FillCircleRaised(from, lampHeight, lampRadius * 2f, GateGlowColor * (0.25f * strength));
+        renderer.FillCircleRaised(to, lampHeight, lampRadius * 2f, GateGlowColor * (0.25f * strength));
+        renderer.FillCircleRaised(from, lampHeight, lampRadius, GateGlowColor * strength);
+        renderer.FillCircleRaised(to, lampHeight, lampRadius, GateGlowColor * strength);
+    }
+
+    // Side by side bands, each dimmer than the last, so the light fades without visible layers.
+    private static void DrawDoorFloorLight(IRenderer renderer, Door door, float strength)
+    {
+        var band = DoorFloorLightDepth / DoorFloorLightBands;
+        for (var i = 0; i < DoorFloorLightBands; i++)
+        {
+            var near = 1f - (float)i / DoorFloorLightBands;
+            var bandTopLeft = DoorFloorLightTopLeft(door, band) + door.Inward * (band * i);
+            renderer.FillRect(
+                bandTopLeft, DoorFloorLightSize(door, band), GateGlowColor * (DoorHaloOpacity * strength * near * near));
+        }
+    }
+
+    // A door's warning follows the spawner while it rises and fades out quickly once its
+    // enemies are out; sparks drift out of it while it glows (3D look only).
+    private void UpdateDoorGlows(float deltaSeconds)
+    {
+        _doorPulseTime += deltaSeconds;
+        var doors = _arena.Doors;
+        for (var i = 0; i < doors.Count; i++)
+        {
+            var target = _waves?.Spawner.GetDoorGlow(i) ?? 0f;
+            _doorGlow[i] = target >= _doorGlow[i] ? target : Math.Max(target, _doorGlow[i] - deltaSeconds / DoorFadeSeconds);
+        }
+
+        if (_settings is not { ThreeDView: true })
+        {
+            return;
+        }
+
+        for (var i = 0; i < doors.Count; i++)
+        {
+            var glow = _doorGlow[i];
+            if (glow <= 0f)
+            {
+                continue;
+            }
+
+            DoorInnerEdge(doors[i], out var from, out var to);
+            _particles.DoorSparks(from, to, doors[i].Inward, WallHeight, glow, GateGlowColor, GateColor, deltaSeconds);
+        }
+    }
+
+    // The two ends of a door's edge facing the arena.
+    private static void DoorInnerEdge(Door door, out Vector2 from, out Vector2 to)
+    {
+        var half = door.Size / 2f;
+        var depth = MathF.Abs(door.Inward.X) * half.X + MathF.Abs(door.Inward.Y) * half.Y;
+        var width = MathF.Abs(door.Inward.Y) * half.X + MathF.Abs(door.Inward.X) * half.Y;
+        var edge = door.Center + door.Inward * (depth + GateInset);
+        var across = new Vector2(-door.Inward.Y, door.Inward.X) * width;
+        from = edge - across;
+        to = edge + across;
     }
 
     // Red bands along the edges of a view, fading out, when its player was just hurt.
@@ -1250,24 +1461,29 @@ public sealed class GameplayScene : IScene
     // Light spilling from a glowing door onto the floor in front of it.
     private static void DrawDoorHalo(IRenderer renderer, Door door, float glow)
     {
-        Vector2 topLeft;
-        Vector2 size;
+        renderer.FillRect(
+            DoorFloorLightTopLeft(door, DoorHaloDepth), DoorFloorLightSize(door, DoorHaloDepth),
+            GateGlowColor * (DoorHaloOpacity * glow));
+    }
+
+    // A strip of floor in front of a door, reaching this deep into the arena.
+    private static Vector2 DoorFloorLightSize(Door door, float depth)
+    {
+        return door.Inward.X == 0f ? new Vector2(door.Size.X, depth) : new Vector2(depth, door.Size.Y);
+    }
+
+    private static Vector2 DoorFloorLightTopLeft(Door door, float depth)
+    {
         if (door.Inward.X == 0f)
         {
-            size = new Vector2(door.Size.X, DoorHaloDepth);
-            topLeft = door.Inward.Y > 0f
+            return door.Inward.Y > 0f
                 ? door.TopLeft + new Vector2(0f, door.Size.Y)
-                : door.TopLeft - new Vector2(0f, DoorHaloDepth);
-        }
-        else
-        {
-            size = new Vector2(DoorHaloDepth, door.Size.Y);
-            topLeft = door.Inward.X > 0f
-                ? door.TopLeft + new Vector2(door.Size.X, 0f)
-                : door.TopLeft - new Vector2(DoorHaloDepth, 0f);
+                : door.TopLeft - new Vector2(0f, depth);
         }
 
-        renderer.FillRect(topLeft, size, GateGlowColor * (DoorHaloOpacity * glow));
+        return door.Inward.X > 0f
+            ? door.TopLeft + new Vector2(door.Size.X, 0f)
+            : door.TopLeft - new Vector2(depth, 0f);
     }
 
     private static void DrawCrosshair(IRenderer renderer, Vector2 position)

@@ -37,7 +37,7 @@ public class FeedbackTests
     }
 
     [Fact]
-    public void BulletHit_LeavesAPuff_AndAWallHitLeavesDust()
+    public void BulletHit_ThrowsBlood_AndAWallHitLeavesDust()
     {
         var particles = new ParticleSystem(new GameRandom(1));
         var shots = new ShotSystem(new Arena(TestData.Arena())) { Particles = particles };
@@ -49,7 +49,8 @@ public class FeedbackTests
             shots.Update(Step);
         }
 
-        Assert.Equal(5, particles.Count);
+        // A light hit: four drops and two puffs of mist.
+        Assert.Equal(6, particles.Count);
 
         shots.FireProjectile(new Vector2(2900, 500), Vector2.UnitX, Projectile(), 10, 0);
         for (var i = 0; i < 3; i++)
@@ -57,7 +58,7 @@ public class FeedbackTests
             shots.Update(Step);
         }
 
-        Assert.Equal(9, particles.Count);
+        Assert.Equal(10, particles.Count);
     }
 
     [Theory]

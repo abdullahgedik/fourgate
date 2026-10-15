@@ -104,9 +104,21 @@ public sealed class Enemy : IHittable
         }
     }
 
+    /// <summary>Way it ambles while there is nobody to chase (zero: standing still).</summary>
+    public Vector2 WanderHeading { get; set; }
+
+    /// <summary>Seconds left on the current amble.</summary>
+    public float WanderLeft { get; set; }
+
+    /// <summary>Ambles taken so far (seeds the next one).</summary>
+    public int WanderLegs { get; set; }
+
     public void Spawn(int id, EnemyConfig config, Vector2 position)
     {
         Id = id;
+        WanderHeading = Vector2.Zero;
+        WanderLeft = 0f;
+        WanderLegs = 0;
         Config = config;
         Position = position;
         Facing = 0f;

@@ -8,4 +8,10 @@ public sealed class FireConfig
 
     /// <summary>How long the pool burns.</summary>
     public required float Seconds { get; init; }
+
+    /// <summary>
+    /// Seconds the splash takes to spread from where it lands to the full radius; it only burns
+    /// as far as it has spread. 0 for all at once.
+    /// </summary>
+    public float SpreadSeconds { get; init; }
 }

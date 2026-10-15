@@ -211,7 +211,7 @@ public class MineTests
     }
 
     [Fact]
-    public void Weapon_PlacesAMine_AndUsesOneFromTheCount()
+    public void Weapon_ThrowsAMine_ToTheAimPoint_AndUsesOneFromTheCount()
     {
         var config = DataLoader.LoadAll(DataLoader.DefaultDirectory).GetWeapon("mine");
         var weapon = new Weapon(config, TestData.Game(), new NullAudioManager());
@@ -219,10 +219,53 @@ public class MineTests
 
         weapon.Update(Step, new WeaponTrigger(true, true, false, 100), Spot, Vector2.UnitX, 0, shots);
 
-        var placed = Assert.Single(shots.Mines);
-        Assert.Equal(Spot, placed.Position);
-        Assert.Equal("mine", placed.WeaponId);
+        var thrown = Assert.Single(shots.Mines);
+        Assert.Equal(Spot + new Vector2(100, 0), thrown.Position);
+        Assert.Equal(Spot, thrown.From);
+        Assert.True(thrown.ThrowSpeed > 0f);
+        Assert.Equal("mine", thrown.WeaponId);
         Assert.Equal(config.Ammo.ReserveMax - 1, weapon.Reserve);
+    }
+
+    [Fact]
+    public void Weapon_AimedBeyondReach_ThrowsTheMineOnlyAsFarAsItCan()
+    {
+        var config = DataLoader.LoadAll(DataLoader.DefaultDirectory).GetWeapon("mine");
+        var weapon = new Weapon(config, TestData.Game(), new NullAudioManager());
+        var shots = new FakeShotHandler();
+
+        weapon.Update(Step, new WeaponTrigger(true, true, false, 5000), Spot, Vector2.UnitX, 0, shots);
+
+        Assert.Equal(Spot + new Vector2(config.Thrown!.MaxRange, 0), Assert.Single(shots.Mines).Position);
+    }
+
+    [Fact]
+    public void ThrownMine_FliesToItsSpot_AndOnlyStartsArmingOnceItLands()
+    {
+        var world = new World();
+        var target = Spot + new Vector2(400, 0);
+
+        // A zombie right under its path, and one where it lands.
+        var underPath = world.Spawn(Spot + new Vector2(200, 30));
+        var atLanding = world.Spawn(target + new Vector2(30, 0));
+
+        // 400 units at 800 per second: half a second in the air, then 0.4 s to arm.
+        world.Mines.Place(new MineShot(target, 150, 50, 45, 0.4f, 0, false, 0, "mine", From: Spot, ThrowSpeed: 800));
+        world.Run(0.25f);
+        var mine = world.Mines[0];
+        Assert.True(mine.IsFlying);
+        Assert.False(mine.IsArmed);
+        Assert.True(Vector2.Distance(mine.Position, Spot + new Vector2(200, 0)) < 20f);
+        Assert.True(underPath.IsAlive);
+
+        world.Run(0.5f);
+        Assert.False(mine.IsFlying);
+        Assert.Equal(target, mine.Position);
+        Assert.True(atLanding.IsAlive);
+
+        world.Run(0.3f);
+        Assert.False(atLanding.IsAlive);
+        Assert.True(underPath.IsAlive);
     }
 
     private static MineShot Mine(

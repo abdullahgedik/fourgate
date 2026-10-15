@@ -8,6 +8,8 @@ public sealed class RecordingRenderer : IRenderer
 {
     public List<(Vector2 Ground, float BaseHeight, float Lift)> Particles { get; } = new();
 
+    public List<Vector2> Circles { get; } = new();
+
     public void BeginWorld(Camera2D camera)
     {
     }
@@ -43,6 +45,25 @@ public sealed class RecordingRenderer : IRenderer
 
     public bool IsThreeD => false;
 
+    public void DrawLowBody(in VisualDescriptor visual, Vector2 position, float height)
+    {
+    }
+
+    public void DrawBarrel(Vector2 position, float radius, float height, Color body, Color band)
+    {
+    }
+
+    public void DrawWallStain(Vector2 from, Vector2 to, float height, Color color)
+    {
+    }
+
+    public int FloorStainDraws { get; private set; }
+
+    public void DrawFloorStains(Vector2 topLeft, Vector2 size)
+    {
+        FloorStainDraws++;
+    }
+
     public void DrawVisualElevated(in VisualDescriptor visual, Vector2 position, float rotation, float elevation)
     {
     }
@@ -67,12 +88,13 @@ public sealed class RecordingRenderer : IRenderer
     {
     }
 
-    public void FillBox(Vector2 topLeft, Vector2 size, float height, Color color)
+    public void FillBox(Vector2 topLeft, Vector2 size, float height, Color color, bool castShadow = true)
     {
     }
 
     public void FillCircle(Vector2 center, float radius, Color color)
     {
+        Circles.Add(center);
     }
 
     public void DrawLine(Vector2 from, Vector2 to, float thickness, Color color)

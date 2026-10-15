@@ -31,6 +31,12 @@ public sealed class PlacedConfig
     public bool ChainDetonation { get; init; }
 
     /// <summary>
+    /// Seconds a placed explosive set off by this one's chain burns before it goes off, so a row
+    /// of them goes off one after another; 0 sets them off at once.
+    /// </summary>
+    public float ChainDelaySeconds { get; init; }
+
+    /// <summary>
     /// Most of these one player can have down at once; placing another removes the oldest.
     /// 0 (the default) means no limit.
     /// </summary>

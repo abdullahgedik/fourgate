@@ -34,6 +34,22 @@ public class MolotovTests
     }
 
     [Fact]
+    public void Splash_SpreadsOutFromWhereItLands_AndOnlyBurnsAsFarAsItHasSpread()
+    {
+        var (enemies, hazards) = CreateWorld();
+        var nearMiddle = Spawn(enemies, Spot + new Vector2(10, 0), hp: 500);
+        var atEdge = Spawn(enemies, Spot + new Vector2(75, 0), hp: 500);
+
+        hazards.SpawnFire(Spot, 90, 4, 12, 0, 0, spreadSeconds: 0.4f);
+        Run(enemies, hazards, seconds: 0.1f);
+        Assert.True(nearMiddle.Hp < 500f);
+        Assert.Equal(500f, atEdge.Hp);
+
+        Run(enemies, hazards, seconds: 0.5f);
+        Assert.True(atEdge.Hp < 500f);
+    }
+
+    [Fact]
     public void FirePool_DoesNotFlashEnemiesLikeAHit()
     {
         var (enemies, hazards) = CreateWorld();

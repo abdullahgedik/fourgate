@@ -55,6 +55,30 @@ public interface IRenderer
     /// </summary>
     void DrawVisualElevated(in VisualDescriptor visual, Vector2 position, float rotation, float elevation);
 
+    /// <summary>
+    /// Lays the floor-stain image (blood that stays for the run) over the floor; drawn right
+    /// after the floor so everything else goes on top.
+    /// </summary>
+    void DrawFloorStains(Vector2 topLeft, Vector2 size);
+
+    /// <summary>
+    /// A low body lying on the floor (a mine): in 3D a short solid of the given height with no
+    /// shadow; in 2D the plain shape.
+    /// </summary>
+    void DrawLowBody(in VisualDescriptor visual, Vector2 position, float height);
+
+    /// <summary>
+    /// An explosive barrel: in 3D a drum with rims, two bands and a lid; in 2D a plain square
+    /// (the 2D look draws its own band on top).
+    /// </summary>
+    void DrawBarrel(Vector2 position, float radius, float height, Color body, Color band);
+
+    /// <summary>
+    /// Soot on a wall or pillar face (3D only): a soft patch from the floor up to the given
+    /// height, darkest at the bottom, fading up and to both sides.
+    /// </summary>
+    void DrawWallStain(Vector2 from, Vector2 to, float height, Color color);
+
     /// <summary>True for the 3D look, for the few things drawn differently there.</summary>
     bool IsThreeD { get; }
 
@@ -71,7 +95,8 @@ public interface IRenderer
     void DrawVisualRaised(in VisualDescriptor visual, Vector2 position, float rotation, float height);
 
     /// <summary>A block standing on the floor (walls, pillars); flat like a rectangle in 2D.</summary>
-    void FillBox(Vector2 topLeft, Vector2 size, float height, Color color);
+    /// <param name="castShadow">False for a block set into a wall (gates), whose shadow would only double the wall's.</param>
+    void FillBox(Vector2 topLeft, Vector2 size, float height, Color color, bool castShadow = true);
 
     void FillCircle(Vector2 center, float radius, Color color);
 

@@ -177,4 +177,25 @@ public class EnemySystemTests
             system.Update(Step, players, TestArena);
         }
     }
+
+    [Fact]
+    public void WithNobodyLeft_ZombiesWander_OnlyWhenAskedTo()
+    {
+        var arena = new Arena(TestData.Arena());
+        var nobody = new List<Player>();
+        var still = new EnemySystem(new NullAudioManager());
+        var wandering = new EnemySystem(new NullAudioManager()) { WanderWhenAlone = true };
+        var a = still.Spawn(TestData.Zombie(), new Vector2(1500, 1500));
+        var b = wandering.Spawn(TestData.Zombie(), new Vector2(1500, 1500));
+        var c = wandering.Spawn(TestData.Zombie(), new Vector2(1500, 600));
+
+        for (var i = 0; i < 60 * 8; i++)
+        {
+            still.Update(1f / 60f, nobody, arena);
+            wandering.Update(1f / 60f, nobody, arena);
+        }
+
+        Assert.Equal(new Vector2(1500, 1500), a.Position);
+        Assert.True(Vector2.Distance(b.Position, new Vector2(1500, 1500)) > 20f || Vector2.Distance(c.Position, new Vector2(1500, 600)) > 20f);
+    }
 }

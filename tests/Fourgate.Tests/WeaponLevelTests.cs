@@ -353,6 +353,7 @@ public class WeaponLevelTests
         var stats = WeaponStats.Compute(smg, 10);
 
         Assert.Equal(1, stats.Ricochets);
+        Assert.Equal(4, stats.WallBounces);
         Assert.True(stats.RicochetRadius > 0f);
         Assert.Equal(0, WeaponStats.Compute(smg, 9).Ricochets);
     }
@@ -364,7 +365,7 @@ public class WeaponLevelTests
 
         // Fired at the right wall from 200 units away; the target sits behind the muzzle.
         var behind = AddTarget(shots, 2600);
-        shots.FireProjectile(new Vector2(2800, 1500), Vector2.UnitX, Projectile, 15, 0, ricochets: 1);
+        shots.FireProjectile(new Vector2(2800, 1500), Vector2.UnitX, Projectile, 15, 0, wallBounces: 1);
         Run(shots, 30);
 
         Assert.Equal(1, behind.HitCount);
@@ -377,7 +378,7 @@ public class WeaponLevelTests
         var far = AddTarget(shots, 1500);
 
         // 200 to the wall and back leaves 700 of range: not enough to reach x = 1500.
-        shots.FireProjectile(new Vector2(2800, 1500), Vector2.UnitX, Projectile, 15, 0, ricochets: 1);
+        shots.FireProjectile(new Vector2(2800, 1500), Vector2.UnitX, Projectile, 15, 0, wallBounces: 1);
         Run(shots, 60);
 
         Assert.Equal(0, far.HitCount);
@@ -404,7 +405,7 @@ public class WeaponLevelTests
         var onThePath = new PracticeTarget(new Vector2(2700, 2700), 20);
         shots.AddTarget(onThePath);
 
-        shots.FireProjectile(new Vector2(2900, 2900), diagonal, Projectile, 15, 0, ricochets: 1);
+        shots.FireProjectile(new Vector2(2900, 2900), diagonal, Projectile, 15, 0, wallBounces: 1);
         Run(shots, 30);
 
         Assert.Equal(1, onThePath.HitCount);

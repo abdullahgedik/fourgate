@@ -29,8 +29,10 @@ public sealed class HighScoreListView
     /// <param name="version">The table's version, to know when to rebuild the lines.</param>
     /// <param name="topCenter">Where the heading's middle goes.</param>
     /// <param name="highlight">Place to highlight (a new entry), or -1.</param>
+    /// <param name="opacity">0–1, for fading in.</param>
     public void Draw(
-        IRenderer renderer, string title, IReadOnlyList<HighScoreEntry> entries, int version, Vector2 topCenter, int highlight)
+        IRenderer renderer, string title, IReadOnlyList<HighScoreEntry> entries, int version, Vector2 topCenter, int highlight,
+        float opacity = 1f)
     {
         if (!ReferenceEquals(entries, _shownList) || version != _shownVersion)
         {
@@ -39,10 +41,10 @@ public sealed class HighScoreListView
             _shownVersion = version;
         }
 
-        renderer.DrawText(title, topCenter, TitleSize, TitleColor, TextAlign.Center);
+        renderer.DrawText(title, topCenter, TitleSize, TitleColor * opacity, TextAlign.Center);
         if (_rows.Count == 0)
         {
-            renderer.DrawText("No scores yet", topCenter + new Vector2(0f, TitleGap), RowSize, EmptyColor, TextAlign.Center);
+            renderer.DrawText("No scores yet", topCenter + new Vector2(0f, TitleGap), RowSize, EmptyColor * opacity, TextAlign.Center);
             return;
         }
 
@@ -50,7 +52,7 @@ public sealed class HighScoreListView
         {
             renderer.DrawText(
                 _rows[i], topCenter + new Vector2(0f, TitleGap + i * RowHeight), RowSize,
-                i == highlight ? HighlightColor : RowColor, TextAlign.Center);
+                (i == highlight ? HighlightColor : RowColor) * opacity, TextAlign.Center);
         }
     }
 

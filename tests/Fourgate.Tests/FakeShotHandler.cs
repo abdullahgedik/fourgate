@@ -21,6 +21,8 @@ public sealed class FakeShotHandler : IShotHandler
 
     public int LastRicochets { get; private set; }
 
+    public int LastWallBounces { get; private set; }
+
     public float LastRicochetRadius { get; private set; }
 
     public bool LastOverkill { get; private set; }
@@ -54,8 +56,10 @@ public sealed class FakeShotHandler : IShotHandler
         float ricochetRadius = 0f,
         float ricochetDamageMult = 1f,
         bool overkill = false,
-        RocketPayload? rocket = null)
+        RocketPayload? rocket = null,
+        int wallBounces = 0)
     {
+        LastWallBounces = wallBounces;
         Count++;
         LastOrigin = origin;
         LastDirection = direction;

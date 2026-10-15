@@ -99,6 +99,28 @@ public class BarrelTests
     }
 
     [Fact]
+    public void DelayedChain_SetsOffTheNextBarrel_AMomentLater_OneAfterAnother()
+    {
+        var world = new World();
+        world.Mines.Place(Barrel(Spot, chain: true) with { ChainDelay = 0.2f });
+        world.Mines.Place(Barrel(Spot + new Vector2(140, 0), chain: true) with { ChainDelay = 0.2f });
+        world.Mines.Place(Barrel(Spot + new Vector2(280, 0), chain: true) with { ChainDelay = 0.2f });
+
+        // A grenade sets off the first one at once; it lights the second one's fuse, which lights the third.
+        world.Explosives.Detonate(Spot - new Vector2(100, 0), 60, 110, 0, Nobody);
+        world.Run(0.05f);
+        Assert.Equal(2, world.Mines.Count);
+        Assert.True(world.Mines[0].IsFused || world.Mines[1].IsFused);
+        Assert.False(world.Mines[0].IsFused && world.Mines[1].IsFused);
+
+        world.Run(0.3f);
+        Assert.Equal(1, world.Mines.Count);
+
+        world.Run(0.3f);
+        Assert.Equal(0, world.Mines.Count);
+    }
+
+    [Fact]
     public void LeaveFire_LeavesAFirePoolWhereTheBarrelWent()
     {
         var world = new World();
@@ -299,7 +321,7 @@ public class BarrelTests
         public void FireProjectile(
             Vector2 origin, Vector2 direction, ProjectileConfig projectile, float damage, int ownerIndex,
             float? range = null, int pierce = 0, int ricochets = 0, float ricochetRadius = 0f,
-            float ricochetDamageMult = 1f, bool overkill = false, RocketPayload? rocket = null)
+            float ricochetDamageMult = 1f, bool overkill = false, RocketPayload? rocket = null, int wallBounces = 0)
         {
         }
 

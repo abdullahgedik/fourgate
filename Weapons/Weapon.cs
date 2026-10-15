@@ -251,8 +251,13 @@ public sealed class Weapon
 
         if (Config.Type == WeaponType.Placed)
         {
+            // A throwable one flies to the aim point (no further than its reach); others go down in front.
+            var thrown = Config.Thrown;
+            var at = thrown is null
+                ? muzzle + direction * Stats.PlaceDistance
+                : muzzle + direction * Math.Min(aimDistance, Stats.Range);
             return shots.PlaceMine(new MineShot(
-                muzzle + direction * Stats.PlaceDistance,
+                at,
                 Stats.Damage,
                 Stats.BlastRadius,
                 Stats.TriggerRadius,
@@ -271,7 +276,10 @@ public sealed class Weapon
                 Stats.LeaveFireHurtsPlayers,
                 Stats.Solid,
                 Stats.GridSize,
-                Stats.EnemyHitsToDetonate));
+                Stats.EnemyHitsToDetonate,
+                muzzle,
+                thrown?.Speed ?? 0f,
+                Config.Placed!.ChainDelaySeconds));
         }
 
         var damage = NextShotDamage();
@@ -360,7 +368,8 @@ public sealed class Weapon
             Stats.FireRadius,
             Stats.FireSeconds,
             Stats.Damage,
-            Stats.IgniteSeconds));
+            Stats.IgniteSeconds,
+            Config.Fire?.SpreadSeconds ?? 0f));
         _audio.PlaySfx(_throwSfx);
     }
 
@@ -371,7 +380,7 @@ public sealed class Weapon
             var beam = Config.Beam!;
             shots.FireBeam(new BeamShot(
                 muzzle, direction, damage, Stats.Range, beam.Width, beam.Knockback, ownerIndex,
-                Stats.EndBlastRadius, damage * Stats.EndBlastDamageMult));
+                Stats.EndBlastRadius, damage * Stats.EndBlastDamageMult, beam.HitEffect));
             return;
         }
 
@@ -404,7 +413,8 @@ public sealed class Weapon
                     Stats.RingDamageMult,
                     Stats.RingRadiusMult,
                     Stats.RingDelay,
-                    Stats.RingInterval));
+                    Stats.RingInterval),
+            Stats.WallBounces);
     }
 
     // Turns the aim inside the weapon's spread cone. A single bullet lands anywhere in the

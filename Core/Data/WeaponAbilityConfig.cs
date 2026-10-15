@@ -5,8 +5,11 @@ public sealed class WeaponAbilityConfig
 {
     public required WeaponAbility Id { get; init; }
 
-    /// <summary>How many: enemies pierced, wall bounces. Not used by abilities without a count.</summary>
+    /// <summary>How many: enemies pierced, bounces to another enemy. Not used by abilities without a count.</summary>
     public int Count { get; init; } = 1;
+
+    /// <summary>Ricochet: bounces off walls and pillars, apart from the bounces to enemies.</summary>
+    public int WallBounces { get; init; }
 
     /// <summary>Reach of the ability in world units (ricochet: how far a bullet looks for its next enemy).</summary>
     public float Radius { get; init; }

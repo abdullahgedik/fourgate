@@ -6,7 +6,7 @@ namespace Fourgate.UI;
 
 /// <summary>
 /// Three letters chosen arcade-style: up/down changes the letter, left/right moves between them,
-/// confirm saves. Works the same on keyboard and gamepad.
+/// confirm saves, back skips saving. Works the same on keyboard and gamepad.
 /// </summary>
 public sealed class InitialsEntry
 {
@@ -28,8 +28,11 @@ public sealed class InitialsEntry
     /// <summary>Goes up whenever a letter or the slot changes (for a menu sound).</summary>
     public int Changes { get; private set; }
 
-    /// <summary>True once confirmed.</summary>
+    /// <summary>True once confirmed or skipped.</summary>
     public bool IsDone { get; private set; }
+
+    /// <summary>True when the player chose not to save the score.</summary>
+    public bool IsSkipped { get; private set; }
 
     public string Initials => new(_letters);
 
@@ -62,6 +65,13 @@ public sealed class InitialsEntry
             Changes++;
         }
 
+        if (input.BackPressed)
+        {
+            IsSkipped = true;
+            IsDone = true;
+            return;
+        }
+
         if (input.ConfirmPressed)
         {
             IsDone = true;
@@ -70,16 +80,16 @@ public sealed class InitialsEntry
 
     /// <param name="renderer">Renderer in a screen-space pass.</param>
     /// <param name="topCenter">Where the middle of the top edge of the boxes goes.</param>
-    public void Draw(IRenderer renderer, Vector2 topCenter)
+    public void Draw(IRenderer renderer, Vector2 topCenter, float opacity = 1f)
     {
         var totalWidth = Length * BoxSize + (Length - 1) * BoxGap;
         for (var i = 0; i < Length; i++)
         {
             var topLeft = new Vector2(topCenter.X - totalWidth / 2f + i * (BoxSize + BoxGap), topCenter.Y);
             var size = new Vector2(BoxSize);
-            renderer.FillRect(topLeft, size, i == _slot ? SelectedColor : BorderColor);
-            renderer.FillRect(topLeft + new Vector2(Border), size - new Vector2(Border * 2f), BoxColor);
-            renderer.DrawTextCentered(_letterTexts[i], topLeft + size / 2f, LetterSize, LetterColor);
+            renderer.FillRect(topLeft, size, (i == _slot ? SelectedColor : BorderColor) * opacity);
+            renderer.FillRect(topLeft + new Vector2(Border), size - new Vector2(Border * 2f), BoxColor * opacity);
+            renderer.DrawTextCentered(_letterTexts[i], topLeft + size / 2f, LetterSize, LetterColor * opacity);
         }
     }
 

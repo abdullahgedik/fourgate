@@ -107,7 +107,7 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
         _spriteBatch.Draw(_pixel, topLeft, null, color, 0f, Vector2.Zero, size, SpriteEffects.None, 0f);
     }
 
-    public void FillBox(Vector2 topLeft, Vector2 size, float height, Color color)
+    public void FillBox(Vector2 topLeft, Vector2 size, float height, Color color, bool castShadow = true)
     {
         FillRect(topLeft, size, color);
     }
@@ -123,6 +123,34 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
     }
 
     public bool IsThreeD => false;
+
+    public void DrawLowBody(in VisualDescriptor visual, Vector2 position, float height)
+    {
+        DrawVisual(visual, position, 0f);
+    }
+
+    public void DrawBarrel(Vector2 position, float radius, float height, Color body, Color band)
+    {
+        FillRect(position - new Vector2(radius), new Vector2(radius * 2f), body);
+    }
+
+    public void DrawWallStain(Vector2 from, Vector2 to, float height, Color color)
+    {
+    }
+
+    /// <summary>The floor-stain image; nothing is drawn while it is null.</summary>
+    public Texture2D? FloorStainTexture { get; set; }
+
+    public void DrawFloorStains(Vector2 topLeft, Vector2 size)
+    {
+        if (FloorStainTexture is null)
+        {
+            return;
+        }
+
+        var scale = new Vector2(size.X / FloorStainTexture.Width, size.Y / FloorStainTexture.Height);
+        _spriteBatch.Draw(FloorStainTexture, topLeft, null, Color.White, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+    }
 
     public void DrawVisualElevated(in VisualDescriptor visual, Vector2 position, float rotation, float elevation)
     {

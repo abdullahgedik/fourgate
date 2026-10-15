@@ -16,6 +16,7 @@ public readonly record struct WeaponStats(
     bool Automatic,
     int Pierce,
     int Ricochets,
+    int WallBounces,
     float RicochetRadius,
     float RicochetDamageMult,
     bool DualWield,
@@ -76,7 +77,7 @@ public readonly record struct WeaponStats(
         var fireRate = config.FireRate;
         var magSize = config.Ammo.MagSize;
         var reloadTime = config.Ammo.ReloadTime;
-        var range = config.Projectile?.Range ?? config.Thrown?.MaxRange ?? config.Stream?.Range ?? config.Beam?.Range ?? 0f;
+        var range = Reach(config);
         var blastRadius = config.Explosion?.Radius ?? 0f;
         var fireRadius = config.Fire?.Radius ?? 0f;
         var fireSeconds = config.Fire?.Seconds ?? 0f;
@@ -106,6 +107,7 @@ public readonly record struct WeaponStats(
 
         var pierce = 0;
         var ricochets = 0;
+        var wallBounces = 0;
         var ricochetRadius = 0f;
         var ricochetDamageMult = 1f;
         var dualWield = false;
@@ -165,6 +167,7 @@ public readonly record struct WeaponStats(
 
                     case WeaponAbility.Ricochet:
                         ricochets += abilities[i].Count;
+                        wallBounces += abilities[i].WallBounces;
                         ricochetRadius = abilities[i].Radius;
                         ricochetDamageMult = abilities[i].DamageMult;
                         break;
@@ -254,7 +257,7 @@ public readonly record struct WeaponStats(
 
         return new WeaponStats(
             damage, fireRate, magSize, reloadTime, range, spread, config.Pellets, automatic,
-            pierce, ricochets, ricochetRadius, ricochetDamageMult, dualWield,
+            pierce, ricochets, wallBounces, ricochetRadius, ricochetDamageMult, dualWield,
             blastRadius, reserveMaxBonus, clusterCount, clusterDistance, clusterDamageMult, clusterRadiusMult,
             empoweredEvery, empoweredDamageMult, overdriveFireRateMult, overdriveSeconds, overkill,
             fireRadius, fireSeconds, igniteSeconds,
@@ -308,6 +311,22 @@ public readonly record struct WeaponStats(
                 lines.Add($"+{bonus.ReserveMaxBonus} carried");
             }
         }
+    }
+
+    // Bullets and beams without a range fly on until something solid stops them.
+    private static float Reach(WeaponConfig config)
+    {
+        if (config.Projectile is not null)
+        {
+            return config.Projectile.Range ?? float.PositiveInfinity;
+        }
+
+        if (config.Beam is not null)
+        {
+            return config.Beam.Range ?? float.PositiveInfinity;
+        }
+
+        return config.Thrown?.MaxRange ?? config.Stream?.Range ?? 0f;
     }
 
     private static void AddPercent(List<string> lines, float multiplier, string stat)

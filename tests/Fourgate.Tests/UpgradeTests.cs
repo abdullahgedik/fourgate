@@ -239,6 +239,67 @@ public class UpgradeTests
         Assert.Equal(0, drops.Count);
     }
 
+    [Fact]
+    public void Screen_PlaysThePickBeforeApplyingIt_ThenDealsTheNextPick_ThenFadesOut()
+    {
+        var upgrades = CreateSystem();
+        var input = new FakeInput();
+        var player = CreatePlayer(input);
+        player.Progression.AddPick();
+        player.Progression.AddPick();
+        var players = new List<Player> { player };
+        var cameras = new List<Fourgate.Core.Rendering.Camera2D>
+        {
+            new(new Rectangle(0, 0, 1920, 1080), TestData.Game().Camera),
+        };
+        var screen = new Fourgate.UI.UpgradeScreen(upgrades);
+
+        void Frames(int count)
+        {
+            for (var i = 0; i < count; i++)
+            {
+                if (upgrades.OpenOffers(players))
+                {
+                    screen.Update(Step, players, cameras);
+                }
+                else
+                {
+                    screen.Tick(Step);
+                }
+            }
+        }
+
+        // Cards come in; input is ignored until they have arrived.
+        Frames(1);
+        input.ConfirmPressed = true;
+        Frames(1);
+        input.ConfirmPressed = false;
+        Assert.Equal(2, player.Progression.BankedPicks);
+
+        Frames(30);
+        input.ConfirmPressed = true;
+        Frames(1);
+        input.ConfirmPressed = false;
+
+        // Chosen, but it only takes effect once the card has played out its moment.
+        Assert.Equal(2, player.Progression.BankedPicks);
+        Frames(30);
+        Assert.Equal(1, player.Progression.BankedPicks);
+        Assert.True(upgrades.AnyOfferOpen);
+
+        // The second pick, then the screen fades out after play resumes.
+        Frames(30);
+        input.ConfirmPressed = true;
+        Frames(1);
+        input.ConfirmPressed = false;
+        Frames(30);
+        Assert.Equal(0, player.Progression.BankedPicks);
+        Assert.False(upgrades.AnyOfferOpen);
+        Assert.True(screen.IsAnimating);
+        Frames(30);
+        Assert.False(screen.IsAnimating);
+    }
+
     private static UpgradeSystem CreateSystem()
     {
         return new UpgradeSystem(TestData.Upgrades(), TestData.Unlocks(), new GameRandom(8), new NullAudioManager());

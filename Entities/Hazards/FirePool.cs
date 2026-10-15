@@ -15,10 +15,30 @@ public sealed class FirePool
     private static readonly Color InnerColor = new(255, 190, 70);
 
     private float _age;
+    private float _fullRadius;
+    private float _spreadSeconds;
+
+    // Share of the full size a spreading splash starts at.
+    private const float SpreadStart = 0.2f;
 
     public Vector2 Position { get; private set; }
 
-    public float Radius { get; private set; }
+    /// <summary>How far it has spread: it grows quickly to its full size, then stays there.</summary>
+    public float Radius
+    {
+        get
+        {
+            if (_spreadSeconds <= 0f || _age >= _spreadSeconds)
+            {
+                return _fullRadius;
+            }
+
+            // Fast at first, easing out as it reaches the edge.
+            var t = _age / _spreadSeconds;
+            var eased = 1f - (1f - t) * (1f - t);
+            return _fullRadius * MathHelper.Lerp(SpreadStart, 1f, eased);
+        }
+    }
 
     /// <summary>Damage per second to everything inside.</summary>
     public float DamagePerSecond { get; private set; }
@@ -61,11 +81,13 @@ public sealed class FirePool
         float damagePerSecond,
         int ownerIndex,
         float igniteSeconds,
-        bool hurtsPlayers)
+        bool hurtsPlayers,
+        float spreadSeconds = 0f)
     {
         HurtsPlayers = hurtsPlayers;
         Position = position;
-        Radius = radius;
+        _fullRadius = radius;
+        _spreadSeconds = spreadSeconds;
         SecondsLeft = seconds;
         DamagePerSecond = damagePerSecond;
         OwnerIndex = ownerIndex;

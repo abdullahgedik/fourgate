@@ -129,13 +129,36 @@ public sealed class WeaponConfig
                 ValidateBeam(file, path);
                 break;
         }
+
+        ValidateNoRangeBonusWithoutRange(file, path);
+    }
+
+    // A range bonus on a gun that already flies on to the wall would do nothing.
+    private void ValidateNoRangeBonusWithoutRange(string file, string path)
+    {
+        var unlimited = (Projectile is not null && Projectile.Range is null) || (Beam is not null && Beam.Range is null);
+        if (!unlimited)
+        {
+            return;
+        }
+
+        for (var i = 0; i < Levels.Count; i++)
+        {
+            DataLoadException.Require(
+                Levels[i].RangeMult == 1f, file, $"{path}.levels[{i}].rangeMult", "does nothing on a weapon without a range limit");
+        }
+
+        DataLoadException.Require(
+            LevelTen is null || LevelTen.RangeMult == 1f, file, $"{path}.levelTen.rangeMult",
+            "does nothing on a weapon without a range limit");
     }
 
     private void ValidateBeam(string file, string path)
     {
         DataLoadException.Require(Beam is not null, file, $"{path}.beam", "is required for this weapon type");
         var beam = Beam!;
-        DataLoadException.Require(beam.Range > 0, file, $"{path}.beam.range", "must be greater than 0");
+        DataLoadException.Require(
+            beam.Range is null or > 0, file, $"{path}.beam.range", "must be greater than 0 (or left out for no limit)");
         DataLoadException.Require(beam.Width > 0, file, $"{path}.beam.width", "must be greater than 0");
         DataLoadException.Require(beam.Knockback >= 0, file, $"{path}.beam.knockback", "must not be negative");
     }
@@ -166,11 +189,21 @@ public sealed class WeaponConfig
             !placed.Solid || placed.GridSize > 0, file, $"{path}.placed.gridSize", "must be greater than 0 for a solid weapon");
         DataLoadException.Require(placed.PlaceDistance >= 0, file, $"{path}.placed.placeDistance", "must not be negative");
         DataLoadException.Require(
+            placed.ChainDelaySeconds >= 0, file, $"{path}.placed.chainDelaySeconds", "must not be negative");
+        DataLoadException.Require(
             placed.EnemyHitsToDetonate >= 0, file, $"{path}.placed.enemyHitsToDetonate", "must not be negative");
 
         DataLoadException.Require(Explosion is not null, file, $"{path}.explosion", "is required for this weapon type");
         DataLoadException.Require(
             Explosion!.Radius > 0, file, $"{path}.explosion.radius", "must be greater than 0");
+
+        // An optional thrown block makes it throwable (it flies to the aim point and arms on landing).
+        if (Thrown is not null)
+        {
+            DataLoadException.Require(!placed.Solid, file, $"{path}.thrown", "a solid placed weapon snaps to the grid and cannot be thrown");
+            DataLoadException.Require(Thrown.Speed > 0, file, $"{path}.thrown.speed", "must be greater than 0");
+            DataLoadException.Require(Thrown.MaxRange > 0, file, $"{path}.thrown.maxRange", "must be greater than 0");
+        }
     }
 
     private void ValidateProjectile(string file, string path)
@@ -179,7 +212,8 @@ public sealed class WeaponConfig
         var projectile = Projectile!;
         DataLoadException.Require(projectile.Speed > 0, file, $"{path}.projectile.speed", "must be greater than 0");
         DataLoadException.Require(projectile.Radius > 0, file, $"{path}.projectile.radius", "must be greater than 0");
-        DataLoadException.Require(projectile.Range > 0, file, $"{path}.projectile.range", "must be greater than 0");
+        DataLoadException.Require(
+            projectile.Range is null or > 0, file, $"{path}.projectile.range", "must be greater than 0 (or left out for no limit)");
         DataLoadException.Require(
             projectile.Knockback >= 0, file, $"{path}.projectile.knockback", "must not be negative");
     }
@@ -205,6 +239,7 @@ public sealed class WeaponConfig
         {
             DataLoadException.Require(Fire.Radius > 0, file, $"{path}.fire.radius", "must be greater than 0");
             DataLoadException.Require(Fire.Seconds > 0, file, $"{path}.fire.seconds", "must be greater than 0");
+            DataLoadException.Require(Fire.SpreadSeconds >= 0, file, $"{path}.fire.spreadSeconds", "must not be negative");
         }
     }
 }

@@ -6,12 +6,15 @@ namespace Fourgate.Core.Data;
 /// </summary>
 public sealed class BeamConfig
 {
-    /// <summary>How far the beam reaches when nothing solid is in the way.</summary>
-    public required float Range { get; init; }
+    /// <summary>How far the beam reaches when nothing solid is in the way; null for up to the arena's wall.</summary>
+    public float? Range { get; init; }
 
     /// <summary>Half the beam's thickness; an enemy this close to the line is hit.</summary>
     public required float Width { get; init; }
 
     /// <summary>World units a hit pushes an enemy along the beam; 0 for none.</summary>
     public float Knockback { get; init; }
+
+    /// <summary>What a hit throws off (purely visual).</summary>
+    public HitEffect HitEffect { get; init; } = HitEffect.Energy;
 }

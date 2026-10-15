@@ -19,6 +19,9 @@ public sealed class GameOverOverlay
     private const float HeadingSize = 44f;
     private const float HintSize = 26f;
 
+    // How far below its place the panel starts while fading in.
+    private const float RiseDistance = 40f;
+
     private static readonly Color DimColor = new(0, 0, 0, 200);
     private static readonly Color TitleColor = new(230, 60, 60);
     private static readonly Color StatColor = new(235, 235, 240);
@@ -49,35 +52,39 @@ public sealed class GameOverOverlay
     /// <param name="entries">The mode's list, or null when there is no high-score table.</param>
     /// <param name="version">The table's version.</param>
     /// <param name="highlight">Place of the new entry, or -1.</param>
+    /// <param name="opacity">0–1: the panel fades in and drifts up into place as it rises.</param>
     public void Draw(
         IRenderer renderer, int screenWidth, int screenHeight, InitialsEntry? initials,
-        IReadOnlyList<HighScoreEntry>? entries, int version, int highlight)
+        IReadOnlyList<HighScoreEntry>? entries, int version, int highlight, float opacity = 1f)
     {
-        renderer.FillRect(Vector2.Zero, new Vector2(screenWidth, screenHeight), DimColor);
+        renderer.FillRect(Vector2.Zero, new Vector2(screenWidth, screenHeight), DimColor * opacity);
 
         var center = screenWidth / 2f;
-        var top = screenHeight * 0.07f;
-        renderer.DrawText(Title, new Vector2(center, top), TitleSize, TitleColor, TextAlign.Center);
-        renderer.DrawText(_scoreText, new Vector2(center, top + 130f), StatSize, ScoreColor, TextAlign.Center);
-        renderer.DrawText(_detailText, new Vector2(center, top + 185f), DetailSize, StatColor, TextAlign.Center);
+        var drift = (1f - opacity) * RiseDistance;
+        var top = screenHeight * 0.07f + drift;
+        renderer.DrawText(Title, new Vector2(center, top), TitleSize, TitleColor * opacity, TextAlign.Center);
+        renderer.DrawText(_scoreText, new Vector2(center, top + 130f), StatSize, ScoreColor * opacity, TextAlign.Center);
+        renderer.DrawText(_detailText, new Vector2(center, top + 185f), DetailSize, StatColor * opacity, TextAlign.Center);
 
-        var sectionTop = screenHeight * 0.38f;
+        var sectionTop = screenHeight * 0.38f + drift;
         if (initials is { IsDone: false })
         {
-            renderer.DrawText("NEW HIGH SCORE!", new Vector2(center, sectionTop), HeadingSize, ScoreColor, TextAlign.Center);
-            initials.Draw(renderer, new Vector2(center, sectionTop + 80f));
             renderer.DrawText(
-                "Up / Down: letter   ·   Left / Right: move   ·   Enter: save",
-                new Vector2(center, sectionTop + 220f), HintSize, PromptColor, TextAlign.Center);
+                "NEW HIGH SCORE!", new Vector2(center, sectionTop), HeadingSize, ScoreColor * opacity, TextAlign.Center);
+            initials.Draw(renderer, new Vector2(center, sectionTop + 80f), opacity);
+            renderer.DrawText(
+                "Up / Down: letter   ·   Left / Right: move   ·   Enter / A: save   ·   Esc / B: don't save",
+                new Vector2(center, sectionTop + 220f), HintSize, PromptColor * opacity, TextAlign.Center);
             return;
         }
 
         if (entries is not null)
         {
-            _list.Draw(renderer, _listTitle, entries, version, new Vector2(center, sectionTop), highlight);
+            _list.Draw(renderer, _listTitle, entries, version, new Vector2(center, sectionTop), highlight, opacity);
         }
 
         renderer.DrawText(
-            "PRESS ENTER TO CONTINUE", new Vector2(center, screenHeight * 0.92f), PromptSize, PromptColor, TextAlign.Center);
+            "PRESS ENTER TO CONTINUE", new Vector2(center, screenHeight * 0.92f + drift), PromptSize, PromptColor * opacity,
+            TextAlign.Center);
     }
 }

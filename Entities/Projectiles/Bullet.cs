@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Fourgate.Core.Data;
 using Fourgate.Weapons;
 using Microsoft.Xna.Framework;
 
@@ -25,6 +26,9 @@ public sealed class Bullet
     /// <summary>Index of the player who fired it.</summary>
     public int OwnerIndex { get; private set; }
 
+    /// <summary>What a hit throws off (purely visual).</summary>
+    public HitEffect HitEffect { get; private set; }
+
     /// <summary>World units a hit pushes an enemy along the bullet's path.</summary>
     public float Knockback { get; private set; }
 
@@ -36,6 +40,9 @@ public sealed class Bullet
 
     /// <summary>Bounces the bullet has left.</summary>
     public int RicochetsLeft { get; private set; }
+
+    /// <summary>Bounces off walls and pillars left.</summary>
+    public int WallBouncesLeft { get; private set; }
 
     /// <summary>How far from an enemy it hit the bullet looks for another to bounce to; 0 bounces off walls only.</summary>
     public float RicochetRadius { get; private set; }
@@ -71,9 +78,13 @@ public sealed class Bullet
         float ricochetDamageMult,
         bool overkill,
         RocketPayload? rocket,
-        float knockback = 0f)
+        float knockback = 0f,
+        HitEffect hitEffect = HitEffect.Light,
+        int wallBounces = 0)
     {
+        WallBouncesLeft = wallBounces;
         Knockback = knockback;
+        HitEffect = hitEffect;
         Rocket = rocket;
         _origin = origin;
         _travelled = 0f;
@@ -125,14 +136,11 @@ public sealed class Bullet
         _alreadyHit.Add(target);
     }
 
-    /// <summary>Uses up one ricochet and continues from the current position in a new direction.</summary>
+    /// <summary>Uses up one wall bounce and continues from the current position in a new direction.</summary>
     public void Bounce(Vector2 newDirection)
     {
-        _origin = Position;
-        _travelled = 0f;
-        _alreadyHit.Clear();
-        Direction = newDirection;
-        RicochetsLeft--;
+        Turn(newDirection);
+        WallBouncesLeft--;
     }
 
     /// <summary>
@@ -144,10 +152,19 @@ public sealed class Bullet
     /// <param name="range">World units the bullet may travel after the bounce.</param>
     public void BounceTo(IHittable from, Vector2 newDirection, float range)
     {
-        Bounce(newDirection);
+        Turn(newDirection);
+        RicochetsLeft--;
         _alreadyHit.Add(from);
         RangeLeft = range;
         Damage *= RicochetDamageMult;
+    }
+
+    private void Turn(Vector2 newDirection)
+    {
+        _origin = Position;
+        _travelled = 0f;
+        _alreadyHit.Clear();
+        Direction = newDirection;
     }
 
     /// <summary>Trailing end of a streak of the given length; never behind where the bullet started or last bounced.</summary>

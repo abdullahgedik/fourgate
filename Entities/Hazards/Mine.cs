@@ -25,13 +25,38 @@ public sealed class Mine : IHittable
     private static readonly Color BarrelColor = new(190, 50, 40);
     private static readonly Color BarrelBandColor = new(240, 200, 60);
 
+    /// <summary>The yellow of a barrel's bands.</summary>
+    public static Color BandColor => BarrelBandColor;
+
     private float _armLeft;
+    private float _flightLeft;
+    private float _fuseLeft = -1f;
+
+    // How fast a burning fuse makes a barrel flash.
+    private const float FuseFlashSpeed = 45f;
+    private float _flightTime;
     private float _age;
     private int _enemyHitsTaken;
 
     public MineShot Shot { get; private set; }
 
-    public Vector2 Position => Shot.Position;
+    /// <summary>Where it is now: on its way while thrown, then where it landed.</summary>
+    public Vector2 Position => IsFlying ? Vector2.Lerp(Shot.From, Shot.Position, FlightProgress) : Shot.Position;
+
+    /// <summary>True while a thrown one is still in the air.</summary>
+    public bool IsFlying => _flightLeft > 0f;
+
+    /// <summary>0 when thrown, 1 on landing.</summary>
+    public float FlightProgress => _flightTime > 0f ? 1f - _flightLeft / _flightTime : 1f;
+
+    /// <summary>0 on the ground, 1 at the top of the throw.</summary>
+    public float ArcHeight => IsFlying ? MathF.Sin(MathF.PI * FlightProgress) : 0f;
+
+    /// <summary>True while a chain has lit its fuse: it goes off when the fuse burns down.</summary>
+    public bool IsFused => _fuseLeft >= 0f;
+
+    /// <summary>True on the update a thrown one lands.</summary>
+    public bool JustLanded { get; private set; }
 
     /// <summary>Half the side of a barrel, or a mine's radius.</summary>
     public float Radius => !Shot.Shootable
@@ -44,7 +69,8 @@ public sealed class Mine : IHittable
     /// <summary>Order of placing; lower is older.</summary>
     public long PlacedOrder { get; private set; }
 
-    public bool IsArmed => _armLeft <= 0f;
+    /// <summary>Its arming delay only starts once it lies on the floor.</summary>
+    public bool IsArmed => !IsFlying && _armLeft <= 0f;
 
     /// <summary>A player hit it; it goes off on the next update.</summary>
     public bool IsTriggered { get; private set; }
@@ -56,9 +82,22 @@ public sealed class Mine : IHittable
     public bool CanBeStruck => Shot.Solid && Shot.EnemyHitsToDetonate > 0 && !IsTriggered && !IsDetonating;
 
     // A barrel darkens with each zombie hit, so the player can see how long it will hold.
-    public VisualDescriptor BodyVisual => Shot.Shootable
-        ? new VisualDescriptor(ShapeKind.Square, Radius, Color.Lerp(BarrelColor, BodyColor, DamageShown))
-        : new VisualDescriptor(ShapeKind.Circle, VisualRadius, BodyColor);
+    // A lit fuse makes it flash white.
+    public VisualDescriptor BodyVisual
+    {
+        get
+        {
+            var color = Shot.Shootable ? Color.Lerp(BarrelColor, BodyColor, DamageShown) : BodyColor;
+            if (IsFused)
+            {
+                color = Color.Lerp(color, Color.White, 0.25f + 0.35f * MathF.Sin(_age * FuseFlashSpeed));
+            }
+
+            return Shot.Shootable
+                ? new VisualDescriptor(ShapeKind.Square, Radius, color)
+                : new VisualDescriptor(ShapeKind.Circle, VisualRadius, color);
+        }
+    }
 
     private float DamageShown => Shot.EnemyHitsToDetonate > 0
         ? 0.7f * _enemyHitsTaken / Shot.EnemyHitsToDetonate
@@ -85,10 +124,23 @@ public sealed class Mine : IHittable
         Shot = shot;
         PlacedOrder = order;
         _armLeft = shot.ArmSeconds;
+        _flightTime = shot.ThrowSpeed > 0f ? Vector2.Distance(shot.From, shot.Position) / shot.ThrowSpeed : 0f;
+        _flightLeft = _flightTime;
+        _fuseLeft = -1f;
+        JustLanded = false;
         _age = 0f;
         IsTriggered = false;
         IsDetonating = false;
         _enemyHitsTaken = 0;
+    }
+
+    /// <summary>Lights its fuse (once): it goes off when the fuse has burnt down.</summary>
+    public void LightFuse(float seconds)
+    {
+        if (!IsFused && !IsTriggered && !IsDetonating)
+        {
+            _fuseLeft = seconds;
+        }
     }
 
     /// <summary>A zombie hit; the last one it can take sets it off.</summary>
@@ -104,6 +156,23 @@ public sealed class Mine : IHittable
     public void Tick(float deltaSeconds)
     {
         _age += deltaSeconds;
+        JustLanded = false;
+        if (IsFused)
+        {
+            _fuseLeft -= deltaSeconds;
+            if (_fuseLeft <= 0f)
+            {
+                IsTriggered = true;
+            }
+        }
+
+        if (IsFlying)
+        {
+            _flightLeft -= deltaSeconds;
+            JustLanded = _flightLeft <= 0f;
+            return;
+        }
+
         _armLeft = Math.Max(0f, _armLeft - deltaSeconds);
     }
 

@@ -23,6 +23,9 @@ namespace Fourgate.Weapons;
 /// <param name="Solid">True when nothing can walk through it; it then snaps to a grid cell.</param>
 /// <param name="GridSize">Size of a grid cell for a solid one.</param>
 /// <param name="EnemyHitsToDetonate">Zombie hits a solid one takes before going off; 0 when zombies leave it alone.</param>
+/// <param name="ChainDelay">Seconds another placed explosive set off by this one's chain burns before going off.</param>
+/// <param name="From">Where a thrown one leaves the hand.</param>
+/// <param name="ThrowSpeed">World units per second of a thrown one's flight to <paramref name="Position"/>; 0 when it is put down.</param>
 public readonly record struct MineShot(
     Vector2 Position,
     float Damage,
@@ -43,4 +46,7 @@ public readonly record struct MineShot(
     bool FireHurtsPlayers = true,
     bool Solid = false,
     float GridSize = 0f,
-    int EnemyHitsToDetonate = 0);
+    int EnemyHitsToDetonate = 0,
+    Vector2 From = default,
+    float ThrowSpeed = 0f,
+    float ChainDelay = 0f);

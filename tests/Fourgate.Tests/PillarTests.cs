@@ -76,7 +76,7 @@ public class PillarTests
         var behindTheShooter = new PracticeTarget(new Vector2(1050, 1500), 20);
         shots.AddTarget(behindTheShooter);
 
-        shots.FireProjectile(new Vector2(1200, 1500), Vector2.UnitX, Projectile, 15, 0, ricochets: 1);
+        shots.FireProjectile(new Vector2(1200, 1500), Vector2.UnitX, Projectile, 15, 0, wallBounces: 1);
         Run(shots, 30);
 
         Assert.Equal(1, behindTheShooter.HitCount);

@@ -42,6 +42,9 @@ public sealed class ShotSystem
     // How high shots fly in the 3D view (chest height); ignored in 2D.
     private const float ShotHeight = 18f;
 
+    // Where on a body hit effects burst, as a share of its height.
+    private const float HitHeightOnBody = 0.8f;
+
     private readonly Arena _arena;
     private readonly IAudioManager? _audio;
     private readonly Pool<Bullet> _bullets = new(InitialBullets);
@@ -99,14 +102,15 @@ public sealed class ShotSystem
         float ricochetRadius = 0f,
         float ricochetDamageMult = 1f,
         bool overkill = false,
-        RocketPayload? rocket = null)
+        RocketPayload? rocket = null,
+        int wallBounces = 0)
     {
         _bullets.Rent().Launch(
             origin,
             direction,
             projectile.Speed,
             projectile.Radius,
-            range ?? projectile.Range,
+            range ?? projectile.Range ?? float.PositiveInfinity,
             damage,
             ownerIndex,
             pierce,
@@ -115,7 +119,9 @@ public sealed class ShotSystem
             ricochetDamageMult,
             overkill,
             rocket,
-            projectile.Knockback);
+            projectile.Knockback,
+            projectile.HitEffect,
+            wallBounces);
     }
 
     /// <summary>
@@ -171,7 +177,7 @@ public sealed class ShotSystem
 
             var entry = shot.Origin + shot.Direction * BeamEntry(shot.Origin, shot.Direction, target);
             target.HitAt(damage, shot.OwnerIndex, entry);
-            Particles?.HitPuff(entry, shot.Direction);
+            Particles?.BodyHit(shot.HitEffect, entry, shot.Direction, HitHeight(target), damage);
             target.Knock(shot.Direction * shot.Knockback);
         }
 
@@ -186,6 +192,12 @@ public sealed class ShotSystem
         {
             AddSpark(end);
         }
+    }
+
+    // Hits show on the upper body (bigger bodies are taller), never below the shot itself.
+    private static float HitHeight(IHittable target)
+    {
+        return MathF.Max(ShotHeight, Depth3D.BodyHeight(target.Radius) * HitHeightOnBody);
     }
 
     // Distance along the beam to where it first meets a target's body.
@@ -400,7 +412,7 @@ public sealed class ShotSystem
 
             hit.HitAt(damage, bullet.OwnerIndex, impact);
             hit.Knock(direction * bullet.Knockback);
-            Particles?.HitPuff(impact, direction);
+            Particles?.BodyHit(bullet.HitEffect, impact, direction, HitHeight(hit), damage);
 
             if (bullet.PierceLeft > 0)
             {
@@ -425,7 +437,7 @@ public sealed class ShotSystem
         }
 
         bullet.Advance(distance);
-        if (atWall && bullet.RicochetsLeft > 0 && bullet.RangeLeft > 0f)
+        if (atWall && bullet.WallBouncesLeft > 0 && bullet.RangeLeft > 0f)
         {
             // The rest of this frame's travel is dropped; the bullet continues next frame.
             Particles?.Sparks(bullet.Position);
@@ -442,7 +454,7 @@ public sealed class ShotSystem
 
             if (atWall)
             {
-                Particles?.Dust(bullet.Position);
+                Particles?.WallHit(bullet.HitEffect, bullet.Position, direction);
             }
 
             bullet.Stop();

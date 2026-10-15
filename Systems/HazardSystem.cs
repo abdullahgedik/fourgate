@@ -62,9 +62,10 @@ public sealed class HazardSystem
         float damagePerSecond,
         int ownerIndex,
         float igniteSeconds,
-        bool hurtsPlayers = true)
+        bool hurtsPlayers = true,
+        float spreadSeconds = 0f)
     {
-        _pools.Rent().Start(position, radius, seconds, damagePerSecond, ownerIndex, igniteSeconds, hurtsPlayers);
+        _pools.Rent().Start(position, radius, seconds, damagePerSecond, ownerIndex, igniteSeconds, hurtsPlayers, spreadSeconds);
     }
 
     /// <summary>Where visual particles go; null draws none (tests).</summary>

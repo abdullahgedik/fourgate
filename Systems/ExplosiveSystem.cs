@@ -19,6 +19,18 @@ public sealed class ExplosiveSystem
     // How high a throw goes in the 3D view (2D shows the arc by size instead).
     private const float ThrowPeakHeight = 140f;
 
+    // A molotov in flight: a spinning bottle with a burning rag that trails embers.
+    private const float BottleSpins = 2.5f;
+    private const float BottleHalfLength = 1.4f;
+    private const float BottleThickness = 1.1f;
+    private const float RagEmbersPerSecond = 45f;
+    private const float RagEmberSize = 3f;
+
+    private static readonly Color BottleColor = new(70, 120, 60);
+    private static readonly Color BottleNeckColor = new(50, 90, 45);
+    private static readonly Color RagFlameColor = new(255, 200, 80);
+    private static readonly Color RagGlowColor = new(255, 110, 30);
+
     private const int InitialThrown = 32;
     private const int InitialEffects = 32;
 
@@ -140,6 +152,14 @@ public sealed class ExplosiveSystem
         {
             var thrown = _thrown[i];
             thrown.Advance(deltaSeconds);
+            if (thrown.Shot.FireRadius > 0f)
+            {
+                // A burning rag trails embers.
+                Particles?.Embers(
+                    thrown.Position, ThrowPeakHeight * thrown.ArcHeight + thrown.Shot.VisualRadius, RagEmbersPerSecond,
+                    RagEmberSize, deltaSeconds);
+            }
+
             if (thrown.HasLanded)
             {
                 _landed.Add(thrown.Shot);
@@ -185,8 +205,31 @@ public sealed class ExplosiveSystem
                 renderer.FillCircle(thrown.Position, thrown.Shot.VisualRadius, ShadowColor);
             }
 
+            if (thrown.Shot.FireRadius > 0f)
+            {
+                DrawBottle(renderer, thrown, height, visual.Radius);
+                continue;
+            }
+
             renderer.FillCircleRaised(thrown.Position, height, visual.Radius, visual.Color);
         }
+    }
+
+    // A fire bomb is a glass bottle tumbling end over end (seen from above: spinning), with a
+    // burning rag stuck in its neck.
+    private static void DrawBottle(IRenderer renderer, ThrownExplosive thrown, float height, float radius)
+    {
+        var throwDirection = thrown.Shot.Target - thrown.Shot.Origin;
+        var angle = MathF.Atan2(throwDirection.Y, throwDirection.X) + thrown.Progress * BottleSpins * MathHelper.TwoPi;
+        var axis = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * (radius * BottleHalfLength);
+        var bottom = thrown.Position - axis;
+        var shoulder = thrown.Position + axis * 0.55f;
+        var neck = thrown.Position + axis;
+        var rag = thrown.Position + axis * 1.35f;
+        renderer.DrawLineRaised(bottom, shoulder, height, radius * BottleThickness, BottleColor);
+        renderer.DrawLineRaised(shoulder, neck, height, radius * BottleThickness * 0.5f, BottleNeckColor);
+        renderer.FillCircleRaised(rag, height, radius * 1.2f, RagGlowColor * 0.45f);
+        renderer.FillCircleRaised(rag, height, radius * 0.6f, RagFlameColor);
     }
 
     /// <summary>An explosion right here and now (a mine going off), with the usual damage rules.</summary>
@@ -226,7 +269,8 @@ public sealed class ExplosiveSystem
         {
             _hazards?.SpawnFire(
                 shot.Target, shot.FireRadius, shot.FireSeconds, shot.FireDamagePerSecond, shot.OwnerIndex,
-                shot.IgniteSeconds);
+                shot.IgniteSeconds, spreadSeconds: shot.FireSpreadSeconds);
+            Particles?.FireSplash(shot.Target, shot.FireRadius);
             _audio.PlaySfx(SfxIds.FireStart);
         }
     }

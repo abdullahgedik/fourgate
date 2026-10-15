@@ -127,9 +127,7 @@ public sealed class HighScoreTests : IDisposable
             scene.Update(Step);
         }
 
-        scene.Players[0].TakeDamage(10000f);
-        scene.Update(Step);
-        Assert.True(scene.IsGameOver);
+        Die(scene);
         Assert.True(scene.IsEnteringInitials);
 
         // Confirming the initials saves them, and does not also leave the screen.
@@ -143,6 +141,87 @@ public sealed class HighScoreTests : IDisposable
 
         scene.Update(Step);
         Assert.True(scene.RestartRequested);
+    }
+
+    [Fact]
+    public void GameOver_HighScore_CanBeLeftUnsaved()
+    {
+        var data = DataLoader.LoadAll(DataLoader.DefaultDirectory);
+        var store = new HighScoreStore(Path.Combine(_folder, "scores.json"));
+        var table = new HighScoreTable();
+        var input = new FakeInput();
+        var scene = new GameplayScene(
+            data, new IPlayerInput[] { input }, new NullAudioManager(), new RunMode(true, false), table, store);
+        for (var i = 0; i < 60 * 3; i++)
+        {
+            scene.Update(Step);
+        }
+
+        Die(scene);
+        Assert.True(scene.IsEnteringInitials);
+
+        input.BackPressed = true;
+        scene.Update(Step);
+        input.BackPressed = false;
+
+        Assert.False(scene.IsEnteringInitials);
+        Assert.False(scene.RestartRequested);
+        Assert.Empty(table.Get("fast"));
+        Assert.Empty(store.Load().Get("fast"));
+
+        input.ConfirmPressed = true;
+        scene.Update(Step);
+        Assert.True(scene.RestartRequested);
+    }
+
+    [Fact]
+    public void Death_ShowsYouDiedFirst_WhileTheWorldGoesOn_ThenTheResults()
+    {
+        var data = DataLoader.LoadAll(DataLoader.DefaultDirectory);
+        var input = new FakeInput();
+        var scene = new GameplayScene(
+            data, new IPlayerInput[] { input }, new NullAudioManager(), new RunMode(true, false), new HighScoreTable(),
+            new HighScoreStore(Path.Combine(_folder, "scores.json")));
+        for (var i = 0; i < 60 * 3; i++)
+        {
+            scene.Update(Step);
+        }
+
+        scene.Players[0].TakeDamage(10000f);
+        scene.Update(Step);
+        Assert.True(scene.IsDying);
+        Assert.False(scene.IsGameOver);
+
+        // A second later it is still "YOU DIED"; the results come after.
+        for (var i = 0; i < 60; i++)
+        {
+            scene.Update(Step);
+        }
+
+        Assert.True(scene.IsDying);
+        for (var i = 0; i < 90; i++)
+        {
+            scene.Update(Step);
+        }
+
+        Assert.True(scene.IsGameOver);
+        Assert.False(scene.IsDying);
+    }
+
+    // Kills the only player and waits through "YOU DIED" and the results fading in.
+    private static void Die(GameplayScene scene)
+    {
+        scene.Players[0].TakeDamage(10000f);
+        for (var i = 0; i < 60 * 4 && !scene.IsGameOver; i++)
+        {
+            scene.Update(Step);
+        }
+
+        Assert.True(scene.IsGameOver);
+        for (var i = 0; i < 60; i++)
+        {
+            scene.Update(Step);
+        }
     }
 
     private static void Press(InitialsEntry entry, FakeInput input, Action<FakeInput> set)

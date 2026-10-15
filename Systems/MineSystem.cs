@@ -21,6 +21,15 @@ public sealed class MineSystem : IHittableSource, IObstacleSource
 {
     private const int InitialMines = 32;
 
+    // A mine is a flat puck this tall (3D only).
+    private const float MineHeight = 10f;
+
+    // A thrown mine's arc: how high it goes (3D), and how much bigger it looks at the top (2D).
+    private const float MineThrowPeakHeight = 110f;
+    private const float FlyingGrowth = 0.6f;
+
+    private static readonly Color FlyingShadowColor = new Color(0, 0, 0) * 0.35f;
+
     private readonly ExplosiveSystem _explosives;
     private readonly HazardSystem? _hazards;
     private readonly GameRandom _random;
@@ -32,6 +41,10 @@ public sealed class MineSystem : IHittableSource, IObstacleSource
     private readonly List<Mine> _detonating = new();
     private readonly List<FollowUpBlast> _followUps = new();
     private long _placedCount;
+    private bool _chainingBlast;
+
+    // Each fuse in a chain burns this much longer or shorter at random, so a ripple looks natural.
+    private const float ChainDelayJitter = 0.25f;
     private IReadOnlyList<Player> _players = Array.Empty<Player>();
     private Arena? _arena;
 
@@ -72,6 +85,12 @@ public sealed class MineSystem : IHittableSource, IObstacleSource
     /// <summary>The barrels near a point: any damage from any weapon or equipment sets them off.</summary>
     public void Collect(Vector2 center, float radius, List<IHittable> results)
     {
+        // Inside a delayed chain's own blast, the chain lights the fuses instead.
+        if (_chainingBlast)
+        {
+            return;
+        }
+
         for (var i = 0; i < _mines.Count; i++)
         {
             var mine = _mines[i];
@@ -106,8 +125,18 @@ public sealed class MineSystem : IHittableSource, IObstacleSource
             RemoveOldest(placed.OwnerIndex, placed.WeaponId);
         }
 
+        if (placed.ThrowSpeed > 0f && _arena is not null)
+        {
+            // A thrown one lands on open floor, never inside a pillar or past a wall.
+            placed = placed with { Position = _arena.PlaceOnFloor(placed.Position, Mine.VisualRadius) };
+        }
+
         _mines.Rent().Place(placed, _placedCount++);
-        _audio.PlaySfx(SfxIds.MinePlaced);
+        if (placed.ThrowSpeed <= 0f)
+        {
+            _audio.PlaySfx(SfxIds.MinePlaced);
+        }
+
         return true;
     }
 
@@ -204,6 +233,11 @@ public sealed class MineSystem : IHittableSource, IObstacleSource
         {
             var mine = _mines[i];
             mine.Tick(deltaSeconds);
+            if (mine.JustLanded)
+            {
+                _audio.PlaySfx(SfxIds.MinePlaced);
+            }
+
             if (mine.IsTriggered || (mine.IsArmed && mine.Shot.TriggerRadius > 0f && IsNearEnemy(mine)))
             {
                 mine.IsDetonating = true;
@@ -217,7 +251,9 @@ public sealed class MineSystem : IHittableSource, IObstacleSource
             var mine = _detonating[i];
             var shot = mine.Shot;
 
+            _chainingBlast = shot.ChainDetonation && shot.ChainDelay > 0f;
             _explosives.Detonate(shot.Position, shot.Damage, shot.BlastRadius, shot.OwnerIndex, players);
+            _chainingBlast = false;
 
             QueueFollowUps(shot);
             LeaveFire(shot);
@@ -243,9 +279,47 @@ public sealed class MineSystem : IHittableSource, IObstacleSource
         {
             var mine = _mines[i];
             var body = mine.BodyVisual;
-            renderer.DrawVisual(body, mine.Position, 0f);
-            renderer.DrawVisualRaised(mine.LightVisual, mine.Position, 0f, Depth3D.BodyHeight(body.Radius) + 0.5f);
+            if (mine.Shot.Shootable)
+            {
+                if (renderer.IsThreeD)
+                {
+                    renderer.DrawBarrel(mine.Position, body.Radius, Depth3D.BodyHeight(body.Radius), body.Color, Mine.BandColor);
+                    continue;
+                }
+
+                renderer.DrawVisual(body, mine.Position, 0f);
+                renderer.DrawVisualRaised(mine.LightVisual, mine.Position, 0f, Depth3D.BodyHeight(body.Radius) + 0.5f);
+                continue;
+            }
+
+            if (mine.IsFlying)
+            {
+                DrawFlying(renderer, mine);
+                continue;
+            }
+
+            // A mine lies flat on the floor, its light on top.
+            renderer.DrawLowBody(body, mine.Position, MineHeight);
+            renderer.DrawVisualRaised(mine.LightVisual, mine.Position, 0f, MineHeight + 0.5f);
         }
+    }
+
+    // A thrown mine on its arc, with its shadow on the floor (in 2D it grows near the top instead).
+    private static void DrawFlying(IRenderer renderer, Mine mine)
+    {
+        var body = mine.BodyVisual;
+        var height = MineThrowPeakHeight * mine.ArcHeight;
+        if (renderer.IsThreeD)
+        {
+            renderer.DrawShadow(mine.Position, height, body.Radius);
+            renderer.DrawVisualRaised(body, mine.Position, 0f, height + MineHeight);
+            renderer.DrawVisualRaised(mine.LightVisual, mine.Position, 0f, height + MineHeight + 0.5f);
+            return;
+        }
+
+        renderer.FillCircle(mine.Position, body.Radius, FlyingShadowColor);
+        var lifted = new VisualDescriptor(body.Shape, body.Radius * (1f + FlyingGrowth * mine.ArcHeight), body.Color);
+        renderer.DrawVisual(lifted, mine.Position, 0f);
     }
 
     private void LeaveFire(in MineShot shot)
@@ -318,11 +392,20 @@ public sealed class MineSystem : IHittableSource, IObstacleSource
         for (var i = 0; i < _mines.Count; i++)
         {
             var other = _mines[i];
-            if (!other.IsDetonating && Vector2.Distance(other.Position, source.Position) <= reach)
+            if (other.IsDetonating || other.IsFlying || Vector2.Distance(other.Position, source.Position) > reach)
             {
-                other.IsDetonating = true;
-                _detonating.Add(other);
+                continue;
             }
+
+            var delay = source.Shot.ChainDelay;
+            if (delay > 0f)
+            {
+                other.LightFuse(delay * _random.Range(1f - ChainDelayJitter, 1f + ChainDelayJitter));
+                continue;
+            }
+
+            other.IsDetonating = true;
+            _detonating.Add(other);
         }
     }
 

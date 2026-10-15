@@ -18,15 +18,19 @@ public sealed class Renderer3D : IRenderer, IDisposable
     private const int VerticesPerDraw = 60_000;
     private const int CircleSegments = 14;
     private const int FlatCircleSegments = 10;
+    private const int BarrelSegments = 16;
+    private const int MaxWallStainVertices = 6 * 1024;
+    private const int SootTextureSize = 64;
 
 
     // Flat things float just above the floor so the floor does not hide them.
     private const float FlatHeight = 0.5f;
     private const int BillboardSegments = 8;
 
-    // Shadows fall away from the light (screen down-right), longer for taller things.
+    // The light comes from the bottom left of the arena, so shadows fall away from it (screen
+    // up-right), longer for taller things.
     private const float ShadowLengthPerHeight = 0.45f;
-    private static readonly Vector2 ShadowDirection = Vector2.Normalize(new Vector2(0.55f, 0.4f));
+    private static readonly Vector2 ShadowDirection = Vector2.Normalize(new Vector2(0.55f, -0.4f));
     private static readonly Color ShadowColor = new(16, 17, 22);
 
     // Flying things cast a softer, see-through shadow.
@@ -75,6 +79,13 @@ public sealed class Renderer3D : IRenderer, IDisposable
     private Vector3 _billboardRight = Vector3.Right;
     private Vector3 _billboardUp = Vector3.Up;
     private Camera2D? _camera;
+    private readonly BasicEffect _stainEffect;
+    private readonly VertexPositionTexture[] _stainQuad = new VertexPositionTexture[6];
+    private int _stainsAt = -1;
+    private readonly BasicEffect _wallStainEffect;
+    private readonly Texture2D _sootTexture;
+    private readonly VertexPositionColorTexture[] _wallStains = new VertexPositionColorTexture[MaxWallStainVertices];
+    private int _wallStainCount;
 
     public Renderer3D(GraphicsDevice device, ShapeRenderer screen)
     {
@@ -84,13 +95,16 @@ public sealed class Renderer3D : IRenderer, IDisposable
         _solidEffect = new BasicEffect(device) { VertexColorEnabled = true, LightingEnabled = true };
         _solidEffect.EnableDefaultLighting();
         _solidEffect.AmbientLightColor = new Vector3(0.45f, 0.45f, 0.5f);
-        _solidEffect.DirectionalLight0.Direction = Vector3.Normalize(new Vector3(0.45f, -1f, 0.33f));
+        _solidEffect.DirectionalLight0.Direction = Vector3.Normalize(new Vector3(0.45f, -1f, -0.33f));
         _solidEffect.DirectionalLight0.DiffuseColor = new Vector3(0.75f, 0.72f, 0.68f);
         _solidEffect.DirectionalLight1.Enabled = false;
         _solidEffect.DirectionalLight2.Enabled = false;
         _solidEffect.SpecularColor = Vector3.Zero;
 
         _flatEffect = new BasicEffect(device) { VertexColorEnabled = true, LightingEnabled = false };
+        _stainEffect = new BasicEffect(device) { TextureEnabled = true, VertexColorEnabled = false, LightingEnabled = false };
+        _wallStainEffect = new BasicEffect(device) { TextureEnabled = true, VertexColorEnabled = true, LightingEnabled = false };
+        _sootTexture = CreateSootTexture(device);
         _silhouetteEffect = new BasicEffect(device)
         {
             VertexColorEnabled = true, LightingEnabled = false, Alpha = SilhouetteAlpha,
@@ -110,6 +124,8 @@ public sealed class Renderer3D : IRenderer, IDisposable
         _solidCount = 0;
         _wallCount = 0;
         _flatCount = 0;
+        _stainsAt = -1;
+        _wallStainCount = 0;
     }
 
     public void BeginScreen()
@@ -182,7 +198,7 @@ public sealed class Renderer3D : IRenderer, IDisposable
         FlatQuad(topLeft, topLeft + new Vector2(size.X, 0f), topLeft + size, topLeft + new Vector2(0f, size.Y), color);
     }
 
-    public void FillBox(Vector2 topLeft, Vector2 size, float height, Color color)
+    public void FillBox(Vector2 topLeft, Vector2 size, float height, Color color, bool castShadow = true)
     {
         if (!_inWorld)
         {
@@ -190,7 +206,11 @@ public sealed class Renderer3D : IRenderer, IDisposable
             return;
         }
 
-        BoxShadow(topLeft, size, height);
+        if (castShadow)
+        {
+            BoxShadow(topLeft, size, height);
+        }
+
         _writingWalls = true;
         Box(topLeft + size / 2f, size / 2f, 0f, height, color);
         _writingWalls = false;
@@ -238,6 +258,93 @@ public sealed class Renderer3D : IRenderer, IDisposable
     }
 
     public bool IsThreeD => true;
+
+    public void DrawLowBody(in VisualDescriptor visual, Vector2 position, float height)
+    {
+        if (!_inWorld)
+        {
+            _screen.DrawVisual(visual, position, 0f);
+            return;
+        }
+
+        if (visual.Shape == ShapeKind.Square)
+        {
+            Box(position, new Vector2(visual.Radius), 0f, height, visual.Color);
+            return;
+        }
+
+        Prism(position, visual.Radius, CircleSegments, 0f, height, visual.Color);
+    }
+
+    public void DrawBarrel(Vector2 position, float radius, float height, Color body, Color band)
+    {
+        if (!_inWorld)
+        {
+            _screen.DrawBarrel(position, radius, height, body, band);
+            return;
+        }
+
+        // A drum: a slightly narrower body, dark rims at the foot and top, two bands round the
+        // middle, and a dark lid with a bung on top.
+        var rim = Color.Lerp(body, Color.Black, 0.45f);
+        Shadow(position, radius, height);
+        Prism(position, radius * 0.9f, BarrelSegments, 0f, height * 0.985f, body);
+        Prism(position, radius, BarrelSegments, 0f, height * 0.07f, rim);
+        Prism(position, radius * 0.96f, BarrelSegments, 0f, height * 0.08f, band, height * 0.3f);
+        Prism(position, radius * 0.96f, BarrelSegments, 0f, height * 0.08f, band, height * 0.62f);
+        Prism(position, radius, BarrelSegments, 0f, height * 0.06f, rim, height * 0.94f);
+        FlatPolygon(position, radius * 0.8f, BarrelSegments, 0f, rim, height + 0.3f);
+        FlatPolygon(position + new Vector2(radius * 0.4f, -radius * 0.25f), radius * 0.14f, 8, 0f, band, height + 0.6f);
+    }
+
+    public void DrawWallStain(Vector2 from, Vector2 to, float height, Color color)
+    {
+        if (!_inWorld || height <= 0f || _wallStainCount + 6 > _wallStains.Length)
+        {
+            return;
+        }
+
+        var b0 = new Vector3(from.X, 0f, from.Y);
+        var b1 = new Vector3(to.X, 0f, to.Y);
+        var t0 = new Vector3(from.X, height, from.Y);
+        var t1 = new Vector3(to.X, height, to.Y);
+        _wallStains[_wallStainCount++] = new VertexPositionColorTexture(b0, color, new Vector2(0f, 1f));
+        _wallStains[_wallStainCount++] = new VertexPositionColorTexture(b1, color, new Vector2(1f, 1f));
+        _wallStains[_wallStainCount++] = new VertexPositionColorTexture(t1, color, new Vector2(1f, 0f));
+        _wallStains[_wallStainCount++] = new VertexPositionColorTexture(b0, color, new Vector2(0f, 1f));
+        _wallStains[_wallStainCount++] = new VertexPositionColorTexture(t1, color, new Vector2(1f, 0f));
+        _wallStains[_wallStainCount++] = new VertexPositionColorTexture(t0, color, new Vector2(0f, 0f));
+    }
+
+    /// <summary>The floor-stain image; nothing is drawn while it is null.</summary>
+    public Texture2D? FloorStainTexture { get; set; }
+
+    public void DrawFloorStains(Vector2 topLeft, Vector2 size)
+    {
+        if (!_inWorld)
+        {
+            _screen.DrawFloorStains(topLeft, size);
+            return;
+        }
+
+        if (FloorStainTexture is null)
+        {
+            return;
+        }
+
+        // Drawn in its place among the flat things: after the floor, before what lies on it.
+        _stainsAt = _flatCount;
+        var a = new Vector3(topLeft.X, FlatHeight, topLeft.Y);
+        var b = new Vector3(topLeft.X + size.X, FlatHeight, topLeft.Y);
+        var c = new Vector3(topLeft.X + size.X, FlatHeight, topLeft.Y + size.Y);
+        var d = new Vector3(topLeft.X, FlatHeight, topLeft.Y + size.Y);
+        _stainQuad[0] = new VertexPositionTexture(a, new Vector2(0f, 0f));
+        _stainQuad[1] = new VertexPositionTexture(b, new Vector2(1f, 0f));
+        _stainQuad[2] = new VertexPositionTexture(c, new Vector2(1f, 1f));
+        _stainQuad[3] = new VertexPositionTexture(a, new Vector2(0f, 0f));
+        _stainQuad[4] = new VertexPositionTexture(c, new Vector2(1f, 1f));
+        _stainQuad[5] = new VertexPositionTexture(d, new Vector2(0f, 1f));
+    }
 
     public void DrawVisualElevated(in VisualDescriptor visual, Vector2 position, float rotation, float elevation)
     {
@@ -392,9 +499,12 @@ public sealed class Renderer3D : IRenderer, IDisposable
 
     public void Dispose()
     {
+        _sootTexture.Dispose();
+        _wallStainEffect.Dispose();
         _solidEffect.Dispose();
         _silhouetteEffect.Dispose();
         _flatEffect.Dispose();
+        _stainEffect.Dispose();
     }
 
     // Solids first (depth written), then flat things in the order they were drawn: they test
@@ -420,34 +530,99 @@ public sealed class Renderer3D : IRenderer, IDisposable
         _solidEffect.Projection = projection;
         _solidEffect.World = Matrix.Identity;
         _device.DepthStencilState = MarkOccluders;
-        DrawInChunks(_walls, _wallCount, _solidEffect);
+        DrawInChunks(_walls, 0, _wallCount, _solidEffect);
         _device.DepthStencilState = DepthStencilState.Default;
-        DrawInChunks(_solids, _solidCount, _solidEffect);
+        DrawInChunks(_solids, 0, _solidCount, _solidEffect);
 
         _device.BlendState = BlendState.AlphaBlend;
         _device.DepthStencilState = DepthStencilState.DepthRead;
         _flatEffect.View = viewMatrix;
         _flatEffect.Projection = projection;
         _flatEffect.World = Matrix.Identity;
-        DrawInChunks(_flats, _flatCount, _flatEffect);
+        if (_stainsAt >= 0 && FloorStainTexture is not null)
+        {
+            DrawInChunks(_flats, 0, _stainsAt, _flatEffect);
+            DrawStainQuad(viewMatrix, projection);
+            DrawInChunks(_flats, _stainsAt, _flatCount, _flatEffect);
+        }
+        else
+        {
+            DrawInChunks(_flats, 0, _flatCount, _flatEffect);
+        }
+
+        if (_wallStainCount > 0)
+        {
+            _wallStainEffect.View = viewMatrix;
+            _wallStainEffect.Projection = projection;
+            _wallStainEffect.World = Matrix.Identity;
+            _wallStainEffect.Texture = _sootTexture;
+            _device.SamplerStates[0] = SamplerState.LinearClamp;
+            foreach (var pass in _wallStainEffect.CurrentTechnique.Passes)
+            {
+                pass.Apply();
+                _device.DrawUserPrimitives(PrimitiveType.TriangleList, _wallStains, 0, _wallStainCount / 3);
+            }
+        }
 
         // Characters hidden behind a wall or pillar show through it as see-through silhouettes.
         _device.DepthStencilState = BehindOccluders;
         _silhouetteEffect.View = viewMatrix;
         _silhouetteEffect.Projection = projection;
         _silhouetteEffect.World = Matrix.Identity;
-        DrawInChunks(_solids, _solidCount, _silhouetteEffect);
+        DrawInChunks(_solids, 0, _solidCount, _silhouetteEffect);
 
         _device.DepthStencilState = DepthStencilState.None;
         _device.Viewport = fullViewport;
     }
 
-    private void DrawInChunks<T>(T[] vertices, int count, BasicEffect effect)
+    // Soot: solid at the foot, thinning upward, soft at both sides, with a few darker streaks
+    // running up so it does not look like a plain gradient. White, tinted per patch.
+    private static Texture2D CreateSootTexture(GraphicsDevice device)
+    {
+        var texture = new Texture2D(device, SootTextureSize, SootTextureSize);
+        var pixels = new Color[SootTextureSize * SootTextureSize];
+        for (var y = 0; y < SootTextureSize; y++)
+        {
+            var up = 1f - y / (SootTextureSize - 1f);
+            for (var x = 0; x < SootTextureSize; x++)
+            {
+                var across = x / (SootTextureSize - 1f);
+                var side = Math.Clamp((1f - MathF.Abs(across * 2f - 1f)) / 0.5f, 0f, 1f);
+                var streaks = 0.75f + 0.25f * MathF.Sin(across * 23f + MathF.Sin(across * 7f) * 2f);
+
+                // Streaks reach higher than the soot between them.
+                var reach = 0.55f + 0.45f * streaks;
+                var rise = Math.Clamp(1f - up / reach, 0f, 1f);
+                var alpha = side * side * (3f - 2f * side) * rise * rise * (0.8f + 0.2f * streaks);
+                pixels[y * SootTextureSize + x] = Color.White * alpha;
+            }
+        }
+
+        texture.SetData(pixels);
+        return texture;
+    }
+
+    private void DrawStainQuad(Matrix view, Matrix projection)
+    {
+        _stainEffect.View = view;
+        _stainEffect.Projection = projection;
+        _stainEffect.World = Matrix.Identity;
+        _stainEffect.Texture = FloorStainTexture;
+        _device.SamplerStates[0] = SamplerState.LinearClamp;
+        foreach (var pass in _stainEffect.CurrentTechnique.Passes)
+        {
+            pass.Apply();
+            _device.DrawUserPrimitives(PrimitiveType.TriangleList, _stainQuad, 0, 2);
+        }
+    }
+
+    // Draws vertices [from, to) a chunk at a time.
+    private void DrawInChunks<T>(T[] vertices, int from, int to, BasicEffect effect)
         where T : struct, IVertexType
     {
-        for (var start = 0; start < count; start += VerticesPerDraw)
+        for (var start = from; start < to; start += VerticesPerDraw)
         {
-            var length = Math.Min(VerticesPerDraw, count - start);
+            var length = Math.Min(VerticesPerDraw, to - start);
             foreach (var pass in effect.CurrentTechnique.Passes)
             {
                 pass.Apply();
