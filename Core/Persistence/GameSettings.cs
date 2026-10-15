@@ -14,6 +14,9 @@ public sealed class GameSettings
 
     public int ResolutionHeight { get; set; } = 720;
 
+    /// <summary>Draw the game with the 3D look; false for the flat top-down look.</summary>
+    public bool ThreeDView { get; set; } = true;
+
     /// <summary>Shake the view on explosions and hits.</summary>
     public bool ScreenShake { get; set; } = true;
 

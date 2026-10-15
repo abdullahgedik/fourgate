@@ -11,7 +11,7 @@ using Microsoft.Xna.Framework;
 namespace Fourgate.Scenes;
 
 /// <summary>
-/// Settings: window mode, windowed size and three volumes. Left/right (or Enter, or a click)
+/// Settings: window mode, windowed size, 2D / 3D view, screen shake and three volumes. Left/right (or Enter, or a click)
 /// changes the highlighted line; display changes apply at once. Back or the BACK line leaves.
 /// </summary>
 public sealed class SettingsScene : IScene
@@ -22,12 +22,13 @@ public sealed class SettingsScene : IScene
 
     private const int WindowRow = 0;
     private const int ResolutionRow = 1;
-    private const int ShakeRow = 2;
-    private const int MasterRow = 3;
-    private const int MusicRow = 4;
-    private const int EffectsRow = 5;
-    private const int BackRow = 6;
-    private const int RowCount = 7;
+    private const int ViewRow = 2;
+    private const int ShakeRow = 3;
+    private const int MasterRow = 4;
+    private const int MusicRow = 5;
+    private const int EffectsRow = 6;
+    private const int BackRow = 7;
+    private const int RowCount = 8;
 
     private static readonly Color BackgroundColor = new(20, 21, 28);
     private static readonly Color TitleColor = new(240, 240, 245);
@@ -64,7 +65,7 @@ public sealed class SettingsScene : IScene
         _screenWidth = config.VirtualWidth;
         _screenHeight = config.VirtualHeight;
         _camera = new Camera2D(new Rectangle(0, 0, _screenWidth, _screenHeight), config.Camera);
-        _menu = new MenuList(new Vector2(_screenWidth / 2f, _screenHeight * 0.19f), 760f, 72f, 16f);
+        _menu = new MenuList(new Vector2(_screenWidth / 2f, _screenHeight * 0.17f), 760f, 72f, 14f);
         RefreshLabels();
     }
 
@@ -186,6 +187,10 @@ public sealed class SettingsScene : IScene
                 _applyDisplay(_settings);
                 break;
 
+            case ViewRow:
+                _settings.ThreeDView = !_settings.ThreeDView;
+                break;
+
             case ShakeRow:
                 _settings.ScreenShake = !_settings.ScreenShake;
                 break;
@@ -241,6 +246,7 @@ public sealed class SettingsScene : IScene
         var windowed = _settings.WindowMode == WindowMode.Windowed;
         _labels[WindowRow] = $"WINDOW:  {(windowed ? "WINDOWED" : "BORDERLESS FULLSCREEN")}";
         _labels[ResolutionRow] = $"WINDOW SIZE:  {_settings.ResolutionWidth} × {_settings.ResolutionHeight}";
+        _labels[ViewRow] = $"VIEW:  {(_settings.ThreeDView ? "3D" : "2D")}";
         _labels[ShakeRow] = $"SCREEN SHAKE:  {(_settings.ScreenShake ? "ON" : "OFF")}";
         _labels[MasterRow] = $"MASTER VOLUME:  {_settings.MasterVolume}%";
         _labels[MusicRow] = $"MUSIC VOLUME:  {_settings.MusicVolume}%";

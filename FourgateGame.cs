@@ -38,7 +38,6 @@ public sealed class FourgateGame : Game
     private VirtualScreen? _screen;
     private ShapeRenderer? _renderer;
     private Renderer3D? _renderer3D;
-    private bool _use3D;
     private IScene? _scene;
     private IPlayerInput? _playerOneInput;
     private IPlayerInput[] _singleInputs = Array.Empty<IPlayerInput>();
@@ -129,7 +128,8 @@ public sealed class FourgateGame : Game
 
             if (_hotkeys.ToggleRendererPressed)
             {
-                _use3D = !_use3D;
+                _settings.ThreeDView = !_settings.ThreeDView;
+                _settingsStore.Save(_settings);
             }
 
             if (_hotkeys.CycleResolutionPressed)
@@ -331,7 +331,7 @@ public sealed class FourgateGame : Game
         }
 
         _screen.Begin(BackgroundColor);
-        _scene.Draw(_use3D && _renderer3D is not null ? _renderer3D : _renderer);
+        _scene.Draw(_settings.ThreeDView && _renderer3D is not null ? _renderer3D : _renderer);
         if (_audioLog is not null)
         {
             _audioOverlay.Draw(_renderer, _audioLog, _data.Game.VirtualHeight);
