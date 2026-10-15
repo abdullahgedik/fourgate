@@ -350,8 +350,8 @@
         { "level": 9, "damageMult": 1.08, "reserveMaxBonus": 2 }
       ],
       "levelTen": {
-        "description": [ "A much thicker beam", "Blast where the beam ends", "+8% damage" ],
-        "damageMult": 1.08,
+        "description": [ "A much thicker beam", "Blast where the beam ends", "+25% damage" ],
+        "damageMult": 1.25,
         "beamWidthMult": 2.5,
         "abilities": [ { "id": "endBlast", "radius": 130, "damageMult": 0.5 } ]
       }

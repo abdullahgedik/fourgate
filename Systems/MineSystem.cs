@@ -21,14 +21,11 @@ public sealed class MineSystem : IHittableSource, IObstacleSource
 {
     private const int InitialMines = 32;
 
-    // A mine is a flat puck this tall (3D only).
+    // A mine is a flat puck this tall.
     private const float MineHeight = 10f;
 
-    // A thrown mine's arc: how high it goes (3D), and how much bigger it looks at the top (2D).
+    // How high a thrown mine's arc goes.
     private const float MineThrowPeakHeight = 110f;
-    private const float FlyingGrowth = 0.6f;
-
-    private static readonly Color FlyingShadowColor = new Color(0, 0, 0) * 0.35f;
 
     private readonly ExplosiveSystem _explosives;
     private readonly HazardSystem? _hazards;
@@ -281,14 +278,7 @@ public sealed class MineSystem : IHittableSource, IObstacleSource
             var body = mine.BodyVisual;
             if (mine.Shot.Shootable)
             {
-                if (renderer.IsThreeD)
-                {
-                    renderer.DrawBarrel(mine.Position, body.Radius, Depth3D.BodyHeight(body.Radius), body.Color, Mine.BandColor);
-                    continue;
-                }
-
-                renderer.DrawVisual(body, mine.Position, 0f);
-                renderer.DrawVisualRaised(mine.LightVisual, mine.Position, 0f, Depth3D.BodyHeight(body.Radius) + 0.5f);
+                renderer.DrawBarrel(mine.Position, body.Radius, Depth3D.BodyHeight(body.Radius), body.Color, Mine.BandColor);
                 continue;
             }
 
@@ -304,22 +294,14 @@ public sealed class MineSystem : IHittableSource, IObstacleSource
         }
     }
 
-    // A thrown mine on its arc, with its shadow on the floor (in 2D it grows near the top instead).
+    // A thrown mine on its arc, with its shadow on the floor.
     private static void DrawFlying(IRenderer renderer, Mine mine)
     {
         var body = mine.BodyVisual;
         var height = MineThrowPeakHeight * mine.ArcHeight;
-        if (renderer.IsThreeD)
-        {
-            renderer.DrawShadow(mine.Position, height, body.Radius);
-            renderer.DrawVisualRaised(body, mine.Position, 0f, height + MineHeight);
-            renderer.DrawVisualRaised(mine.LightVisual, mine.Position, 0f, height + MineHeight + 0.5f);
-            return;
-        }
-
-        renderer.FillCircle(mine.Position, body.Radius, FlyingShadowColor);
-        var lifted = new VisualDescriptor(body.Shape, body.Radius * (1f + FlyingGrowth * mine.ArcHeight), body.Color);
-        renderer.DrawVisual(lifted, mine.Position, 0f);
+        renderer.DrawShadow(mine.Position, height, body.Radius);
+        renderer.DrawVisualRaised(body, mine.Position, 0f, height + MineHeight);
+        renderer.DrawVisualRaised(mine.LightVisual, mine.Position, 0f, height + MineHeight + 0.5f);
     }
 
     private void LeaveFire(in MineShot shot)

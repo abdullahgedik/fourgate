@@ -22,54 +22,38 @@ namespace Fourgate.Scenes;
 /// <summary>The arena and everything that happens in it.</summary>
 public sealed class GameplayScene : IScene
 {
-    // Floor grid spacing when no weapon snaps to a grid.
-    private const float GridSpacing = 100f;
-    private const float GridLineThickness = 2f;
-
-    // Heights for the 3D look (ignored in 2D).
-    private const float WallHeight = 90f;
-    private const float PillarHeight = 120f;
-    private const float GateInset = 2f;
-    private const float GunBottom = 14f;
-    private const float GunTop = 22f;
-    private const float FacingLineLength = 14f;
-    private const float FacingLineThickness = 6f;
-    private const float DualBarrelOffset = 7f;
-    private const float DualBarrelThickness = 5f;
     private const float CrosshairArm = 14f;
     private const float CrosshairThickness = 2f;
-    private const float DoorHaloDepth = 110f;
-    private const float DoorHaloOpacity = 0.3f;
 
-    // The 3D door warning: pulses that quicken as the enemies near, a curtain of light in the
-    // opening, lamps on the gate posts and light spilled deeper onto the floor.
-    private const float DoorPulseSlow = 4f;
-    private const float DoorPulseFast = 14f;
-    private const float DoorCurtainOpacity = 0.35f;
-    private const float DoorLampRadius = 16f;
-    private const float DoorFloorLightDepth = 260f;
-    private const int DoorFloorLightBands = 5;
-
-    // Once its enemies are out, a door's warning fades over this long instead of vanishing.
-    private const float DoorFadeSeconds = 0.4f;
-
-    // Bodies (3D only): how long they lie before shrinking away, and how much darker a dead zombie is.
+    // Bodies: how long they lie before shrinking away, and how much darker a dead zombie is.
     private const float EnemyCorpseSeconds = 1.6f;
     private const float PlayerCorpseSeconds = 8f;
     private const float BossCorpseSeconds = 6f;
     private const float CorpseDarkening = 0.75f;
+    private static readonly Color GibClothesColor = new(95, 82, 66);
 
-    // The lethal-attack warning on screen.
-    private const float LethalPulseSpeed = 14f;
-    private const float LethalEdgeOpacity = 0.35f;
-    private const float LethalEdgeThickness = 26f;
-    private const float SkullRadius = 26f;
-    private const float SkullLift = 90f;
-    private const float SkullMargin = 50f;
-    private const float LethalTextSize = 30f;
-    private static readonly Color LethalEdgeColor = new(235, 0, 85);
-    private static readonly Color LethalSkullColor = new(255, 60, 110);
-    private static readonly Color SkullHoleColor = new(20, 0, 8);
+    // Firing feedback: how far ahead of the body the muzzle is for each way of holding a gun,
+    // how high, and how big the flash is.
+    private const float MuzzleReachOneHand = 16f;
+    private const float MuzzleReachTwoHands = 26f;
+    private const float MuzzleReachShoulder = 30f;
+    private const float MuzzleHeight = 30f;
+    private const float MuzzleHeightShoulder = 42f;
+    private const float DualMuzzleSpread = 7f;
+    private const float MuzzleFlashSmall = 7f;
+    private const float MuzzleFlashMedium = 9f;
+    private const float MuzzleFlashLarge = 12f;
+    private const float MuzzleFlashRocket = 16f;
+    private static readonly Color BrassColor = new(210, 170, 70);
+
+    // The landing marker of thrown equipment.
+    private const int ThrowMarkerSegments = 32;
+    private const float ThrowMarkerThickness = 2.5f;
+    private const float ThrowMarkerDot = 5f;
+    private const float ThrowMarkerRingOpacity = 0.35f;
+    private const float ThrowMarkerDotOpacity = 0.7f;
+    private static readonly Color ThrowMarkerColor = new(255, 240, 200);
+    private static readonly Color ShotgunShellColor = new(190, 45, 35);
 
     // After the last player dies: "YOU DIED" grows in over a red tint, the world carries on, and
     // the results screen fades in a little later (its choices are read once it is in).
@@ -81,8 +65,6 @@ public sealed class GameplayScene : IScene
     private const float GameOverFadeSeconds = 0.6f;
     private static readonly Color DeathTintColor = new(80, 0, 0);
     private static readonly Color DeathTextColor = new(220, 40, 40);
-    private const float EdgeIndicatorInset = 40f;
-    private const float EdgeIndicatorRadius = 18f;
     private const float WeaponCrateSpacing = 70f;
     private const float DebugNoticeSeconds = 2f;
     private const float PlayerSpawnSpacing = 90f;
@@ -96,10 +78,8 @@ public sealed class GameplayScene : IScene
 
     // A red flash round the edges of a hurt player's view.
     private const float HurtFlashSeconds = 0.35f;
-    private const float HurtFlashThickness = 60f;
     private const float HurtFeedbackMinDamage = 2f;
     private const float BossCrateSpacing = 70f;
-    private const float BossIndicatorRadius = 24f;
     private const float SplitLineThickness = 4f;
     private const float DownedNoticeY = 230f;
     private const float PauseTitleSize = 60f;
@@ -108,26 +88,15 @@ public sealed class GameplayScene : IScene
     private const float DebugNoticeY = 190f;
     private const float DebugNoticeSize = 28f;
 
-    private static readonly Color WallColor = new(70, 74, 92);
-    private static readonly Color FloorColor = new(34, 36, 46);
-    private static readonly Color GridColor = new(42, 45, 57);
-    private static readonly Color GateColor = new(150, 60, 50);
-    private static readonly Color GateGlowColor = new(255, 190, 70);
-    private static readonly Color EdgeIndicatorCoreColor = new(40, 20, 10);
-    private static readonly Color WeaponCrateIndicatorColor = new(60, 170, 230);
-    private static readonly Color FacingColor = new(225, 230, 240);
     private static readonly Color CrosshairColor = new(240, 240, 240);
     private static readonly Color DebugNoticeColor = new(255, 225, 120);
     private static readonly Color SplitLineColor = new(10, 10, 14);
     private static readonly Color DownedNoticeColor = new(255, 120, 100);
-    private static readonly Color BossIndicatorColor = new(230, 50, 45);
-    private static readonly Color HurtFlashColor = new(220, 20, 20);
     private static readonly Color PauseDimColor = new(0, 0, 0, 185);
     private static readonly Color PauseTitleColor = new(240, 240, 245);
     private static readonly Color PauseTextColor = new(170, 175, 190);
 
     private readonly GameData _data;
-    private readonly float _floorCellSize;
     private readonly GameRandom _random;
     private readonly Arena _arena;
     private readonly ShotSystem _shots;
@@ -153,12 +122,12 @@ public sealed class GameplayScene : IScene
     private readonly List<bool> _wasAlive = new();
     private readonly GameRandom _visualRandom = new(Environment.TickCount);
     private readonly GameSettings? _settings;
-    private float _doorPulseTime;
+    private readonly ArenaView _arenaView;
+    private readonly ViewIndicators _indicators;
 
     // -1 while someone is alive; then seconds since the last player died.
     private float _deathSeconds = -1f;
     private float _gameOverSeconds;
-    private readonly float[] _doorGlow;
 
     /// <summary>Blood that stays on the floor for the whole run; painted by the game before each frame.</summary>
     public FloorStains FloorStains { get; }
@@ -214,14 +183,12 @@ public sealed class GameplayScene : IScene
         HighScoreTable? highScores = null, HighScoreStore? highScoreStore = null, GameSettings? settings = null)
     {
         _data = data;
-        _floorCellSize = FloorCellSize(data);
         _audio = audio;
         var config = data.Game;
         _random = new GameRandom(config.Debug.Seed ?? Environment.TickCount);
         _arena = new Arena(config.Arena);
-        _doorGlow = new float[_arena.Doors.Count];
         FloorStains = new FloorStains(new Vector2(_arena.Left, _arena.Top), _arena.Size);
-        Scorches = new ScorchSystem(_arena, FloorStains, WallHeight, PillarHeight);
+        Scorches = new ScorchSystem(_arena, FloorStains, ArenaView.WallHeight, ArenaView.PillarHeight);
         _enemies = new EnemySystem(audio) { KnockbackDamping = config.Knockback.Damping, Fireballs = _fireballs };
         _bosses = new BossSystem(_enemies, data, _random, audio)
         {
@@ -254,6 +221,8 @@ public sealed class GameplayScene : IScene
         // Visual only, with its own random source so effects never change a seeded run.
         _particles = new ParticleSystem(_visualRandom);
         _particles.Stains = FloorStains;
+        _arenaView = new ArenaView(_arena, data, _particles);
+        _indicators = new ViewIndicators(_arena);
         _shots.Particles = _particles;
         _bosses.Particles = _particles;
         _bosses.Impact = OnExplosion;
@@ -446,6 +415,7 @@ public sealed class GameplayScene : IScene
             camera.Follow(player.Position, player.Input.AimScreen, deltaSeconds);
             ShakeOnHurt(i);
             LeaveBodyOnDeath(i);
+            ShowShot(player);
             camera.UpdateShake(deltaSeconds, _visualRandom.Range(-1f, 1f), _visualRandom.Range(-1f, 1f));
             var view = camera.ViewRect;
             player.SetView(
@@ -458,7 +428,7 @@ public sealed class GameplayScene : IScene
         _hazards.Update(deltaSeconds, _players);
         _mines.Update(deltaSeconds, _players);
         _flames.Update(deltaSeconds);
-        UpdateDoorGlows(deltaSeconds);
+        _arenaView.Update(deltaSeconds, _waves);
         _particles.Update(deltaSeconds);
         _corpses.Update(deltaSeconds);
         _drops.Update(deltaSeconds, _players);
@@ -484,7 +454,7 @@ public sealed class GameplayScene : IScene
         _hazards.Update(deltaSeconds, _players);
         _mines.Update(deltaSeconds, _players);
         _flames.Update(deltaSeconds);
-        UpdateDoorGlows(deltaSeconds);
+        _arenaView.Update(deltaSeconds, _waves);
         _particles.Update(deltaSeconds);
         _corpses.Update(deltaSeconds);
         for (var i = 0; i < _cameras.Count; i++)
@@ -1034,7 +1004,7 @@ public sealed class GameplayScene : IScene
             }
 
             renderer.BeginWorld(_cameras[i]);
-            DrawArena(renderer);
+            _arenaView.Draw(renderer);
             Scorches.Draw(renderer);
             _corpses.Draw(renderer);
             _particles.DrawFloor(renderer);
@@ -1098,11 +1068,16 @@ public sealed class GameplayScene : IScene
                 continue;
             }
 
-            DrawDoorIndicators(renderer, _cameras[i]);
-            DrawBossIndicator(renderer, _cameras[i]);
-            DrawWeaponCrateIndicators(renderer, _cameras[i]);
-            DrawHurtFlash(renderer, i);
-            DrawLethalWarning(renderer, i);
+            _indicators.DrawDoors(renderer, _cameras[i], _waves);
+            _indicators.DrawBoss(renderer, _cameras[i], _bosses.Boss);
+            _indicators.DrawWeaponCrates(renderer, _cameras[i], _drops);
+            _indicators.DrawHurtFlash(
+                renderer, _cameras[i].ViewRect, i < _hurtFlashLeft.Count ? _hurtFlashLeft[i] / HurtFlashSeconds : 0f);
+            if (_players[i].IsAlive)
+            {
+                _indicators.DrawLethalWarning(renderer, _cameras[i], _bosses);
+            }
+
             _playerHuds[i].Draw(renderer, _players[i], _cameras[i].ViewRect);
         }
 
@@ -1168,67 +1143,6 @@ public sealed class GameplayScene : IScene
         renderer.End();
     }
 
-    // Points toward weapon crates that are outside a view, so a new weapon is found quickly.
-    private void DrawWeaponCrateIndicators(IRenderer renderer, Camera2D camera)
-    {
-        var view = camera.ViewRect;
-        for (var i = 0; i < _drops.Count; i++)
-        {
-            var crate = _drops[i];
-            if (crate.Type != CrateType.Weapon)
-            {
-                continue;
-            }
-
-            var screen = camera.WorldToScreen(crate.Position);
-            if (screen.X >= view.Left && screen.X <= view.Right && screen.Y >= view.Top && screen.Y <= view.Bottom)
-            {
-                continue;
-            }
-
-            var marker = new Vector2(
-                Math.Clamp(screen.X, view.Left + EdgeIndicatorInset, view.Right - EdgeIndicatorInset),
-                Math.Clamp(screen.Y, view.Top + EdgeIndicatorInset, view.Bottom - EdgeIndicatorInset));
-            var half = new Vector2(EdgeIndicatorRadius * 0.8f);
-            renderer.FillRect(marker - half - new Vector2(3f), half * 2f + new Vector2(6f), EdgeIndicatorCoreColor);
-            renderer.FillRect(marker - half, half * 2f, WeaponCrateIndicatorColor);
-        }
-    }
-
-    // Points toward glowing doors that are outside a view, so a spawn warning is never
-    // missed just because the door is off screen.
-    private void DrawDoorIndicators(IRenderer renderer, Camera2D camera)
-    {
-        if (_waves is null)
-        {
-            return;
-        }
-
-        var view = camera.ViewRect;
-        var doors = _arena.Doors;
-        for (var i = 0; i < doors.Count; i++)
-        {
-            var glow = _waves.Spawner.GetDoorGlow(i);
-            if (glow <= 0f)
-            {
-                continue;
-            }
-
-            var screen = camera.WorldToScreen(doors[i].Center);
-            if (screen.X >= view.Left && screen.X <= view.Right && screen.Y >= view.Top && screen.Y <= view.Bottom)
-            {
-                continue;
-            }
-
-            var marker = new Vector2(
-                Math.Clamp(screen.X, view.Left + EdgeIndicatorInset, view.Right - EdgeIndicatorInset),
-                Math.Clamp(screen.Y, view.Top + EdgeIndicatorInset, view.Bottom - EdgeIndicatorInset));
-            var radius = EdgeIndicatorRadius * (0.6f + 0.4f * glow);
-            renderer.FillCircle(marker, radius, GateGlowColor);
-            renderer.FillCircle(marker, radius * 0.45f, EdgeIndicatorCoreColor);
-        }
-    }
-
     // Debug dummies near the spawn point: one still, one patrolling left and right.
     private void AddPracticeTargets(float radius)
     {
@@ -1277,7 +1191,9 @@ public sealed class GameplayScene : IScene
                 continue;
             }
 
-            if (renderer.IsThreeD && _data.Game.Player.Model is { } model)
+            DrawThrowMarker(renderer, player);
+
+            if (_data.Game.Player.Model is { } model)
             {
                 // The body faces the aim; the gun is in its hands.
                 var aim = MathF.Atan2(player.AimDirection.Y, player.AimDirection.X);
@@ -1294,217 +1210,6 @@ public sealed class GameplayScene : IScene
             }
 
             renderer.DrawVisual(player.Visual, player.Position, 0f);
-
-            var muzzle = player.Position + player.AimDirection * player.Radius;
-            var barrel = player.AimDirection * FacingLineLength;
-            if (player.CurrentWeapon is { Stats.DualWield: true })
-            {
-                // Two barrels for a dual-wielded weapon.
-                var side = new Vector2(-player.AimDirection.Y, player.AimDirection.X) * DualBarrelOffset;
-                renderer.DrawBar(muzzle + side, muzzle + side + barrel, DualBarrelThickness, GunBottom, GunTop, FacingColor);
-                renderer.DrawBar(muzzle - side, muzzle - side + barrel, DualBarrelThickness, GunBottom, GunTop, FacingColor);
-            }
-            else
-            {
-                renderer.DrawBar(muzzle, muzzle + barrel, FacingLineThickness, GunBottom, GunTop, FacingColor);
-            }
-        }
-    }
-
-    // The floor grid shows the cells barrels snap to, so a player can see where one will go.
-    private static float FloorCellSize(GameData data)
-    {
-        var weapons = data.Weapons;
-        for (var i = 0; i < weapons.Count; i++)
-        {
-            var placed = weapons[i].Placed;
-            if (placed is not null && placed.Solid && placed.GridSize > 0f)
-            {
-                return placed.GridSize;
-            }
-        }
-
-        return GridSpacing;
-    }
-
-    private void DrawArena(IRenderer renderer)
-    {
-        var wall = new Vector2(_arena.WallThickness);
-        var floorTopLeft = new Vector2(_arena.Left, _arena.Top);
-        var floorSize = new Vector2(_arena.Size);
-
-        // Four walls round the floor (boxes in 3D, flat in 2D), then the floor.
-        var outer = floorSize + wall * 2f;
-        renderer.FillBox(floorTopLeft - wall, new Vector2(outer.X, wall.Y), WallHeight, WallColor);
-        renderer.FillBox(floorTopLeft + new Vector2(-wall.X, floorSize.Y), new Vector2(outer.X, wall.Y), WallHeight, WallColor);
-        renderer.FillBox(floorTopLeft - new Vector2(wall.X, 0f), new Vector2(wall.X, floorSize.Y), WallHeight, WallColor);
-        renderer.FillBox(floorTopLeft + new Vector2(floorSize.X, 0f), new Vector2(wall.X, floorSize.Y), WallHeight, WallColor);
-        renderer.FillRect(floorTopLeft, floorSize, FloorColor);
-
-        // Floor grid: gives the eye a reference for camera and player movement.
-        // (Blood stains go on after it, so they darken the grid lines too.)
-        for (var offset = _floorCellSize; offset < _arena.Size; offset += _floorCellSize)
-        {
-            renderer.FillRect(
-                new Vector2(_arena.Left + offset - GridLineThickness / 2f, _arena.Top),
-                new Vector2(GridLineThickness, _arena.Size),
-                GridColor);
-            renderer.FillRect(
-                new Vector2(_arena.Left, _arena.Top + offset - GridLineThickness / 2f),
-                new Vector2(_arena.Size, GridLineThickness),
-                GridColor);
-        }
-
-        renderer.DrawFloorStains(floorTopLeft, floorSize);
-
-        var pillars = _arena.Pillars;
-        for (var i = 0; i < pillars.Count; i++)
-        {
-            renderer.FillBox(pillars[i].Center - pillars[i].HalfSize, pillars[i].HalfSize * 2f, PillarHeight, WallColor);
-        }
-
-        var doors = _arena.Doors;
-        for (var i = 0; i < doors.Count; i++)
-        {
-            var glow = _doorGlow[i];
-            if (glow > 0f && !renderer.IsThreeD)
-            {
-                DrawDoorHalo(renderer, doors[i], glow);
-            }
-
-            // A gate block slightly proud of the wall, so it shows in front of it in 3D; set into
-            // the wall, it casts no shadow of its own. In 3D it throbs while it warns.
-            var shown = renderer.IsThreeD && glow > 0f ? glow * DoorPulse(glow) : glow;
-            renderer.FillBox(
-                doors[i].TopLeft - new Vector2(GateInset), doors[i].Size + new Vector2(GateInset * 2f), WallHeight + GateInset,
-                Color.Lerp(GateColor, GateGlowColor, shown), castShadow: false);
-            if (renderer.IsThreeD && glow > 0f)
-            {
-                DrawDoorWarning3D(renderer, doors[i], glow);
-            }
-        }
-    }
-
-    // 0.55–1: a throb that quickens as the door's enemies get closer.
-    private float DoorPulse(float glow)
-    {
-        var speed = MathHelper.Lerp(DoorPulseSlow, DoorPulseFast, glow);
-        return 0.775f + 0.225f * MathF.Sin(_doorPulseTime * speed);
-    }
-
-    // In 3D: light spilled onto the floor, fading smoothly away from the door, a curtain of
-    // light standing in the opening and lamps on both gate posts, all throbbing with the gate.
-    private void DrawDoorWarning3D(IRenderer renderer, Door door, float glow)
-    {
-        var strength = glow * DoorPulse(glow);
-        DoorInnerEdge(door, out var from, out var to);
-        DrawDoorFloorLight(renderer, door, strength);
-        renderer.DrawGlowWall(from, to, WallHeight * (0.4f + 0.6f * glow), GateGlowColor * (DoorCurtainOpacity * strength));
-        var lampHeight = WallHeight + GateInset + DoorLampRadius * 0.5f;
-        var lampRadius = DoorLampRadius * (0.6f + 0.6f * strength);
-        renderer.FillCircleRaised(from, lampHeight, lampRadius * 2f, GateGlowColor * (0.25f * strength));
-        renderer.FillCircleRaised(to, lampHeight, lampRadius * 2f, GateGlowColor * (0.25f * strength));
-        renderer.FillCircleRaised(from, lampHeight, lampRadius, GateGlowColor * strength);
-        renderer.FillCircleRaised(to, lampHeight, lampRadius, GateGlowColor * strength);
-    }
-
-    // Side by side bands, each dimmer than the last, so the light fades without visible layers.
-    private static void DrawDoorFloorLight(IRenderer renderer, Door door, float strength)
-    {
-        var band = DoorFloorLightDepth / DoorFloorLightBands;
-        for (var i = 0; i < DoorFloorLightBands; i++)
-        {
-            var near = 1f - (float)i / DoorFloorLightBands;
-            var bandTopLeft = DoorFloorLightTopLeft(door, band) + door.Inward * (band * i);
-            renderer.FillRect(
-                bandTopLeft, DoorFloorLightSize(door, band), GateGlowColor * (DoorHaloOpacity * strength * near * near));
-        }
-    }
-
-    // A door's warning follows the spawner while it rises and fades out quickly once its
-    // enemies are out; sparks drift out of it while it glows (3D look only).
-    private void UpdateDoorGlows(float deltaSeconds)
-    {
-        _doorPulseTime += deltaSeconds;
-        var doors = _arena.Doors;
-        for (var i = 0; i < doors.Count; i++)
-        {
-            var target = _waves?.Spawner.GetDoorGlow(i) ?? 0f;
-            _doorGlow[i] = target >= _doorGlow[i] ? target : Math.Max(target, _doorGlow[i] - deltaSeconds / DoorFadeSeconds);
-        }
-
-        if (_settings is not { ThreeDView: true })
-        {
-            return;
-        }
-
-        for (var i = 0; i < doors.Count; i++)
-        {
-            var glow = _doorGlow[i];
-            if (glow <= 0f)
-            {
-                continue;
-            }
-
-            DoorInnerEdge(doors[i], out var from, out var to);
-            _particles.DoorSparks(from, to, doors[i].Inward, WallHeight, glow, GateGlowColor, GateColor, deltaSeconds);
-        }
-    }
-
-    // The two ends of a door's edge facing the arena.
-    private static void DoorInnerEdge(Door door, out Vector2 from, out Vector2 to)
-    {
-        var half = door.Size / 2f;
-        var depth = MathF.Abs(door.Inward.X) * half.X + MathF.Abs(door.Inward.Y) * half.Y;
-        var width = MathF.Abs(door.Inward.Y) * half.X + MathF.Abs(door.Inward.X) * half.Y;
-        var edge = door.Center + door.Inward * (depth + GateInset);
-        var across = new Vector2(-door.Inward.Y, door.Inward.X) * width;
-        from = edge - across;
-        to = edge + across;
-    }
-
-    // A lethal boss attack is coming: the view's edges throb crimson and a skull marked LETHAL
-    // floats over where it will land (kept inside the view when that is off screen).
-    private void DrawLethalWarning(IRenderer renderer, int index)
-    {
-        if (!_bosses.IsLethalWarning || !_players[index].IsAlive)
-        {
-            return;
-        }
-
-        var camera = _cameras[index];
-        var view = camera.ViewRect;
-        var pulse = 0.6f + 0.4f * MathF.Sin(_bosses.Time * LethalPulseSpeed);
-        var edge = LethalEdgeColor * (LethalEdgeOpacity * pulse);
-        var thick = LethalEdgeThickness;
-        renderer.FillRect(new Vector2(view.Left, view.Top), new Vector2(view.Width, thick), edge);
-        renderer.FillRect(new Vector2(view.Left, view.Bottom - thick), new Vector2(view.Width, thick), edge);
-        renderer.FillRect(new Vector2(view.Left, view.Top + thick), new Vector2(thick, view.Height - 2f * thick), edge);
-        renderer.FillRect(new Vector2(view.Right - thick, view.Top + thick), new Vector2(thick, view.Height - 2f * thick), edge);
-
-        var at = camera.WorldToScreen(_bosses.LethalPoint) - new Vector2(0f, SkullLift);
-        at = new Vector2(
-            Math.Clamp(at.X, view.Left + SkullMargin, view.Right - SkullMargin),
-            Math.Clamp(at.Y, view.Top + SkullMargin, view.Bottom - SkullMargin - LethalTextSize));
-        DrawSkull(renderer, at, SkullRadius * (0.92f + 0.08f * pulse), LethalSkullColor);
-        renderer.DrawTextCentered(
-            "LETHAL", at + new Vector2(0f, SkullRadius * 1.9f), LethalTextSize, LethalSkullColor * (0.7f + 0.3f * pulse));
-    }
-
-    // A simple skull: a round head, a narrower jaw with teeth gaps, two dark eyes and a nose.
-    private static void DrawSkull(IRenderer renderer, Vector2 center, float radius, Color color)
-    {
-        renderer.FillCircle(center, radius, color);
-        var jawSize = new Vector2(radius * 1.1f, radius * 0.55f);
-        var jawTopLeft = center + new Vector2(-jawSize.X / 2f, radius * 0.55f);
-        renderer.FillRect(jawTopLeft, jawSize, color);
-        renderer.FillCircle(center + new Vector2(-radius * 0.38f, radius * 0.05f), radius * 0.27f, SkullHoleColor);
-        renderer.FillCircle(center + new Vector2(radius * 0.38f, radius * 0.05f), radius * 0.27f, SkullHoleColor);
-        renderer.FillCircle(center + new Vector2(0f, radius * 0.45f), radius * 0.1f, SkullHoleColor);
-        for (var i = 1; i < 4; i++)
-        {
-            var x = jawTopLeft.X + jawSize.X * i / 4f;
-            renderer.FillRect(new Vector2(x - 1.5f, jawTopLeft.Y + jawSize.Y * 0.35f), new Vector2(3f, jawSize.Y * 0.65f), SkullHoleColor);
         }
     }
 
@@ -1529,15 +1234,92 @@ public sealed class GameplayScene : IScene
         };
     }
 
-    // A zombie with a model leaves a body that topples over and later shrinks away.
+    // Where the active grenade, molotov or mine would land: a faint ring of its reach and a dot.
+    private static void DrawThrowMarker(IRenderer renderer, Player player)
+    {
+        if (!player.TryGetThrowLanding(out var landing, out var reach))
+        {
+            return;
+        }
+
+        if (reach > 0f)
+        {
+            var previous = landing + new Vector2(reach, 0f);
+            for (var i = 1; i <= ThrowMarkerSegments; i++)
+            {
+                var angle = MathHelper.TwoPi * i / ThrowMarkerSegments;
+                var point = landing + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * reach;
+                renderer.DrawLine(previous, point, ThrowMarkerThickness, ThrowMarkerColor * ThrowMarkerRingOpacity);
+                previous = point;
+            }
+        }
+
+        renderer.FillCircle(landing, ThrowMarkerDot, ThrowMarkerColor * ThrowMarkerDotOpacity);
+    }
+
+    // A gun that fired this frame flashes at its muzzle and throws out a spent shell.
+    private void ShowShot(Player player)
+    {
+        var weapon = player.CurrentWeapon;
+        if (weapon is null || weapon.SecondsSinceShot > 0f || weapon.Config.Type != WeaponType.Projectile)
+        {
+            return;
+        }
+
+        var aim = player.AimDirection;
+        var right = new Vector2(-aim.Y, aim.X);
+        var rocket = weapon.Config.Explosion is not null;
+        var hold = HoldFor(weapon);
+        var reach = hold switch
+        {
+            ModelHold.OneHand or ModelHold.Dual => MuzzleReachOneHand,
+            ModelHold.Shoulder => MuzzleReachShoulder,
+            _ => MuzzleReachTwoHands,
+        };
+        var height = hold == ModelHold.Shoulder ? MuzzleHeightShoulder : MuzzleHeight;
+        var size = rocket ? MuzzleFlashRocket : weapon.Config.Projectile!.HitEffect switch
+        {
+            HitEffect.Pellet => MuzzleFlashLarge,
+            HitEffect.Sniper => MuzzleFlashLarge,
+            HitEffect.Heavy => MuzzleFlashMedium,
+            _ => MuzzleFlashSmall,
+        };
+
+        var muzzle = player.Position + aim * (player.Radius + reach);
+        if (hold == ModelHold.Dual)
+        {
+            _particles.MuzzleFlash(muzzle + right * DualMuzzleSpread, height, size);
+            _particles.MuzzleFlash(muzzle - right * DualMuzzleSpread, height, size);
+        }
+        else
+        {
+            _particles.MuzzleFlash(muzzle, height, size);
+        }
+
+        if (!rocket)
+        {
+            var shotgun = weapon.Config.Projectile!.HitEffect == HitEffect.Pellet;
+            _particles.Shell(player.Position + aim * player.Radius, height, right, shotgun ? ShotgunShellColor : BrassColor);
+        }
+    }
+
+    // A zombie with a model leaves a body that topples over and later shrinks away; one torn
+    // apart by a big hit bursts into chunks instead.
     private void LeaveBody(in EnemyDeath death)
     {
+        var color = death.Config.Color;
+        if (death.Gibbed)
+        {
+            var body = new Color(color[0], color[1], color[2]);
+            _particles.Gibs(death.Position, death.Config.Radius, body, GibClothesColor);
+            return;
+        }
+
         if (death.Config.Model is not { } model)
         {
             return;
         }
 
-        var color = death.Config.Color;
         var tint = new Color(color[0], color[1], color[2]) * CorpseDarkening;
         _corpses.Add(
             model, death.Position, death.Facing, new Color(tint.R, tint.G, tint.B), death.Config.Radius,
@@ -1562,46 +1344,6 @@ public sealed class GameplayScene : IScene
         _wasAlive[index] = player.IsAlive;
     }
 
-    // Red bands along the edges of a view, fading out, when its player was just hurt.
-    private void DrawHurtFlash(IRenderer renderer, int index)
-    {
-        if (index >= _hurtFlashLeft.Count || _hurtFlashLeft[index] <= 0f)
-        {
-            return;
-        }
-
-        var view = _cameras[index].ViewRect;
-        var color = HurtFlashColor * (0.45f * _hurtFlashLeft[index] / HurtFlashSeconds);
-        var thick = HurtFlashThickness;
-        renderer.FillRect(new Vector2(view.Left, view.Top), new Vector2(view.Width, thick), color);
-        renderer.FillRect(new Vector2(view.Left, view.Bottom - thick), new Vector2(view.Width, thick), color);
-        renderer.FillRect(new Vector2(view.Left, view.Top + thick), new Vector2(thick, view.Height - 2f * thick), color);
-        renderer.FillRect(
-            new Vector2(view.Right - thick, view.Top + thick), new Vector2(thick, view.Height - 2f * thick), color);
-    }
-
-    // A red marker at the edge of a view points to a boss outside it.
-    private void DrawBossIndicator(IRenderer renderer, Camera2D camera)
-    {
-        if (_bosses.Boss is not { } boss)
-        {
-            return;
-        }
-
-        var view = camera.ViewRect;
-        var screen = camera.WorldToScreen(boss.Position);
-        if (screen.X >= view.Left && screen.X <= view.Right && screen.Y >= view.Top && screen.Y <= view.Bottom)
-        {
-            return;
-        }
-
-        var marker = new Vector2(
-            Math.Clamp(screen.X, view.Left + EdgeIndicatorInset, view.Right - EdgeIndicatorInset),
-            Math.Clamp(screen.Y, view.Top + EdgeIndicatorInset, view.Bottom - EdgeIndicatorInset));
-        renderer.FillCircle(marker, BossIndicatorRadius, BossIndicatorColor);
-        renderer.FillCircle(marker, BossIndicatorRadius * 0.45f, EdgeIndicatorCoreColor);
-    }
-
     private void DrawDisconnected(IRenderer renderer)
     {
         var width = _data.Game.VirtualWidth;
@@ -1612,34 +1354,6 @@ public sealed class GameplayScene : IScene
         renderer.DrawText(
             "Connect a gamepad to continue", new Vector2(width / 2f, height * 0.42f + 80f), PauseTextSize, PauseTextColor,
             TextAlign.Center);
-    }
-
-    // Light spilling from a glowing door onto the floor in front of it.
-    private static void DrawDoorHalo(IRenderer renderer, Door door, float glow)
-    {
-        renderer.FillRect(
-            DoorFloorLightTopLeft(door, DoorHaloDepth), DoorFloorLightSize(door, DoorHaloDepth),
-            GateGlowColor * (DoorHaloOpacity * glow));
-    }
-
-    // A strip of floor in front of a door, reaching this deep into the arena.
-    private static Vector2 DoorFloorLightSize(Door door, float depth)
-    {
-        return door.Inward.X == 0f ? new Vector2(door.Size.X, depth) : new Vector2(depth, door.Size.Y);
-    }
-
-    private static Vector2 DoorFloorLightTopLeft(Door door, float depth)
-    {
-        if (door.Inward.X == 0f)
-        {
-            return door.Inward.Y > 0f
-                ? door.TopLeft + new Vector2(0f, door.Size.Y)
-                : door.TopLeft - new Vector2(0f, depth);
-        }
-
-        return door.Inward.X > 0f
-            ? door.TopLeft + new Vector2(door.Size.X, 0f)
-            : door.TopLeft - new Vector2(depth, 0f);
     }
 
     private static void DrawCrosshair(IRenderer renderer, Vector2 position)

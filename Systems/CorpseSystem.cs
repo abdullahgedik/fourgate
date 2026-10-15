@@ -7,7 +7,7 @@ using Microsoft.Xna.Framework;
 namespace Fourgate.Systems;
 
 /// <summary>
-/// Bodies of the dead, purely visual and only in the 3D look: a model topples over backward,
+/// Bodies of the dead, purely visual: a model topples over backward,
 /// lies a moment, then shrinks away. A fixed-size buffer; the oldest gives way when it is full.
 /// </summary>
 public sealed class CorpseSystem
@@ -69,11 +69,6 @@ public sealed class CorpseSystem
 
     public void Draw(IRenderer renderer)
     {
-        if (!renderer.IsThreeD)
-        {
-            return;
-        }
-
         for (var i = 0; i < Capacity; i++)
         {
             ref readonly var corpse = ref _corpses[i];

@@ -29,14 +29,19 @@ public sealed class Renderer3D : IRenderer, IDisposable
     private const float FlatHeight = 0.5f;
     private const int BillboardSegments = 8;
 
-    // The light comes from the bottom left of the arena, so shadows fall away from it (screen
-    // up-right), longer for taller things.
-    private const float ShadowLengthPerHeight = 0.45f;
-    private static readonly Vector2 ShadowDirection = Vector2.Normalize(new Vector2(0.55f, -0.4f));
-    private static readonly Color ShadowColor = new(16, 17, 22);
+    // The sun stands overhead (as in Boxhead): every shadow lies right under its object, a soft
+    // see-through blob, darker in the middle; blocks get a soft band hugging their base.
+    private static readonly Color ShadowColor = new Color(0, 0, 0) * 0.32f;
+    private static readonly Color ShadowCoreColor = new Color(0, 0, 0) * 0.22f;
+    private const float ShadowSpread = 1.15f;
+    private const float ShadowCore = 0.7f;
+    private const float BoxShadowMargin = 7f;
+
+    // A flying thing's shadow shrinks and fades the higher it is.
+    private const float FlyingShadowFadeHeight = 400f;
 
     // Flying things cast a softer, see-through shadow.
-    private static readonly Color FlyingShadowColor = new Color(0, 0, 0) * 0.45f;
+    private static readonly Color FlyingShadowColor = new Color(0, 0, 0) * 0.4f;
 
     private static readonly RasterizerState NoCulling = new() { CullMode = CullMode.None };
 
@@ -107,10 +112,15 @@ public sealed class Renderer3D : IRenderer, IDisposable
 
         _solidEffect = new BasicEffect(device) { VertexColorEnabled = true, LightingEnabled = true };
         _solidEffect.EnableDefaultLighting();
-        _solidEffect.AmbientLightColor = new Vector3(0.45f, 0.45f, 0.5f);
-        _solidEffect.DirectionalLight0.Direction = Vector3.Normalize(new Vector3(0.45f, -1f, -0.33f));
-        _solidEffect.DirectionalLight0.DiffuseColor = new Vector3(0.75f, 0.72f, 0.68f);
-        _solidEffect.DirectionalLight1.Enabled = false;
+        // The sun from almost straight above, and a weak fill from the camera's side so the faces
+        // turned toward the player are not left dark.
+        _solidEffect.AmbientLightColor = new Vector3(0.5f, 0.5f, 0.54f);
+        _solidEffect.DirectionalLight0.Direction = Vector3.Normalize(new Vector3(0.12f, -1f, 0.18f));
+        _solidEffect.DirectionalLight0.DiffuseColor = new Vector3(0.62f, 0.6f, 0.56f);
+        _solidEffect.DirectionalLight1.Enabled = true;
+        _solidEffect.DirectionalLight1.Direction = Vector3.Normalize(new Vector3(0f, -0.5f, -1f));
+        _solidEffect.DirectionalLight1.DiffuseColor = new Vector3(0.22f, 0.22f, 0.26f);
+        _solidEffect.DirectionalLight1.SpecularColor = Vector3.Zero;
         _solidEffect.DirectionalLight2.Enabled = false;
         _solidEffect.SpecularColor = Vector3.Zero;
 
@@ -270,7 +280,6 @@ public sealed class Renderer3D : IRenderer, IDisposable
         Triangle(start - side, end + side, start + side, color);
     }
 
-    public bool IsThreeD => true;
 
     /// <summary>The models characters and guns are drawn with; null draws plain shapes.</summary>
     public ModelLibrary? Models { get; set; }
@@ -541,8 +550,9 @@ public sealed class Renderer3D : IRenderer, IDisposable
             return;
         }
 
-        var offset = ShadowDirection * (height * ShadowLengthPerHeight);
-        FlatPolygon(position + offset, radius, FlatCircleSegments, 0f, FlyingShadowColor);
+        // Right under it, smaller and fainter the higher it flies.
+        var away = Math.Clamp(height / FlyingShadowFadeHeight, 0f, 0.6f);
+        FlatPolygon(position, radius * (1f - away * 0.5f), FlatCircleSegments, 0f, FlyingShadowColor * (1f - away));
     }
 
     public void DrawBar(Vector2 from, Vector2 to, float thickness, float bottom, float top, Color color)
@@ -935,27 +945,21 @@ public sealed class Renderer3D : IRenderer, IDisposable
     }
 
     // A round body's shadow: its footprint stretched away from the light.
+    // A soft blob right under a body: a wide faint rim and a darker core (the height no longer
+    // matters with the sun overhead).
     private void Shadow(Vector2 position, float radius, float height)
     {
-        var offset = ShadowDirection * (height * ShadowLengthPerHeight);
-        FlatPolygon(position + offset, radius, FlatCircleSegments, 0f, ShadowColor);
-        var side = new Vector2(-ShadowDirection.Y, ShadowDirection.X) * radius;
-        FlatQuad(position - side, position + side, position + offset + side, position + offset - side, ShadowColor);
+        FlatPolygon(position, radius * ShadowSpread, FlatCircleSegments, 0f, ShadowColor);
+        FlatPolygon(position, radius * ShadowCore, FlatCircleSegments, 0f, ShadowCoreColor);
     }
 
-    // A block's shadow: its footprint and the same footprint moved away from the light, joined up.
+    // A block's shadow: a soft band just around its base.
     private void BoxShadow(Vector2 topLeft, Vector2 size, float height)
     {
-        var offset = ShadowDirection * (height * ShadowLengthPerHeight);
-        var a = topLeft;
-        var b = topLeft + new Vector2(size.X, 0f);
-        var c = topLeft + size;
-        var d = topLeft + new Vector2(0f, size.Y);
-        FlatQuad(a + offset, b + offset, c + offset, d + offset, ShadowColor);
-        FlatQuad(a, b, b + offset, a + offset, ShadowColor);
-        FlatQuad(b, c, c + offset, b + offset, ShadowColor);
-        FlatQuad(c, d, d + offset, c + offset, ShadowColor);
-        FlatQuad(d, a, a + offset, d + offset, ShadowColor);
+        var margin = new Vector2(BoxShadowMargin);
+        var a = topLeft - margin;
+        var c = topLeft + size + margin;
+        FlatQuad(a, new Vector2(c.X, a.Y), c, new Vector2(a.X, c.Y), ShadowColor);
     }
 
     private static Vector2 Direction(float angle)

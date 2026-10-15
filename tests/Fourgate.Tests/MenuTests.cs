@@ -100,13 +100,8 @@ public sealed class MenuTests : IDisposable
         var settings = new GameSettings { MasterVolume = 100, MusicVolume = 70, SfxVolume = 0 };
         var scene = new SettingsScene(input, TestData.Game(), settings, Resolutions, _ => { });
 
-        // Window, size, view, screen shake, then the volumes.
+        // Window, size, screen shake, then the volumes.
         Tap(scene, input, f => f.MenuDownPressed = true);
-        Tap(scene, input, f => f.MenuDownPressed = true);
-        Assert.True(settings.ThreeDView);
-        Tap(scene, input, f => f.ConfirmPressed = true);
-        Assert.False(settings.ThreeDView);
-
         Tap(scene, input, f => f.MenuDownPressed = true);
         Tap(scene, input, f => f.ConfirmPressed = true);
         Assert.False(settings.ScreenShake);
@@ -135,19 +130,16 @@ public sealed class MenuTests : IDisposable
         var store = new SettingsStore(path);
         Assert.Equal(WindowMode.Windowed, store.Load().WindowMode);
 
-        store.Save(new GameSettings { WindowMode = WindowMode.BorderlessFullscreen, MusicVolume = 30, ThreeDView = false });
+        store.Save(new GameSettings { WindowMode = WindowMode.BorderlessFullscreen, MusicVolume = 30 });
         var loaded = store.Load();
         Assert.Equal(WindowMode.BorderlessFullscreen, loaded.WindowMode);
         Assert.Equal(30, loaded.MusicVolume);
-        Assert.False(loaded.ThreeDView);
 
         File.WriteAllText(path, "{ \"musicVolume\": 400, \"sfxVolume\": -5 }");
         var clamped = store.Load();
         Assert.Equal(100, clamped.MusicVolume);
         Assert.Equal(0, clamped.SfxVolume);
 
-        // A file from before the view setting existed opens in 3D.
-        Assert.True(clamped.ThreeDView);
     }
 
     [Fact]

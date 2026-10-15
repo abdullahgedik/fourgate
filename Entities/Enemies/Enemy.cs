@@ -89,6 +89,9 @@ public sealed class Enemy : IHittable
     /// <summary>Index of the player whose shot landed last.</summary>
     public int LastHitBy { get; private set; }
 
+    /// <summary>Damage of the last bullet, beam or blast that hit it (burning does not count).</summary>
+    public float LastHitDamage { get; private set; }
+
     // Model animation: how long a lunge lasts, how quickly the walk speed follows, and a jump too
     // big to be a step (a teleport) that does not count as walking.
     private const float LungeSeconds = 0.3f;
@@ -251,6 +254,7 @@ public sealed class Enemy : IHittable
         Hp = config.Hp;
         MaxHp = config.Hp;
         LastHitBy = 0;
+        LastHitDamage = 0f;
         Array.Clear(_damageByOwner);
         _flashLeft = 0f;
         _wasHit = false;
@@ -442,6 +446,7 @@ public sealed class Enemy : IHittable
 
         Hp -= damage;
         LastHitBy = ownerIndex;
+        LastHitDamage = damage;
         CountDamage(damage, ownerIndex);
         _flashLeft = FlashSeconds;
         _wasHit = true;

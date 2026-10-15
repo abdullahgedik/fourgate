@@ -98,14 +98,11 @@ public sealed class HazardSystem
             var pool = _pools[i];
             renderer.DrawVisual(pool.OuterVisual, pool.Position, 0f);
             renderer.DrawVisual(pool.InnerVisual, pool.Position, 0f);
-            if (renderer.IsThreeD)
-            {
-                DrawFlameTongues(renderer, pool, i);
-            }
+            DrawFlameTongues(renderer, pool, i);
         }
     }
 
-    // Standing, flickering tongues of fire spread over the pool (3D only): each a stack of
+    // Standing, flickering tongues of fire spread over the pool: each a stack of
     // glowing sprites, wide and red at the foot, small and yellow at the tip.
     private static void DrawFlameTongues(IRenderer renderer, FirePool pool, int seed)
     {

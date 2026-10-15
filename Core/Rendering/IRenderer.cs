@@ -86,8 +86,6 @@ public interface IRenderer
     /// </summary>
     void DrawModel(in ModelPose pose, in VisualDescriptor fallback);
 
-    /// <summary>True for the 3D look, for the few things drawn differently there.</summary>
-    bool IsThreeD { get; }
 
     /// <summary>
     /// The floor shadow of something flying at <paramref name="height"/> (a grenade, a rocket): in 3D

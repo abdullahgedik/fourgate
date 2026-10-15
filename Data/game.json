@@ -9,7 +9,7 @@
       { "centerX": 2010, "centerY": 2010, "width": 300, "height": 300 }
     ]
   },
-  "camera": { "zoom": 1.3, "leadFraction": 0.35, "leadMaxDistance": 260, "smoothing": 10, "edgeMargin": 120 },
+  "camera": { "zoom": 1.5, "leadFraction": 0.35, "leadMaxDistance": 260, "smoothing": 10, "edgeMargin": 120 },
   "debug": { "hotkeys": true, "practiceTargets": false, "practiceTargetModel": "dummy", "oneShotKills": false, "keyboardPlayerTwo": true, "showAudioEvents": false },
   "maxAliveEnemies": 60,
   "campaignWaves": 50,

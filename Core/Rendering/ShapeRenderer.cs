@@ -123,7 +123,6 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
         DrawLine(from, to, thickness, color);
     }
 
-    public bool IsThreeD => false;
 
     public void DrawModel(in ModelPose pose, in VisualDescriptor fallback)
     {

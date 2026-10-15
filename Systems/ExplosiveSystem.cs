@@ -17,7 +17,7 @@ namespace Fourgate.Systems;
 /// <summary>Owns thrown explosives in flight and resolves their blasts against enemies and players.</summary>
 public sealed class ExplosiveSystem
 {
-    // How high a throw goes in the 3D view (2D shows the arc by size instead).
+    // How high a throw goes.
     private const float ThrowPeakHeight = 140f;
 
     // A molotov in flight: a spinning bottle with a burning rag that trails embers.
@@ -39,7 +39,6 @@ public sealed class ExplosiveSystem
     // Mini-bombs look smaller than the grenade they come from.
     private const float ClusterVisualScale = 0.6f;
 
-    private static readonly Color ShadowColor = new(0, 0, 0, 90);
 
     private readonly Arena _arena;
     private readonly FriendlyFireRules _friendlyFire;
@@ -197,7 +196,7 @@ public sealed class ExplosiveSystem
         {
             var thrown = _thrown[i];
             var visual = thrown.Visual;
-            if (renderer.IsThreeD && thrown.Shot.Model is { } model && thrown.Shot.FireRadius <= 0f)
+            if (thrown.Shot.Model is { } model && thrown.Shot.FireRadius <= 0f)
             {
                 // A grenade tumbles end over end along its arc, its shadow on the floor below.
                 var throwDirection = thrown.Shot.Target - thrown.Shot.Origin;
@@ -213,14 +212,7 @@ public sealed class ExplosiveSystem
             }
 
             var height = ThrowPeakHeight * thrown.ArcHeight + visual.Radius;
-            if (renderer.IsThreeD)
-            {
-                renderer.DrawShadow(thrown.Position, height, thrown.Shot.VisualRadius);
-            }
-            else
-            {
-                renderer.FillCircle(thrown.Position, thrown.Shot.VisualRadius, ShadowColor);
-            }
+            renderer.DrawShadow(thrown.Position, height, thrown.Shot.VisualRadius);
 
             if (thrown.Shot.FireRadius > 0f)
             {

@@ -17,6 +17,9 @@ public sealed class EnemySystem : IHittableSource
 {
     // Ambling once the players are gone: slower than a chase, in short legs, sometimes standing still.
     private const float WanderSpeedShare = 0.3f;
+
+    // A zombie killed by a single hit this big (a share of its full HP) bursts apart.
+    private const float GibHitShare = 0.8f;
     private const float WanderMinSeconds = 1.2f;
     private const float WanderMaxSeconds = 3f;
     private const float WanderPauseChance = 0.3f;
@@ -222,7 +225,8 @@ public sealed class EnemySystem : IHittableSource
             var enemy = _enemies[i];
             if (!enemy.IsAlive)
             {
-                _deaths.Add(new EnemyDeath(enemy.Config, enemy.Position, enemy.LastHitBy, enemy.Facing));
+                var gibbed = !enemy.Config.IsBoss && enemy.LastHitDamage >= enemy.MaxHp * GibHitShare;
+                _deaths.Add(new EnemyDeath(enemy.Config, enemy.Position, enemy.LastHitBy, enemy.Facing, gibbed));
                 KillCount++;
                 _audio.PlaySfx(SfxIds.EnemyDeath);
                 _enemies.ReturnAt(i);

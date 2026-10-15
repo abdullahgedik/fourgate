@@ -14,7 +14,7 @@ public sealed class FlameSystem
     // Embers flying off each flame of a flamethrower stream.
     private const float FlameEmbersPerSecond = 6f;
 
-    // How high the stream flies in the 3D view; ignored in 2D.
+    // How high the stream flies.
     private const float FlameHeight = 28f;
 
     private const int InitialFlames = 128;

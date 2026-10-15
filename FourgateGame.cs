@@ -136,12 +136,6 @@ public sealed class FourgateGame : Game
                 RememberDisplay();
             }
 
-            if (_hotkeys.ToggleRendererPressed)
-            {
-                _settings.ThreeDView = !_settings.ThreeDView;
-                _settingsStore.Save(_settings);
-            }
-
             if (_hotkeys.CycleResolutionPressed)
             {
                 _display.CycleWindowedResolution();
@@ -347,7 +341,7 @@ public sealed class FourgateGame : Game
         }
 
         _screen.Begin(BackgroundColor);
-        _scene.Draw(_settings.ThreeDView && _renderer3D is not null ? _renderer3D : _renderer);
+        _scene.Draw(_renderer3D is not null ? _renderer3D : _renderer);
         if (_audioLog is not null)
         {
             _audioOverlay.Draw(_renderer, _audioLog, _data.Game.VirtualHeight);

@@ -47,7 +47,7 @@ local co-op and menus are still to come.
 ## Planned
 
 - Sound and sprite art (the game currently draws geometric shapes and is silent)
-- A 3D look in the style of Boxhead 2Play, with the same 2D gameplay (in progress; 3D is the default, 2D can be chosen in Settings or with F12)
+- A 3D look in the style of Boxhead 2Play: blocky animated characters, bosses and guns over 2D gameplay
 
 ## Requirements
 
@@ -87,7 +87,6 @@ dotnet test tests/Fourgate.Tests
 | Menus | Arrows / WASD to move, Enter to pick (or start on a player card, switch a mode toggle), Esc to go back, or click | D-pad or left stick, A, B to go back |
 | Back to the start screen after game over | Enter | A or Start |
 | Borderless fullscreen | F11 | |
-| 2D / 3D look (also in Settings) | F12 | |
 | Cycle window size | F9 | |
 
 Gamepad support is implemented but has not been tested yet.

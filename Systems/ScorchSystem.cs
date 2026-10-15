@@ -26,7 +26,6 @@ public sealed class ScorchSystem
     private const float WallHeightPerRadius = 1f;
     private const float WallAlpha = 0.9f;
     private const float WallOffset = 1f;
-    private const float WallStripWidth2D = 10f;
 
     private static readonly Color Soot = new(18, 16, 14);
 
@@ -77,22 +76,14 @@ public sealed class ScorchSystem
         }
     }
 
-    /// <summary>Wall and pillar soot: rising up the faces in 3D, a dark strip along their edge in 2D.</summary>
+    /// <summary>Wall and pillar soot rising up the faces.</summary>
     public void Draw(IRenderer renderer)
     {
         for (var i = 0; i < WallMarkCount; i++)
         {
             ref readonly var mark = ref _marks[i];
             var color = Soot * (WallAlpha * mark.Strength);
-            if (renderer.IsThreeD)
-            {
-                renderer.DrawWallStain(mark.From + mark.Normal * WallOffset, mark.To + mark.Normal * WallOffset, mark.Height, color);
-            }
-            else
-            {
-                var inward = -mark.Normal * (WallStripWidth2D / 2f);
-                renderer.DrawLine(mark.From + inward, mark.To + inward, WallStripWidth2D, color);
-            }
+            renderer.DrawWallStain(mark.From + mark.Normal * WallOffset, mark.To + mark.Normal * WallOffset, mark.Height, color);
         }
     }
 

@@ -15,7 +15,7 @@ public sealed class EnemyShotSystem
     private const float GlowScale = 1.5f;
     private const float FireballEmbersPerSecond = 35f;
 
-    // How high fireballs fly in the 3D view; ignored in 2D.
+    // How high fireballs fly.
     private const float FlightHeight = 22f;
 
     private static readonly Color CoreColor = new(255, 210, 90);

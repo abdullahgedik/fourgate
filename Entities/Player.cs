@@ -370,6 +370,27 @@ public sealed class Player
         ActiveEquipment?.Update(deltaSeconds, WeaponTrigger.ForEquipment(Input), muzzle, AimDirection, Index, shots);
     }
 
+    /// <summary>
+    /// Where the active equipment would land if thrown now, and how far its blast or fire reaches;
+    /// false when it is not thrown (a barrel) or none is left.
+    /// </summary>
+    public bool TryGetThrowLanding(out Vector2 landing, out float reach)
+    {
+        landing = Position;
+        reach = 0f;
+        var equipment = ActiveEquipment;
+        if (!IsAlive || equipment?.Config.Thrown is null || (!equipment.HasInfiniteReserve && equipment.Reserve <= 0))
+        {
+            return false;
+        }
+
+        // The same rule as the throw itself: the aim point, no further than the reach.
+        var muzzle = Position + AimDirection * Radius;
+        landing = muzzle + AimDirection * Math.Min(Input.AimDistance, equipment.Stats.Range);
+        reach = Math.Max(equipment.Stats.BlastRadius, equipment.Stats.FireRadius);
+        return true;
+    }
+
     private void HandleWeaponSwitch()
     {
         var slot = Input.WeaponSlotPressed;

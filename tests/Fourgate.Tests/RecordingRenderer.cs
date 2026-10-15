@@ -44,7 +44,6 @@ public sealed class RecordingRenderer : IRenderer
         Particles.Add((ground, baseHeight, lift));
     }
 
-    public bool IsThreeD => false;
 
     public List<ModelPose> Models { get; } = new();
 

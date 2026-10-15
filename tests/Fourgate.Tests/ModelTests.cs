@@ -206,6 +206,53 @@ public class ModelTests
         Assert.Equal(zombie.Config.Color[1], zombie.BodyColor.G);
     }
 
+    [Fact]
+    public void OneBigHit_TearsAZombieApart_ManySmallOnesDoNot()
+    {
+        var arena = new Arena(TestData.Arena());
+        var nobody = new List<Player>();
+        var enemies = new EnemySystem(new NullAudioManager());
+        var blasted = enemies.Spawn(TestData.Zombie(), new Vector2(1000, 1000));
+        var whittled = enemies.Spawn(TestData.Zombie(), new Vector2(1500, 1500));
+
+        blasted.Hit(blasted.MaxHp, 0);
+        for (var i = 0; i < 8; i++)
+        {
+            whittled.Hit(whittled.MaxHp / 8f, 0);
+        }
+
+        enemies.Update(Step, nobody, arena);
+
+        Assert.Equal(2, enemies.Deaths.Count);
+        Assert.Contains(enemies.Deaths, d => d.Gibbed && d.Position == new Vector2(1000, 1000));
+        Assert.Contains(enemies.Deaths, d => !d.Gibbed && d.Position == new Vector2(1500, 1500));
+    }
+
+    [Fact]
+    public void Shells_FlyOut_LieOnTheFloorAMoment_ThenGo()
+    {
+        var particles = new ParticleSystem(new Fourgate.Core.Rng.GameRandom(2));
+        particles.Shell(new Vector2(500, 500), 30f, Vector2.UnitY, Color.Gold);
+
+        for (var i = 0; i < 60; i++)
+        {
+            particles.Update(Step);
+        }
+
+        var drawn = new RecordingRenderer();
+        particles.Draw(drawn);
+        var shell = Assert.Single(drawn.Particles);
+        Assert.Equal(0f, shell.BaseHeight + shell.Lift, 2);
+        Assert.True(shell.Ground.Y > 500f);
+
+        for (var i = 0; i < 120; i++)
+        {
+            particles.Update(Step);
+        }
+
+        Assert.Equal(0, particles.Count);
+    }
+
     private static (Vector3 Left, Vector3 Right) Feet(ModelDefinition model, float speed, float walked, float? heading = null)
     {
         var pose = new ModelPose("survivor", Vector2.Zero, 0f, 0f, walked, speed, Color.White, MoveHeading: heading);

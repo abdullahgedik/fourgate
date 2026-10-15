@@ -15,9 +15,14 @@ public sealed class ParticleSystem
 {
     private const int Capacity = 4000;
 
-    // Starting heights (3D only) of things born in the air: shot impacts and dust.
+    // Starting heights of things born in the air: shot impacts and dust.
     private const float ShotHeight = 30f;
     private const float SplatAlpha = 0.6f;
+
+    // Firing feedback: how long a muzzle flash lasts, and how long shells and gibs lie on the floor.
+    private const float MuzzleFlashSeconds = 0.06f;
+    private const float ShellRestSeconds = 1.2f;
+    private const float GibRestSeconds = 3f;
 
     // Lasting stains are nearly solid and a little brighter than flying drops, so fresh blood
     // shows on top of soot and older stains (newer marks cover older ones).
@@ -214,6 +219,89 @@ public sealed class ParticleSystem
         }
     }
 
+    /// <summary>A gun's flash at its muzzle: a bright core in a wider glow, gone in a blink.</summary>
+    public void MuzzleFlash(Vector2 position, float height, float size)
+    {
+        Add(new Particle
+        {
+            Position = position,
+            BaseHeight = height,
+            Life = MuzzleFlashSeconds,
+            SizeStart = size * 1.8f,
+            SizeEnd = size,
+            ColorStart = FlameCool,
+            ColorEnd = FlameCool,
+            AlphaStart = 0.55f,
+        });
+        Add(new Particle
+        {
+            Position = position,
+            BaseHeight = height,
+            Life = MuzzleFlashSeconds,
+            SizeStart = size,
+            SizeEnd = size * 0.5f,
+            ColorStart = FlameHot,
+            ColorEnd = FlameHot,
+            AlphaStart = 1f,
+        });
+    }
+
+    /// <summary>A spent shell flipped out to the side of the gun; it bounces down and lies a moment.</summary>
+    /// <param name="side">Which way it is thrown (the gun's right).</param>
+    public void Shell(Vector2 position, float height, Vector2 side, Color color)
+    {
+        Add(new Particle
+        {
+            Position = position,
+            BaseHeight = height,
+            Velocity = Turn(side, _random.Range(-0.5f, 0.3f)) * _random.Range(70f, 140f),
+            Climb = _random.Range(60f, 130f),
+            Gravity = Gravity,
+            Drag = 1.5f,
+            Life = 2f,
+            SizeStart = 1.8f,
+            SizeEnd = 1.8f,
+            ColorStart = color,
+            ColorEnd = color,
+            AlphaStart = 1f,
+            RestSeconds = ShellRestSeconds,
+        });
+    }
+
+    /// <summary>
+    /// A zombie torn apart by one big hit: chunks of it (and of its clothes) fly out, land and lie
+    /// a while, each leaving blood where it lands, in a spray of blood drops.
+    /// </summary>
+    public void Gibs(Vector2 position, float radius, Color body, Color clothes)
+    {
+        var chunks = (int)Math.Clamp(radius * 0.35f, 5f, 12f);
+        for (var i = 0; i < chunks; i++)
+        {
+            var size = radius * _random.Range(0.12f, 0.26f);
+            var color = i % 3 == 0 ? clothes : i % 3 == 1 ? body : BloodBright;
+            Add(new Particle
+            {
+                Position = position + RandomInDisc(radius * 0.4f),
+                BaseHeight = radius * 0.8f,
+                Velocity = RandomDirection() * _random.Range(80f, 260f),
+                Climb = _random.Range(100f, 260f),
+                Gravity = Gravity,
+                Drag = 1.2f,
+                Life = 2f,
+                SizeStart = size,
+                SizeEnd = size,
+                ColorStart = color,
+                ColorEnd = Color.Lerp(color, BloodDark, 0.3f),
+                AlphaStart = 1f,
+                SplatSize = size * 1.4f,
+                RestSeconds = GibRestSeconds,
+            });
+        }
+
+        Drops(position, radius * 0.8f, Vector2.UnitX, chunks * 2, MathHelper.Pi, 60f, 220f, 3f, 5.5f, 6f);
+        Mist(position, radius * 0.8f, Vector2.UnitX, 4, radius * 0.5f);
+    }
+
     /// <summary>Flames licking up over a fire pool; call every frame it burns.</summary>
     /// <param name="center">Middle of the pool.</param>
     /// <param name="radius">Its size.</param>
@@ -285,7 +373,7 @@ public sealed class ParticleSystem
 
     /// <summary>Glowing embers left behind something hot that is moving; call every frame.</summary>
     /// <param name="position">Where it is now.</param>
-    /// <param name="height">How high it flies (3D only).</param>
+    /// <param name="height">How high it flies.</param>
     /// <param name="perSecond">How many embers a second.</param>
     /// <param name="size">Size of a fresh ember.</param>
     /// <param name="deltaSeconds">Frame time.</param>
@@ -346,7 +434,7 @@ public sealed class ParticleSystem
     }
 
     /// <summary>What a gun's shot throws off where it hits a body, by the gun's hit effect.</summary>
-    /// <param name="height">Where on the body it struck, above the floor (3D only).</param>
+    /// <param name="height">Where on the body it struck, above the floor.</param>
     /// <param name="damage">Damage of the hit: harder hits throw bigger drops and leave bigger stains.</param>
     public void BodyHit(HitEffect effect, Vector2 position, Vector2 shotDirection, float height, float damage = BleedReferenceDamage)
     {
@@ -634,6 +722,23 @@ public sealed class ParticleSystem
         particle.Velocity = Vector2.Zero;
         particle.Climb = 0f;
         particle.Gravity = 0f;
+        if (particle.RestSeconds > 0f)
+        {
+            // Something solid (a shell, a chunk): it lies where it fell a while, then fades.
+            if (particle.SplatSize > 0f)
+            {
+                Stains?.Add(particle.Position, particle.SplatSize, BloodStain * StainAlpha);
+            }
+
+            particle.Age = 0f;
+            particle.Life = particle.RestSeconds;
+            particle.SizeEnd = particle.SizeStart;
+            particle.ColorStart = particle.ColorEnd;
+            particle.RestSeconds = 0f;
+            particle.SplatSize = 0f;
+            return;
+        }
+
         if (particle.SplatSize <= 0f)
         {
             particle.Age = particle.Life;
@@ -883,5 +988,8 @@ public sealed class ParticleSystem
         public float SplatSize;
         public float SplatLife;
         public bool IsSplat;
+
+        // Seconds it lies on the floor after landing (a shell, a chunk); 0 when it does not.
+        public float RestSeconds;
     }
 }

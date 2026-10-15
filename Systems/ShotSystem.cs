@@ -44,7 +44,7 @@ public sealed class ShotSystem
     private const float BeamFadeSeconds = 0.3f;
     private const float BeamGlowScale = 3f;
 
-    // How high shots fly in the 3D view (chest height); ignored in 2D.
+    // How high shots fly (chest height).
     private const float ShotHeight = 30f;
 
     // Where on a body hit effects burst, as a share of its height.
@@ -291,12 +291,9 @@ public sealed class ShotSystem
         {
             var beam = _beams[i];
             var fade = 1f - beam.Age / BeamFadeSeconds;
-            if (renderer.IsThreeD)
-            {
-                // A wide soft halo and light on the floor below (3D only).
-                renderer.DrawLine(beam.From, beam.To, beam.Width * 7f * fade, BeamGlowColor * (0.14f * fade));
-                renderer.DrawLineRaised(beam.From, beam.To, ShotHeight, beam.Width * 6f * fade, BeamGlowColor * (0.18f * fade));
-            }
+            // A wide soft halo and light on the floor below.
+            renderer.DrawLine(beam.From, beam.To, beam.Width * 7f * fade, BeamGlowColor * (0.14f * fade));
+            renderer.DrawLineRaised(beam.From, beam.To, ShotHeight, beam.Width * 6f * fade, BeamGlowColor * (0.18f * fade));
 
             renderer.DrawLineRaised(
                 beam.From, beam.To, ShotHeight, beam.Width * BeamGlowScale * fade, BeamGlowColor * (0.6f * fade));
