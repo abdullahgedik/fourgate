@@ -10,7 +10,13 @@ namespace Fourgate.Core.Rendering;
 /// </summary>
 public sealed class Camera2D
 {
+    // Screen shake: "trauma" (0–1) builds up with hits and blasts and drains away; the picture
+    // moves by the square of it, so small knocks barely show and big ones really shake.
+    private const float MaxShakePixels = 32f;
+    private const float TraumaDrainPerSecond = 1.8f;
+
     private readonly CameraConfig _config;
+    private float _trauma;
     private Vector2 _boundsMin;
     private Vector2 _boundsMax;
     private bool _hasBounds;
@@ -28,6 +34,26 @@ public sealed class Camera2D
     public Vector2 Position { get; private set; }
 
     public float Zoom => _config.Zoom;
+
+    /// <summary>How shaken the view is now, 0–1.</summary>
+    public float Trauma => _trauma;
+
+    /// <summary>Screen-space offset of the shake this frame; only the picture moves, never aiming.</summary>
+    public Vector2 ShakeOffset { get; private set; }
+
+    /// <summary>Adds shake (0–1 total).</summary>
+    public void AddTrauma(float amount)
+    {
+        _trauma = Math.Clamp(_trauma + amount, 0f, 1f);
+    }
+
+    /// <summary>Drains the shake and picks this frame's offset from two random numbers in -1..1.</summary>
+    public void UpdateShake(float deltaSeconds, float noiseX, float noiseY)
+    {
+        _trauma = Math.Max(0f, _trauma - TraumaDrainPerSecond * deltaSeconds);
+        var strength = MaxShakePixels * _trauma * _trauma;
+        ShakeOffset = new Vector2(noiseX, noiseY) * strength;
+    }
 
     public Vector2 ViewCenter => new(ViewRect.X + ViewRect.Width / 2f, ViewRect.Y + ViewRect.Height / 2f);
 
@@ -55,7 +81,7 @@ public sealed class Camera2D
         var center = ViewCenter;
         return Matrix.CreateTranslation(-Position.X, -Position.Y, 0f)
             * Matrix.CreateScale(Zoom, Zoom, 1f)
-            * Matrix.CreateTranslation(center.X, center.Y, 0f);
+            * Matrix.CreateTranslation(center.X + ShakeOffset.X, center.Y + ShakeOffset.Y, 0f);
     }
 
     /// <summary>Moves toward the follow target for this frame.</summary>

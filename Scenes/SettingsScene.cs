@@ -21,11 +21,12 @@ public sealed class SettingsScene : IScene
 
     private const int WindowRow = 0;
     private const int ResolutionRow = 1;
-    private const int MasterRow = 2;
-    private const int MusicRow = 3;
-    private const int EffectsRow = 4;
-    private const int BackRow = 5;
-    private const int RowCount = 6;
+    private const int ShakeRow = 2;
+    private const int MasterRow = 3;
+    private const int MusicRow = 4;
+    private const int EffectsRow = 5;
+    private const int BackRow = 6;
+    private const int RowCount = 7;
 
     private static readonly Color BackgroundColor = new(20, 21, 28);
     private static readonly Color TitleColor = new(240, 240, 245);
@@ -59,7 +60,7 @@ public sealed class SettingsScene : IScene
         _screenWidth = config.VirtualWidth;
         _screenHeight = config.VirtualHeight;
         _camera = new Camera2D(new Rectangle(0, 0, _screenWidth, _screenHeight), config.Camera);
-        _menu = new MenuList(new Vector2(_screenWidth / 2f, _screenHeight * 0.22f), 760f, 76f, 18f);
+        _menu = new MenuList(new Vector2(_screenWidth / 2f, _screenHeight * 0.19f), 760f, 72f, 16f);
         RefreshLabels();
     }
 
@@ -162,6 +163,10 @@ public sealed class SettingsScene : IScene
                 _applyDisplay(_settings);
                 break;
 
+            case ShakeRow:
+                _settings.ScreenShake = !_settings.ScreenShake;
+                break;
+
             case MasterRow:
                 _settings.MasterVolume = StepVolume(_settings.MasterVolume, step);
                 break;
@@ -212,6 +217,7 @@ public sealed class SettingsScene : IScene
         var windowed = _settings.WindowMode == WindowMode.Windowed;
         _labels[WindowRow] = $"WINDOW:  {(windowed ? "WINDOWED" : "BORDERLESS FULLSCREEN")}";
         _labels[ResolutionRow] = $"WINDOW SIZE:  {_settings.ResolutionWidth} × {_settings.ResolutionHeight}";
+        _labels[ShakeRow] = $"SCREEN SHAKE:  {(_settings.ScreenShake ? "ON" : "OFF")}";
         _labels[MasterRow] = $"MASTER VOLUME:  {_settings.MasterVolume}%";
         _labels[MusicRow] = $"MUSIC VOLUME:  {_settings.MusicVolume}%";
         _labels[EffectsRow] = $"EFFECTS VOLUME:  {_settings.SfxVolume}%";

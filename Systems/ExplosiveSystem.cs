@@ -221,6 +221,9 @@ public sealed class ExplosiveSystem
     /// <summary>Where visual particles go; null draws none (tests).</summary>
     public ParticleSystem? Particles { get; set; }
 
+    /// <summary>Called for every explosion with its center and radius (screen shake).</summary>
+    public Action<Vector2, float>? Exploded { get; set; }
+
     /// <summary>World units a blast pushes enemies away from its center.</summary>
     public float KnockbackDistance { get; set; }
 
@@ -257,6 +260,7 @@ public sealed class ExplosiveSystem
 
         _effects.Rent().Start(center, shot.BlastRadius);
         Particles?.Explosion(center, shot.BlastRadius);
+        Exploded?.Invoke(center, shot.BlastRadius);
         _audio.PlaySfx(SfxIds.Explosion);
 
         if (shot.ClusterCount > 0)

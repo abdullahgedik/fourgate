@@ -14,6 +14,9 @@ public sealed class GameSettings
 
     public int ResolutionHeight { get; set; } = 720;
 
+    /// <summary>Shake the view on explosions and hits.</summary>
+    public bool ScreenShake { get; set; } = true;
+
     /// <summary>0–100; scales music and effects; stored for when audio exists.</summary>
     public int MasterVolume { get; set; } = 100;
 

@@ -23,6 +23,10 @@ public sealed class ParticleSystem
     private static readonly Color SparkCool = new(255, 150, 40);
     private static readonly Color SmokeDark = new(45, 42, 40);
     private static readonly Color SmokeLight = new(90, 86, 82);
+    private static readonly Color BloodBright = new(170, 30, 25);
+    private static readonly Color BloodDark = new(70, 10, 10);
+    private static readonly Color DustLight = new(150, 150, 160);
+    private static readonly Color DustDark = new(80, 80, 90);
 
     private readonly Particle[] _particles = new Particle[Capacity];
     private readonly GameRandom _random;
@@ -188,6 +192,66 @@ public sealed class ParticleSystem
         }
     }
 
+    /// <summary>A small dark-red spray where a shot hits an enemy, thrown along the shot.</summary>
+    public void HitPuff(Vector2 position, Vector2 shotDirection)
+    {
+        for (var i = 0; i < 5; i++)
+        {
+            Add(new Particle
+            {
+                Position = position,
+                Velocity = Turn(shotDirection, _random.Range(-0.8f, 0.8f)) * _random.Range(80f, 240f),
+                Drag = 6f,
+                Life = _random.Range(0.2f, 0.35f),
+                SizeStart = _random.Range(3f, 5.5f),
+                SizeEnd = 1.5f,
+                ColorStart = BloodBright,
+                ColorEnd = BloodDark,
+                AlphaStart = 0.9f,
+            });
+        }
+    }
+
+    /// <summary>A puff of dust where a bullet stops on a wall or pillar.</summary>
+    public void Dust(Vector2 position)
+    {
+        for (var i = 0; i < 4; i++)
+        {
+            Add(new Particle
+            {
+                Position = position,
+                Velocity = RandomDirection() * _random.Range(30f, 90f),
+                Drag = 5f,
+                Life = _random.Range(0.2f, 0.35f),
+                SizeStart = _random.Range(3f, 5f),
+                SizeEnd = 6f,
+                ColorStart = DustLight,
+                ColorEnd = DustDark,
+                AlphaStart = 0.6f,
+            });
+        }
+    }
+
+    /// <summary>A few bright sparks (a ricochet off a wall).</summary>
+    public void Sparks(Vector2 position)
+    {
+        for (var i = 0; i < 6; i++)
+        {
+            Add(new Particle
+            {
+                Position = position,
+                Velocity = RandomDirection() * _random.Range(150f, 350f),
+                Drag = 5f,
+                Life = _random.Range(0.12f, 0.25f),
+                SizeStart = 2.5f,
+                SizeEnd = 1f,
+                ColorStart = SparkHot,
+                ColorEnd = SparkCool,
+                AlphaStart = 1f,
+            });
+        }
+    }
+
     public void Update(float deltaSeconds)
     {
         for (var i = _count - 1; i >= 0; i--)
@@ -230,6 +294,13 @@ public sealed class ParticleSystem
     {
         var angle = _random.Range(0f, MathHelper.TwoPi);
         return new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+    }
+
+    private static Vector2 Turn(Vector2 direction, float radians)
+    {
+        var cos = MathF.Cos(radians);
+        var sin = MathF.Sin(radians);
+        return new Vector2(direction.X * cos - direction.Y * sin, direction.X * sin + direction.Y * cos);
     }
 
     private Vector2 RandomInDisc(float radius)

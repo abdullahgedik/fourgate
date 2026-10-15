@@ -38,6 +38,18 @@ public sealed class GameplayScene : IScene
     private const float WeaponCrateSpacing = 70f;
     private const float DebugNoticeSeconds = 2f;
     private const float PlayerSpawnSpacing = 90f;
+
+    // Screen shake: how far away a blast still shakes a view, the blast radius that gives the
+    // full amount, and the trauma added by a blast and by getting hurt.
+    private const float ShakeReach = 1400f;
+    private const float ShakeRadiusForFull = 260f;
+    private const float ExplosionShake = 0.9f;
+    private const float HurtShake = 0.55f;
+
+    // A red flash round the edges of a hurt player's view.
+    private const float HurtFlashSeconds = 0.35f;
+    private const float HurtFlashThickness = 60f;
+    private const float HurtFeedbackMinDamage = 2f;
     private const float BossCrateSpacing = 70f;
     private const float BossIndicatorRadius = 24f;
     private const float SplitLineThickness = 4f;
@@ -63,6 +75,7 @@ public sealed class GameplayScene : IScene
     private static readonly Color SplitLineColor = new(10, 10, 14);
     private static readonly Color DownedNoticeColor = new(255, 120, 100);
     private static readonly Color BossIndicatorColor = new(230, 50, 45);
+    private static readonly Color HurtFlashColor = new(220, 20, 20);
     private static readonly Color PauseDimColor = new(0, 0, 0, 185);
     private static readonly Color PauseTitleColor = new(240, 240, 245);
     private static readonly Color PauseTextColor = new(170, 175, 190);
@@ -90,6 +103,10 @@ public sealed class GameplayScene : IScene
     private readonly BossHud _bossHud = new();
     private readonly BossSystem _bosses;
     private readonly ParticleSystem _particles;
+    private readonly GameRandom _visualRandom = new(Environment.TickCount);
+    private readonly GameSettings? _settings;
+    private readonly List<float> _lastHp = new();
+    private readonly List<float> _hurtFlashLeft = new();
     private readonly ModeRules _rules;
     private readonly string _modeLabel;
     private readonly ScoreSystem _score;
@@ -134,7 +151,7 @@ public sealed class GameplayScene : IScene
     /// <param name="highScoreStore">Where to save them after a new entry, or null.</param>
     public GameplayScene(
         GameData data, IReadOnlyList<IPlayerInput> inputs, IAudioManager audio, RunMode mode = default,
-        HighScoreTable? highScores = null, HighScoreStore? highScoreStore = null)
+        HighScoreTable? highScores = null, HighScoreStore? highScoreStore = null, GameSettings? settings = null)
     {
         _data = data;
         _floorCellSize = FloorCellSize(data);
@@ -172,7 +189,9 @@ public sealed class GameplayScene : IScene
         _flames = new FlameSystem(_arena, _hazards);
 
         // Visual only, with its own random source so effects never change a seeded run.
-        _particles = new ParticleSystem(new GameRandom(Environment.TickCount));
+        _particles = new ParticleSystem(_visualRandom);
+        _shots.Particles = _particles;
+        _explosives.Exploded = OnExplosion;
         _hazards.Particles = _particles;
         _explosives.Particles = _particles;
         _enemies.Particles = _particles;
@@ -188,6 +207,7 @@ public sealed class GameplayScene : IScene
         _upgradeScreen = new UpgradeScreen(_upgrades);
         _pauseOverlay = new PauseOverlay(config.VirtualWidth, config.VirtualHeight);
         _victoryOverlay = new VictoryOverlay(config.VirtualWidth, config.VirtualHeight);
+        _settings = settings;
         _highScores = highScores;
         _highScoreStore = highScoreStore;
         _rules = new ModeRules(data.Modes, mode);
@@ -243,6 +263,10 @@ public sealed class GameplayScene : IScene
     public void Update(float deltaSeconds)
     {
         _debugNoticeLeft = Math.Max(0f, _debugNoticeLeft - deltaSeconds);
+        for (var i = 0; i < _hurtFlashLeft.Count; i++)
+        {
+            _hurtFlashLeft[i] = Math.Max(0f, _hurtFlashLeft[i] - deltaSeconds);
+        }
         if (IsGameOver)
         {
             UpdateGameOver();
@@ -318,6 +342,8 @@ public sealed class GameplayScene : IScene
             player.Input.Update(player.Position, camera);
             player.Update(deltaSeconds, _arena, _shotRouter);
             camera.Follow(player.Position, player.Input.AimScreen, deltaSeconds);
+            ShakeOnHurt(i);
+            camera.UpdateShake(deltaSeconds, _visualRandom.Range(-1f, 1f), _visualRandom.Range(-1f, 1f));
             var view = camera.ViewRect;
             player.SetView(
                 camera.ScreenToWorld(new Vector2(view.Left, view.Top)),
@@ -560,6 +586,49 @@ public sealed class GameplayScene : IScene
         return null;
     }
 
+    // Each view shakes with the blasts near its own player, more for bigger and closer ones.
+    private void OnExplosion(Vector2 center, float radius)
+    {
+        if (_settings is { ScreenShake: false })
+        {
+            return;
+        }
+
+        for (var i = 0; i < _players.Count; i++)
+        {
+            var distance = Vector2.Distance(_players[i].Position, center);
+            var nearness = Math.Clamp(1f - distance / ShakeReach, 0f, 1f);
+            _cameras[i].AddTrauma(Math.Clamp(radius / ShakeRadiusForFull, 0.15f, 1f) * nearness * ExplosionShake);
+        }
+    }
+
+    // A knock and a red flash on the view of a player who was just hit.
+    private void ShakeOnHurt(int index)
+    {
+        while (_lastHp.Count <= index)
+        {
+            _lastHp.Add(_players[_lastHp.Count].Hp);
+        }
+
+        while (_hurtFlashLeft.Count <= index)
+        {
+            _hurtFlashLeft.Add(0f);
+        }
+
+        // Fire nibbles a little every frame; only a real hit (a chunk of HP at once) counts.
+        var hp = _players[index].Hp;
+        if (_lastHp[index] - hp >= HurtFeedbackMinDamage)
+        {
+            _hurtFlashLeft[index] = HurtFlashSeconds;
+            if (_settings is not { ScreenShake: false })
+            {
+                _cameras[index].AddTrauma(HurtShake);
+            }
+        }
+
+        _lastHp[index] = hp;
+    }
+
     private void RecordHighScore(string initials)
     {
         var seconds = (int)_elapsedSeconds;
@@ -686,6 +755,18 @@ public sealed class GameplayScene : IScene
         _flames.OneShotKills = _shots.OneShotKills;
     }
 
+    /// <summary>True while a player's view shows the red hurt flash.</summary>
+    public bool IsHurtFlashing(int playerIndex)
+    {
+        return playerIndex < _hurtFlashLeft.Count && _hurtFlashLeft[playerIndex] > 0f;
+    }
+
+    /// <summary>How shaken a player's view is now (0–1).</summary>
+    public float ViewTrauma(int playerIndex)
+    {
+        return _cameras[playerIndex].Trauma;
+    }
+
     /// <summary>True while a new high score's initials are being entered.</summary>
     public bool IsEnteringInitials => _initials is { IsDone: false };
 
@@ -810,6 +891,7 @@ public sealed class GameplayScene : IScene
             DrawDoorIndicators(renderer, _cameras[i]);
             DrawBossIndicator(renderer, _cameras[i]);
             DrawWeaponCrateIndicators(renderer, _cameras[i]);
+            DrawHurtFlash(renderer, i);
             _playerHuds[i].Draw(renderer, _players[i], _cameras[i].ViewRect);
         }
 
@@ -1066,6 +1148,24 @@ public sealed class GameplayScene : IScene
 
             renderer.FillRect(doors[i].TopLeft, doors[i].Size, Color.Lerp(GateColor, GateGlowColor, glow));
         }
+    }
+
+    // Red bands along the edges of a view, fading out, when its player was just hurt.
+    private void DrawHurtFlash(IRenderer renderer, int index)
+    {
+        if (index >= _hurtFlashLeft.Count || _hurtFlashLeft[index] <= 0f)
+        {
+            return;
+        }
+
+        var view = _cameras[index].ViewRect;
+        var color = HurtFlashColor * (0.45f * _hurtFlashLeft[index] / HurtFlashSeconds);
+        var thick = HurtFlashThickness;
+        renderer.FillRect(new Vector2(view.Left, view.Top), new Vector2(view.Width, thick), color);
+        renderer.FillRect(new Vector2(view.Left, view.Bottom - thick), new Vector2(view.Width, thick), color);
+        renderer.FillRect(new Vector2(view.Left, view.Top + thick), new Vector2(thick, view.Height - 2f * thick), color);
+        renderer.FillRect(
+            new Vector2(view.Right - thick, view.Top + thick), new Vector2(thick, view.Height - 2f * thick), color);
     }
 
     // A red marker at the edge of a view points to a boss outside it.

@@ -202,7 +202,8 @@ public sealed class FourgateGame : Game
             _lastChosenPlayers = players;
             _lastMode = select.Mode;
             _scene = new GameplayScene(
-                _data, players == 2 ? _coopInputs : _singleInputs, _audio, _lastMode, _highScores, _highScoreStore);
+                _data, players == 2 ? _coopInputs : _singleInputs, _audio, _lastMode, _highScores, _highScoreStore,
+                _settings);
         }
         else if (_scene is HighScoresScene { IsDone: true })
         {

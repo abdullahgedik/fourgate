@@ -63,6 +63,9 @@ public sealed class ShotSystem
     /// <summary>Beams still fading on screen.</summary>
     public int BeamCount => _beams.Count;
 
+    /// <summary>Where hit puffs, dust and sparks go; null draws none (tests).</summary>
+    public ParticleSystem? Particles { get; set; }
+
     /// <summary>Where rockets explode. Without it, rockets hit like ordinary bullets.</summary>
     public ExplosiveSystem? Explosives { get; set; }
 
@@ -163,7 +166,9 @@ public sealed class ShotSystem
                 continue;
             }
 
-            target.HitAt(damage, shot.OwnerIndex, shot.Origin + shot.Direction * BeamEntry(shot.Origin, shot.Direction, target));
+            var entry = shot.Origin + shot.Direction * BeamEntry(shot.Origin, shot.Direction, target);
+            target.HitAt(damage, shot.OwnerIndex, entry);
+            Particles?.HitPuff(entry, shot.Direction);
             target.Knock(shot.Direction * shot.Knockback);
         }
 
@@ -382,6 +387,7 @@ public sealed class ShotSystem
 
             hit.HitAt(damage, bullet.OwnerIndex, impact);
             hit.Knock(direction * bullet.Knockback);
+            Particles?.HitPuff(impact, direction);
 
             if (bullet.PierceLeft > 0)
             {
@@ -409,6 +415,7 @@ public sealed class ShotSystem
         if (atWall && bullet.RicochetsLeft > 0 && bullet.RangeLeft > 0f)
         {
             // The rest of this frame's travel is dropped; the bullet continues next frame.
+            Particles?.Sparks(bullet.Position);
             bullet.Bounce(Reflect(direction, wallNormal));
         }
         else if (atWall || outOfRange)
@@ -417,6 +424,11 @@ public sealed class ShotSystem
             {
                 ExplodeRocket(bullet);
                 return;
+            }
+
+            if (atWall)
+            {
+                Particles?.Dust(bullet.Position);
             }
 
             bullet.Stop();

@@ -21,7 +21,8 @@ local co-op and menus are still to come.
   wave 40 (summons every zombie kind, each followed by a matching attack; splits on death)
   and The Warden on wave 50 (three phases, borrowed attacks, a sweeping laser)
 - Knockback on hits
-- Particle effects: explosion bursts with smoke, flames over fire pools, burning enemies, ember trails
+- Particle effects: explosion bursts with smoke, flames over fire pools, burning enemies, ember trails,
+  hit puffs and dust; screen shake on explosions and hits (can be switched off in Settings)
 - Nine guns (pistol, SMG, shotgun, marksman rifle, assault rifle, sniper rifle,
   flamethrower, rocket launcher, railgun) and four pieces of equipment (hand grenade, molotov, mine,
   explosive barrel), each with levels
@@ -39,13 +40,12 @@ local co-op and menus are still to come.
 - A score (a team score in co-op, multiplied by the mode) and a game over screen with the score,
   wave reached, kills and time
 - Local high scores: a top 10 per mode with initials, saved in `%APPDATA%/Fourgate/scores.json`
-- A main menu and a settings screen (window mode, window size, master / music / effects volume),
-  saved in `%APPDATA%/Fourgate/settings.json`
+- A main menu and a settings screen (window mode, window size, screen shake, master / music /
+  effects volume), saved in `%APPDATA%/Fourgate/settings.json`
 - A pause menu (Esc / gamepad Start) and a "50 waves survived" screen after the last boss
 
 ## Planned
 
-- Visual polish: hit feedback and optional screen shake
 - Sound and sprite art (the game currently draws geometric shapes and is silent)
 - Later: a 3D look in the style of Boxhead 2Play, with the same 2D gameplay
 

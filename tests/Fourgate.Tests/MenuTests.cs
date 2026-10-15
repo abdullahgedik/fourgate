@@ -100,7 +100,12 @@ public sealed class MenuTests : IDisposable
         var settings = new GameSettings { MasterVolume = 100, MusicVolume = 70, SfxVolume = 0 };
         var scene = new SettingsScene(input, TestData.Game(), settings, Resolutions, _ => { });
 
+        // Window, size, screen shake, then the volumes.
         Tap(scene, input, f => f.MenuDownPressed = true);
+        Tap(scene, input, f => f.MenuDownPressed = true);
+        Tap(scene, input, f => f.ConfirmPressed = true);
+        Assert.False(settings.ScreenShake);
+
         Tap(scene, input, f => f.MenuDownPressed = true);
         Tap(scene, input, f => f.MenuRightPressed = true);
         Assert.Equal(0, settings.MasterVolume);
