@@ -248,4 +248,42 @@ public class WeaponTests
             weapon.Update(Step, _input, Vector2.Zero, Vector2.UnitX, 0, _shots);
         }
     }
+
+    [Fact]
+    public void HoldingFire_KeepsEveryGunShooting_AtItsOwnRate_ButTheLauncherAndRailgunFireOncePerPress()
+    {
+        var data = DataLoader.LoadAll(DataLoader.DefaultDirectory);
+        var held = new WeaponTrigger(false, true, false, 500f);
+        var press = new WeaponTrigger(true, true, false, 500f);
+
+        foreach (var id in new[] { "pistol", "shotgun", "marksman", "sniper", "smg", "assault" })
+        {
+            var config = data.GetWeapon(id);
+            var weapon = new Weapon(config, TestData.Game(reloadsEnabled: false), new NullAudioManager());
+            var shots = new FakeShotHandler();
+            weapon.Update(Step, press, Vector2.Zero, Vector2.UnitX, 0, shots);
+            for (var i = 0; i < 60 * 3; i++)
+            {
+                weapon.Update(Step, held, Vector2.Zero, Vector2.UnitX, 0, shots);
+            }
+
+            // Three seconds of holding: about three seconds' worth of shots (pellets count once).
+            var volleys = shots.Count / Math.Max(1, config.Pellets);
+            Assert.InRange(volleys, (int)(config.FireRate * 3f) - 1, (int)(config.FireRate * 3f) + 2);
+        }
+
+        foreach (var id in new[] { "rocket", "railgun" })
+        {
+            var weapon = new Weapon(data.GetWeapon(id), TestData.Game(reloadsEnabled: false), new NullAudioManager());
+            var shots = new FakeShotHandler();
+            weapon.Update(Step, press, Vector2.Zero, Vector2.UnitX, 0, shots);
+            for (var i = 0; i < 60 * 3; i++)
+            {
+                weapon.Update(Step, held, Vector2.Zero, Vector2.UnitX, 0, shots);
+            }
+
+            Assert.Equal(1, Math.Max(shots.Count, shots.Beams.Count));
+        }
+    }
+
 }

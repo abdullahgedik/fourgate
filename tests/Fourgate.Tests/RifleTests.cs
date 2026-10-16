@@ -88,7 +88,7 @@ public class RifleTests
 
         Assert.Equal(4, rifle.Slot);
         Assert.Equal(6, rifle.UnlockWave);
-        Assert.False(ten.Automatic);
+        Assert.True(ten.Automatic);
         Assert.Equal(0, nine.Pierce);
         Assert.Equal(0, nine.EmpoweredEvery);
         Assert.Equal(3, ten.Pierce);

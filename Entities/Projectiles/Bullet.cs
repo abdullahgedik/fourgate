@@ -12,6 +12,7 @@ public sealed class Bullet
     private readonly List<IHittable> _alreadyHit = new();
     private Vector2 _origin;
     private float _travelled;
+    private float _flown;
 
     /// <summary>Unit-length flight direction.</summary>
     public Vector2 Direction { get; private set; }
@@ -56,6 +57,9 @@ public sealed class Bullet
     /// <summary>After a kill, the leftover damage keeps flying to the next enemy in line.</summary>
     public bool Overkill { get; private set; }
 
+    /// <summary>Set when close hits hit harder and push further.</summary>
+    public PointBlank? PointBlank { get; private set; }
+
     /// <summary>Set for a rocket: it explodes where it stops instead of hitting directly.</summary>
     public RocketPayload? Rocket { get; private set; }
 
@@ -84,8 +88,11 @@ public sealed class Bullet
         float knockback = 0f,
         HitEffect hitEffect = HitEffect.Light,
         int wallBounces = 0,
-        string? model = null)
+        string? model = null,
+        PointBlank? pointBlank = null)
     {
+        PointBlank = pointBlank;
+        _flown = 0f;
         WallBouncesLeft = wallBounces;
         Model = model;
         Knockback = knockback;
@@ -112,6 +119,7 @@ public sealed class Bullet
     public void Advance(float distance)
     {
         _travelled += distance;
+        _flown += distance;
         RangeLeft -= distance;
     }
 
@@ -171,6 +179,9 @@ public sealed class Bullet
         _alreadyHit.Clear();
         Direction = newDirection;
     }
+
+    /// <summary>Distance flown since it was fired, bounces included.</summary>
+    public float Flown => _flown;
 
     /// <summary>Distance flown since it was fired or last bounced.</summary>
     public float Travelled => _travelled;

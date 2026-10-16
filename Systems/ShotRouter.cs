@@ -33,13 +33,15 @@ public sealed class ShotRouter : IShotHandler
         float ricochetDamageMult = 1f,
         bool overkill = false,
         RocketPayload? rocket = null,
-        int wallBounces = 0)
+        int wallBounces = 0,
+        PointBlank? pointBlank = null)
     {
         _bullets.FireProjectile(
             origin, direction, projectile, damage, ownerIndex, range, pierce, ricochets, ricochetRadius, ricochetDamageMult,
             overkill,
             rocket,
-            wallBounces);
+            wallBounces,
+            pointBlank);
     }
 
     public Vector2 ClearMuzzle(Vector2 body, Vector2 muzzle)

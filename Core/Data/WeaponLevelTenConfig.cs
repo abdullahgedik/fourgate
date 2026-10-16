@@ -61,6 +61,8 @@ public sealed class WeaponLevelTenConfig
             DataLoadException.Require(
                 Abilities[i].FireRateMult > 0, file, $"{path}.abilities[{i}].fireRateMult", "must be greater than 0");
             DataLoadException.Require(
+                Abilities[i].KnockbackMult >= 0, file, $"{path}.abilities[{i}].knockbackMult", "must not be negative");
+            DataLoadException.Require(
                 Abilities[i].Seconds >= 0, file, $"{path}.abilities[{i}].seconds", "must not be negative");
             DataLoadException.Require(
                 Abilities[i].Interval >= 0, file, $"{path}.abilities[{i}].interval", "must not be negative");

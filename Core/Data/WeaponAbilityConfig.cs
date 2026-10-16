@@ -23,6 +23,9 @@ public sealed class WeaponAbilityConfig
     /// <summary>Fire rate multiplier reached by the ability (overdrive: at full ramp).</summary>
     public float FireRateMult { get; init; } = 1f;
 
+    /// <summary>Knockback multiplier applied by the ability (point blank: to close hits).</summary>
+    public float KnockbackMult { get; init; } = 1f;
+
     /// <summary>Time the ability takes, in seconds (overdrive: to ramp up fully).</summary>
     public float Seconds { get; init; }
 

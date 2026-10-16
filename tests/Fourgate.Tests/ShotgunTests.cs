@@ -99,7 +99,7 @@ public class ShotgunTests
     }
 
     [Fact]
-    public void ShippedShotgun_IsPumpActionUntilLevelTen_ThenARapidAutomatic()
+    public void ShippedShotgun_FiresWhileHeld_AndLevelTenDoublesItsRate_AndHitsHardUpClose()
     {
         var shotgun = DataLoader.LoadAll(DataLoader.DefaultDirectory).GetWeapon("shotgun");
 
@@ -110,13 +110,13 @@ public class ShotgunTests
         Assert.Equal(3, shotgun.Slot);
         Assert.Equal(3, shotgun.UnlockWave);
         Assert.True(one.Pellets > 1);
-        Assert.False(one.Automatic);
-        Assert.False(nine.Automatic);
+        Assert.True(one.Automatic);
+        Assert.Null(nine.PointBlank);
 
-        // Level 10 must be a real step up in fire rate, not just "hold instead of click".
-        Assert.True(ten.Automatic);
+        // Level 10: a real step up in fire rate and magazine, and close hits land harder.
         Assert.True(ten.FireRate >= nine.FireRate * 1.5f);
         Assert.True(ten.MagSize > nine.MagSize);
+        Assert.NotNull(ten.PointBlank);
     }
 
     [Fact]

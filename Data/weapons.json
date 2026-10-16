@@ -10,7 +10,7 @@
       "type": "projectile",
       "damage": 28,
       "fireRate": 3,
-      "automatic": false,
+      "automatic": true,
       "ammo": { "magSize": 12, "reserveMax": 0, "reloadTime": 0.8, "infiniteReserve": true },
       "projectile": { "speed": 6000, "radius": 4, "knockback": 14, "hitEffect": "light" },
       "levels": [
@@ -68,27 +68,27 @@
       "type": "projectile",
       "damage": 14,
       "pellets": 7,
-      "fireRate": 2.0,
-      "automatic": false,
+      "fireRate": 2.2,
+      "automatic": true,
       "spreadDegrees": 14,
       "ammo": { "magSize": 8, "reserveMax": 48, "reloadTime": 1.5, "infiniteReserve": false },
       "projectile": { "speed": 5000, "radius": 4, "knockback": 8, "hitEffect": "pellet" },
       "levels": [
-        { "level": 2, "damageMult": 1.08, "fireRateMult": 1.10 },
+        { "level": 2, "damageMult": 1.08, "fireRateMult": 1.083 },
         { "level": 3, "damageMult": 1.08, "magSizeBonus": 2 },
-        { "level": 4, "damageMult": 1.08, "reloadTimeMult": 0.90 },
+        { "level": 4, "damageMult": 1.08, "reloadTimeMult": 0.90, "fireRateMult": 1.083 },
         { "level": 5, "damageMult": 1.08, "magSizeBonus": 2, "spreadMult": 0.90 },
-        { "level": 6, "damageMult": 1.08, "fireRateMult": 1.10 },
+        { "level": 6, "damageMult": 1.08, "fireRateMult": 1.083 },
         { "level": 7, "damageMult": 1.08, "magSizeBonus": 2 },
-        { "level": 8, "damageMult": 1.08, "reloadTimeMult": 0.90 },
+        { "level": 8, "damageMult": 1.08, "reloadTimeMult": 0.90, "fireRateMult": 1.083 },
         { "level": 9, "damageMult": 1.08, "magSizeBonus": 2, "spreadMult": 0.90 }
       ],
       "levelTen": {
-        "description": [ "Fully automatic fire", "Double fire rate, +4 magazine", "+8% damage" ],
+        "description": [ "Double fire rate, +4 magazine", "Point blank: close hits deal", "heavy damage and knockback", "+8% damage" ],
         "damageMult": 1.08,
         "fireRateMult": 2.0,
         "magSizeBonus": 4,
-        "abilities": [ { "id": "fullAuto" } ]
+        "abilities": [ { "id": "pointBlank", "radius": 150, "damageMult": 1.6, "knockbackMult": 2.0 } ]
       }
     },
     {
@@ -130,7 +130,7 @@
       "type": "projectile",
       "damage": 40,
       "fireRate": 2.5,
-      "automatic": false,
+      "automatic": true,
       "ammo": { "magSize": 10, "reserveMax": 80, "reloadTime": 1.3, "infiniteReserve": false },
       "projectile": { "speed": 7500, "radius": 4, "knockback": 22, "hitEffect": "heavy" },
       "levels": [
@@ -187,7 +187,7 @@
       "type": "projectile",
       "damage": 150,
       "fireRate": 0.7,
-      "automatic": false,
+      "automatic": true,
       "ammo": { "magSize": 5, "reserveMax": 30, "reloadTime": 2.5, "infiniteReserve": false },
       "projectile": { "speed": 9000, "radius": 4, "knockback": 45, "hitEffect": "sniper" },
       "levels": [

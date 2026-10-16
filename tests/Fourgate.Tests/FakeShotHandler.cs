@@ -29,6 +29,8 @@ public sealed class FakeShotHandler : IShotHandler
 
     public RocketPayload? LastRocket { get; private set; }
 
+    public PointBlank? LastPointBlank { get; private set; }
+
     /// <summary>Every beam fired, in order.</summary>
     public List<BeamShot> Beams { get; } = new();
 
@@ -57,7 +59,8 @@ public sealed class FakeShotHandler : IShotHandler
         float ricochetDamageMult = 1f,
         bool overkill = false,
         RocketPayload? rocket = null,
-        int wallBounces = 0)
+        int wallBounces = 0,
+        PointBlank? pointBlank = null)
     {
         LastWallBounces = wallBounces;
         Count++;
@@ -71,6 +74,7 @@ public sealed class FakeShotHandler : IShotHandler
         LastRicochetRadius = ricochetRadius;
         LastOverkill = overkill;
         LastRocket = rocket;
+        LastPointBlank = pointBlank;
     }
 
     public Vector2 ClearMuzzle(Vector2 body, Vector2 muzzle)

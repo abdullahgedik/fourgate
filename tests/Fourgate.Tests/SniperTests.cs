@@ -105,7 +105,7 @@ public class SniperTests
         var stats = WeaponStats.Compute(sniper, 1);
         Assert.Equal(6, sniper.Slot);
         Assert.Equal(11, sniper.UnlockWave);
-        Assert.False(stats.Automatic);
+        Assert.True(stats.Automatic);
         Assert.Equal(0, stats.Pierce);
         Assert.True(stats.Damage > WeaponStats.Compute(marksman, 1).Damage);
         Assert.True(stats.FireRate < WeaponStats.Compute(marksman, 1).FireRate);

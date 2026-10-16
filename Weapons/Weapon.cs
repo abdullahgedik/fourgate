@@ -430,7 +430,8 @@ public sealed class Weapon
                     Stats.RingRadiusMult,
                     Stats.RingDelay,
                     Stats.RingInterval),
-            Stats.WallBounces);
+            Stats.WallBounces,
+            Stats.PointBlank);
     }
 
     // Turns the aim inside the weapon's spread cone. A single bullet lands anywhere in the

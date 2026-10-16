@@ -79,4 +79,10 @@ public enum WeaponAbility
     LeaveFire,
 
     EndBlast,
+
+    /// <summary>
+    /// A bullet that hits within the ability's <c>radius</c> of the muzzle deals <c>damageMult</c>
+    /// times the damage and pushes <c>knockbackMult</c> times as far.
+    /// </summary>
+    PointBlank,
 }

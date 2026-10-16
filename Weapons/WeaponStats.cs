@@ -63,7 +63,8 @@ public readonly record struct WeaponStats(
     float PlaceDistance,
     int EnemyHitsToDetonate,
     float EndBlastRadius,
-    float EndBlastDamageMult)
+    float EndBlastDamageMult,
+    PointBlank? PointBlank)
 {
     /// <summary>
     /// Applies every level bonus up to <paramref name="level"/> to the weapon's base stats;
@@ -146,6 +147,7 @@ public readonly record struct WeaponStats(
         var leaveFireHurtsPlayers = true;
         var endBlastRadius = 0f;
         var endBlastDamageMult = 0f;
+        PointBlank? pointBlank = null;
         if (level >= WeaponConfig.MaxLevel && config.LevelTen is not null)
         {
             damage *= config.LevelTen.DamageMult;
@@ -198,6 +200,11 @@ public readonly record struct WeaponStats(
                         leaveFireSeconds = abilities[i].Seconds;
                         leaveFireDamageMult = abilities[i].DamageMult;
                         leaveFireHurtsPlayers = abilities[i].HurtsPlayers;
+                        break;
+
+                    case WeaponAbility.PointBlank:
+                        pointBlank = new PointBlank(
+                            abilities[i].Radius, abilities[i].DamageMult, abilities[i].KnockbackMult);
                         break;
 
                     case WeaponAbility.EndBlast:
@@ -268,7 +275,7 @@ public readonly record struct WeaponStats(
             config.Placed?.Shootable ?? false, leaveFireRadius, leaveFireSeconds, leaveFireDamageMult,
             leaveFireHurtsPlayers, config.Placed?.Solid ?? false, config.Placed?.GridSize ?? 0f,
             config.Placed?.PlaceDistance ?? 0f, config.Placed?.EnemyHitsToDetonate ?? 0,
-            endBlastRadius, endBlastDamageMult);
+            endBlastRadius, endBlastDamageMult, pointBlank);
     }
 
     /// <summary>

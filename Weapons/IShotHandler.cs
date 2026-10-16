@@ -20,6 +20,7 @@ public interface IShotHandler
     /// <param name="overkill">After a kill, the leftover damage keeps flying to the next enemy in line.</param>
     /// <param name="rocket">Makes it a rocket: it explodes where it stops instead of hitting directly.</param>
     /// <param name="wallBounces">Times the bullet bounces off walls and pillars instead of stopping.</param>
+    /// <param name="pointBlank">Makes hits close to the muzzle hit harder and push further.</param>
     void FireProjectile(
         Vector2 origin,
         Vector2 direction,
@@ -33,7 +34,8 @@ public interface IShotHandler
         float ricochetDamageMult = 1f,
         bool overkill = false,
         RocketPayload? rocket = null,
-        int wallBounces = 0);
+        int wallBounces = 0,
+        PointBlank? pointBlank = null);
 
     /// <summary>Throws an explosive that flies to its target and explodes where it lands.</summary>
     void ThrowExplosive(in ExplosiveShot shot);

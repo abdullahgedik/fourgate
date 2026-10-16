@@ -119,7 +119,8 @@ public sealed class ShotSystem
         float ricochetDamageMult = 1f,
         bool overkill = false,
         RocketPayload? rocket = null,
-        int wallBounces = 0)
+        int wallBounces = 0,
+        PointBlank? pointBlank = null)
     {
         _bullets.Rent().Launch(
             origin,
@@ -138,7 +139,8 @@ public sealed class ShotSystem
             projectile.Knockback,
             projectile.HitEffect,
             wallBounces,
-            projectile.Model);
+            projectile.Model,
+            pointBlank);
     }
 
     /// <summary>
@@ -498,8 +500,15 @@ public sealed class ShotSystem
                 return;
             }
 
+            var knockback = bullet.Knockback;
+            if (bullet.PointBlank is { } close && bullet.Flown + hitDistance <= close.Range)
+            {
+                damage *= close.DamageMult;
+                knockback *= close.KnockbackMult;
+            }
+
             hit.HitAt(damage, bullet.OwnerIndex, impact);
-            hit.Knock(direction * bullet.Knockback);
+            hit.Knock(direction * knockback);
             Particles?.BodyHit(bullet.HitEffect, impact, direction, HitHeight(hit), damage);
 
             if (bullet.PierceLeft > 0)

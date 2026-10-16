@@ -321,7 +321,8 @@ public class BarrelTests
         public void FireProjectile(
             Vector2 origin, Vector2 direction, ProjectileConfig projectile, float damage, int ownerIndex,
             float? range = null, int pierce = 0, int ricochets = 0, float ricochetRadius = 0f,
-            float ricochetDamageMult = 1f, bool overkill = false, RocketPayload? rocket = null, int wallBounces = 0)
+            float ricochetDamageMult = 1f, bool overkill = false, RocketPayload? rocket = null, int wallBounces = 0,
+            PointBlank? pointBlank = null)
         {
         }
 
