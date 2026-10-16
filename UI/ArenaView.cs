@@ -40,12 +40,12 @@ public sealed class ArenaView
     private const float DoorFadeSeconds = 0.4f;
 
     /// <summary>The gold a warning door glows (also used by the off-screen door pointers).</summary>
-    public static readonly Color GateGlowColor = new(255, 190, 70);
+    public static readonly Color GateGlowColor = new(255, 130, 50);
 
-    private static readonly Color WallColor = new(70, 74, 92);
-    private static readonly Color FloorColor = new(34, 36, 46);
-    private static readonly Color GridColor = new(39, 41, 52);
-    private static readonly Color GateColor = new(150, 60, 50);
+    private static readonly Color WallColor = new(66, 54, 56);
+    private static readonly Color FloorColor = new(40, 31, 31);
+    private static readonly Color GridColor = new(45, 35, 35);
+    private static readonly Color GateColor = new(95, 32, 26);
 
     private readonly Arena _arena;
     private readonly ParticleSystem _particles;
@@ -73,6 +73,7 @@ public sealed class ArenaView
     public void Update(float deltaSeconds, WaveSystem? waves)
     {
         _pulseTime += deltaSeconds;
+        _decor.Update(deltaSeconds, _particles);
         var doors = _arena.Doors;
         for (var i = 0; i < doors.Count; i++)
         {

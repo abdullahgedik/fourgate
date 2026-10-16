@@ -116,12 +116,12 @@ public sealed class Renderer3D : IRenderer, IDisposable
         _solidEffect.EnableDefaultLighting();
         // The sun from almost straight above, and a weak fill from the camera's side so the faces
         // turned toward the player are not left dark.
-        _solidEffect.AmbientLightColor = new Vector3(0.5f, 0.5f, 0.54f);
+        _solidEffect.AmbientLightColor = new Vector3(0.52f, 0.45f, 0.44f);
         _solidEffect.DirectionalLight0.Direction = Vector3.Normalize(new Vector3(0.12f, -1f, 0.18f));
-        _solidEffect.DirectionalLight0.DiffuseColor = new Vector3(0.62f, 0.6f, 0.56f);
+        _solidEffect.DirectionalLight0.DiffuseColor = new Vector3(0.64f, 0.56f, 0.5f);
         _solidEffect.DirectionalLight1.Enabled = true;
         _solidEffect.DirectionalLight1.Direction = Vector3.Normalize(new Vector3(0f, -0.5f, -1f));
-        _solidEffect.DirectionalLight1.DiffuseColor = new Vector3(0.22f, 0.22f, 0.26f);
+        _solidEffect.DirectionalLight1.DiffuseColor = new Vector3(0.26f, 0.18f, 0.16f);
         _solidEffect.DirectionalLight1.SpecularColor = Vector3.Zero;
         _solidEffect.DirectionalLight2.Enabled = false;
         _solidEffect.SpecularColor = Vector3.Zero;

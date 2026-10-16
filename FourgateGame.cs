@@ -24,7 +24,7 @@ public sealed class FourgateGame : Game
     private static readonly string FontPath =
         Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts", "Rajdhani-SemiBold.ttf");
 
-    private static readonly Color BackgroundColor = new(16, 17, 22);
+    private static readonly Color BackgroundColor = new(14, 9, 9);
 
     private readonly DisplayManager _display;
     private readonly WindowHotkeys _hotkeys = new();
