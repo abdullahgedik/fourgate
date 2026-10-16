@@ -11,8 +11,9 @@ using Microsoft.Xna.Framework;
 namespace Fourgate.Scenes;
 
 /// <summary>
-/// Settings: window mode, windowed size, screen shake and three volumes. Left/right (or Enter, or a click)
-/// changes the highlighted line; display changes apply at once. Back or the BACK line leaves.
+/// Settings: window mode, windowed size, screen shake, three volumes and the keyboard controls.
+/// Left/right (or Enter, or a click) changes the highlighted line; display changes apply at once.
+/// CONTROLS opens the key list. Back or the BACK line leaves.
 /// </summary>
 public sealed class SettingsScene : IScene
 {
@@ -26,8 +27,9 @@ public sealed class SettingsScene : IScene
     private const int MasterRow = 3;
     private const int MusicRow = 4;
     private const int EffectsRow = 5;
-    private const int BackRow = 6;
-    private const int RowCount = 7;
+    private const int ControlsRow = 6;
+    private const int BackRow = 7;
+    private const int RowCount = 8;
 
     private static readonly Color BackgroundColor = new(20, 21, 28);
     private static readonly Color TitleColor = new(240, 240, 245);
@@ -42,6 +44,8 @@ public sealed class SettingsScene : IScene
     private readonly int _screenWidth;
     private readonly int _screenHeight;
     private readonly MenuList _menu;
+    private readonly IKeyCapture? _keys;
+    private readonly ControlsMenu? _controls;
     private readonly string[] _labels = new string[RowCount];
     private readonly bool[] _disabled = new bool[RowCount];
     private int _selected;
@@ -52,10 +56,12 @@ public sealed class SettingsScene : IScene
     /// <param name="settings">The settings to change (changed in place).</param>
     /// <param name="resolutions">Windowed sizes to choose from.</param>
     /// <param name="applyDisplay">Applies the window mode and size right away.</param>
+    /// <param name="keys">The keyboard player's keys; without it CONTROLS is greyed out.</param>
     public SettingsScene(
         IPlayerInput input, GameConfig config, GameSettings settings, IReadOnlyList<Point> resolutions,
-        Action<GameSettings> applyDisplay, IAudioManager? audio = null)
+        Action<GameSettings> applyDisplay, IAudioManager? audio = null, IKeyCapture? keys = null)
     {
+        _keys = keys;
         _input = input;
         _audio = audio ?? new NullAudioManager();
         _settings = settings;
@@ -65,6 +71,11 @@ public sealed class SettingsScene : IScene
         _screenHeight = config.VirtualHeight;
         _camera = new Camera2D(new Rectangle(0, 0, _screenWidth, _screenHeight), config.Camera);
         _menu = new MenuList(new Vector2(_screenWidth / 2f, _screenHeight * 0.19f), 760f, 72f, 16f);
+        if (keys is not null)
+        {
+            _controls = new ControlsMenu(keys.Bindings, _screenWidth, _screenHeight);
+        }
+
         RefreshLabels();
     }
 
@@ -93,6 +104,16 @@ public sealed class SettingsScene : IScene
     private void UpdateMenu(float deltaSeconds)
     {
         _input.Update(_camera.ViewCenter, _camera);
+        if (_controls is { IsOpen: true } && _keys is not null)
+        {
+            if (_controls.Update(_input, _keys, deltaSeconds))
+            {
+                _labelVersion++;
+            }
+
+            return;
+        }
+
         if (_input.BackPressed)
         {
             IsDone = true;
@@ -136,6 +157,14 @@ public sealed class SettingsScene : IScene
             {
                 IsDone = true;
             }
+            else if (_selected == ControlsRow)
+            {
+                if (_controls is not null)
+                {
+                    _controls.Open();
+                    _labelVersion++;
+                }
+            }
             else
             {
                 Change(_selected, 1);
@@ -147,6 +176,13 @@ public sealed class SettingsScene : IScene
     {
         renderer.BeginScreen();
         renderer.FillRect(Vector2.Zero, new Vector2(_screenWidth, _screenHeight), BackgroundColor);
+        if (_controls is { IsOpen: true })
+        {
+            _controls.Draw(renderer, _input);
+            renderer.End();
+            return;
+        }
+
         renderer.DrawText("SETTINGS", new Vector2(_screenWidth / 2f, _screenHeight * 0.07f), TitleSize, TitleColor, TextAlign.Center);
         _menu.Draw(renderer, _labels, _selected, _disabled);
 
@@ -245,7 +281,9 @@ public sealed class SettingsScene : IScene
         _labels[MasterRow] = $"MASTER VOLUME:  {_settings.MasterVolume}%";
         _labels[MusicRow] = $"MUSIC VOLUME:  {_settings.MusicVolume}%";
         _labels[EffectsRow] = $"EFFECTS VOLUME:  {_settings.SfxVolume}%";
+        _labels[ControlsRow] = "CONTROLS";
         _labels[BackRow] = "BACK";
         _disabled[ResolutionRow] = !windowed;
+        _disabled[ControlsRow] = _controls is null;
     }
 }

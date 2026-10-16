@@ -1,3 +1,4 @@
+using Fourgate.Core.Input;
 using Fourgate.Core.Rendering;
 
 namespace Fourgate.Core.Persistence;
@@ -26,6 +27,9 @@ public sealed class GameSettings
     /// <summary>0–100; stored for when sound effects exist.</summary>
     public int SfxVolume { get; set; } = 80;
 
+    /// <summary>Player 1's keyboard keys.</summary>
+    public KeyBindings? Controls { get; set; } = new();
+
     /// <summary>Pulls hand-edited or old values back into range.</summary>
     public void Clamp()
     {
@@ -37,6 +41,9 @@ public sealed class GameSettings
             ResolutionWidth = 1280;
             ResolutionHeight = 720;
         }
+
+        Controls ??= new KeyBindings();
+        Controls.Repair();
 
         if (!System.Enum.IsDefined(WindowMode))
         {

@@ -4,11 +4,14 @@ using Microsoft.Xna.Framework.Input;
 
 namespace Fourgate.Core.Input;
 
-/// <summary>Player 1 controls: WASD to move, mouse to aim and fire.</summary>
-public sealed class KeyboardMouseInput : IPlayerInput
+/// <summary>
+/// Player 1 controls: the mouse aims and fires, the keys come from <see cref="Bindings"/>
+/// (WASD, Left Shift, R, G, T, Q / E by default; rebindable in Settings).
+/// </summary>
+public sealed class KeyboardMouseInput : IPlayerInput, IKeyCapture
 {
-    private const Keys EquipmentKey = Keys.G;
-    private const Keys EquipmentCycleKey = Keys.T;
+    // Room for every key held at once that matters; more are ignored.
+    private const int MaxKeysHeld = 16;
 
     // Index + 1 is the gun slot.
     private static readonly Keys[] SlotKeys =
@@ -17,6 +20,7 @@ public sealed class KeyboardMouseInput : IPlayerInput
     };
 
     private readonly VirtualScreen _screen;
+    private readonly Keys[] _held = new Keys[MaxKeysHeld];
     private KeyboardState _previousKeyboard;
     private MouseState _previousMouse;
 
@@ -24,6 +28,11 @@ public sealed class KeyboardMouseInput : IPlayerInput
     {
         _screen = screen;
     }
+
+    /// <summary>The keys in use; replace or change them to rebind.</summary>
+    public KeyBindings Bindings { get; set; } = new();
+
+    public Keys KeyPressed { get; private set; }
 
     public Vector2 Move { get; private set; }
 
@@ -76,23 +85,24 @@ public sealed class KeyboardMouseInput : IPlayerInput
         var keyboard = Keyboard.GetState();
         var mouse = Mouse.GetState();
 
+        var keys = Bindings;
         var move = Vector2.Zero;
-        if (keyboard.IsKeyDown(Keys.W))
+        if (keyboard.IsKeyDown(keys.MoveUp))
         {
             move.Y -= 1f;
         }
 
-        if (keyboard.IsKeyDown(Keys.S))
+        if (keyboard.IsKeyDown(keys.MoveDown))
         {
             move.Y += 1f;
         }
 
-        if (keyboard.IsKeyDown(Keys.A))
+        if (keyboard.IsKeyDown(keys.MoveLeft))
         {
             move.X -= 1f;
         }
 
-        if (keyboard.IsKeyDown(Keys.D))
+        if (keyboard.IsKeyDown(keys.MoveRight))
         {
             move.X += 1f;
         }
@@ -114,24 +124,24 @@ public sealed class KeyboardMouseInput : IPlayerInput
 
         FireHeld = mouse.LeftButton == ButtonState.Pressed;
         FirePressed = FireHeld && _previousMouse.LeftButton == ButtonState.Released;
-        DashPressed = keyboard.IsKeyDown(Keys.LeftShift) && _previousKeyboard.IsKeyUp(Keys.LeftShift);
-        ReloadPressed = keyboard.IsKeyDown(Keys.R) && _previousKeyboard.IsKeyUp(Keys.R);
+        DashPressed = WasPressed(keyboard, keys.Dash);
+        ReloadPressed = WasPressed(keyboard, keys.Reload);
         ConfirmPressed = keyboard.IsKeyDown(Keys.Enter) && _previousKeyboard.IsKeyUp(Keys.Enter);
 
         var wheel = mouse.ScrollWheelValue - _previousMouse.ScrollWheelValue;
         WeaponCycle = 0;
-        if (wheel < 0 || WasPressed(keyboard, Keys.E))
+        if (wheel < 0 || WasPressed(keyboard, keys.NextGun))
         {
             WeaponCycle = 1;
         }
-        else if (wheel > 0 || WasPressed(keyboard, Keys.Q))
+        else if (wheel > 0 || WasPressed(keyboard, keys.PreviousGun))
         {
             WeaponCycle = -1;
         }
 
-        EquipmentHeld = keyboard.IsKeyDown(EquipmentKey);
-        EquipmentPressed = WasPressed(keyboard, EquipmentKey);
-        EquipmentCycle = WasPressed(keyboard, EquipmentCycleKey) ? 1 : 0;
+        EquipmentHeld = keyboard.IsKeyDown(keys.Equipment);
+        EquipmentPressed = WasPressed(keyboard, keys.Equipment);
+        EquipmentCycle = WasPressed(keyboard, keys.EquipmentCycle) ? 1 : 0;
 
         WeaponSlotPressed = 0;
         for (var i = 0; i < SlotKeys.Length; i++)
@@ -142,11 +152,13 @@ public sealed class KeyboardMouseInput : IPlayerInput
                 break;
             }
         }
-        MenuLeftPressed = WasPressed(keyboard, Keys.A) || WasPressed(keyboard, Keys.Left);
-        MenuRightPressed = WasPressed(keyboard, Keys.D) || WasPressed(keyboard, Keys.Right);
-        MenuUpPressed = WasPressed(keyboard, Keys.W) || WasPressed(keyboard, Keys.Up);
+
+        MenuLeftPressed = WasPressed(keyboard, keys.MoveLeft) || WasPressed(keyboard, Keys.Left);
+        MenuRightPressed = WasPressed(keyboard, keys.MoveRight) || WasPressed(keyboard, Keys.Right);
+        MenuUpPressed = WasPressed(keyboard, keys.MoveUp) || WasPressed(keyboard, Keys.Up);
         BackPressed = WasPressed(keyboard, Keys.Escape);
-        MenuDownPressed = WasPressed(keyboard, Keys.S) || WasPressed(keyboard, Keys.Down);
+        MenuDownPressed = WasPressed(keyboard, keys.MoveDown) || WasPressed(keyboard, Keys.Down);
+        KeyPressed = FirstNewKey(keyboard);
 
         HasActivity = move != Vector2.Zero
             || FireHeld
@@ -166,6 +178,26 @@ public sealed class KeyboardMouseInput : IPlayerInput
 
         _previousKeyboard = keyboard;
         _previousMouse = mouse;
+    }
+
+    private Keys FirstNewKey(KeyboardState keyboard)
+    {
+        var count = System.Math.Min(keyboard.GetPressedKeyCount(), MaxKeysHeld);
+        if (count == 0)
+        {
+            return Keys.None;
+        }
+
+        keyboard.GetPressedKeys(_held);
+        for (var i = 0; i < count; i++)
+        {
+            if (_previousKeyboard.IsKeyUp(_held[i]))
+            {
+                return _held[i];
+            }
+        }
+
+        return Keys.None;
     }
 
     private bool WasPressed(KeyboardState keyboard, Keys key)

@@ -71,6 +71,10 @@ public sealed class PlayerHud
     private Weapon? _equipmentShown;
     private int _equipmentCountShown = -1;
     private string _equipmentText = string.Empty;
+    private string? _equipmentKeyShown;
+
+    /// <summary>The name of the key that uses equipment, shown before it.</summary>
+    public string EquipmentKey { get; set; } = "G";
 
     public PlayerHud(XpConfig xpConfig)
     {
@@ -228,11 +232,13 @@ public sealed class PlayerHud
             return;
         }
 
-        if (!ReferenceEquals(equipment, _equipmentShown) || equipment.Reserve != _equipmentCountShown)
+        if (!ReferenceEquals(equipment, _equipmentShown) || equipment.Reserve != _equipmentCountShown
+            || !ReferenceEquals(EquipmentKey, _equipmentKeyShown))
         {
+            _equipmentKeyShown = EquipmentKey;
             _equipmentShown = equipment;
             _equipmentCountShown = equipment.Reserve;
-            _equipmentText = $"G  {equipment.Config.DisplayName.ToUpperInvariant()}  {equipment.Reserve}";
+            _equipmentText = $"{EquipmentKey}  {equipment.Config.DisplayName.ToUpperInvariant()}  {equipment.Reserve}";
         }
 
         var color = equipment.Reserve == 0 ? EmptyTextColor : TextColor;

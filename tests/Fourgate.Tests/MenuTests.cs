@@ -118,6 +118,8 @@ public sealed class MenuTests : IDisposable
         Tap(scene, input, f => f.ConfirmPressed = true);
         Assert.Equal(10, settings.SfxVolume);
 
+        // Past CONTROLS (greyed out without a keyboard to learn keys from) to BACK.
+        Tap(scene, input, f => f.MenuDownPressed = true);
         Tap(scene, input, f => f.MenuDownPressed = true);
         Tap(scene, input, f => f.ConfirmPressed = true);
         Assert.True(scene.IsDone);

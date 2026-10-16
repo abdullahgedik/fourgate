@@ -16,6 +16,7 @@ using Fourgate.Systems;
 using Fourgate.UI;
 using Fourgate.Weapons;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
 
 namespace Fourgate.Scenes;
 
@@ -162,6 +163,8 @@ public sealed class GameplayScene : IScene
     private int _newEntryPlace = -1;
     private string _debugNotice = string.Empty;
     private string _weaponNotice = string.Empty;
+    private Keys _equipmentKeyNamed = Keys.None;
+    private string _equipmentKeyName = "G";
     private float _weaponNoticeLeft;
     private float _debugNoticeLeft;
     private string _disconnectedNotice = string.Empty;
@@ -968,11 +971,24 @@ public sealed class GameplayScene : IScene
     }
 
     /// <summary>Debug helper: shows a short message under the wave title for a moment.</summary>
+    // Player 1's equipment key as the HUD shows it; the name is only rebuilt after a rebind.
+    private string EquipmentKeyName()
+    {
+        if (_settings?.Controls is { } keys && keys.Equipment != _equipmentKeyNamed)
+        {
+            _equipmentKeyNamed = keys.Equipment;
+            _equipmentKeyName = KeyBindings.NameOf(keys.Equipment);
+        }
+
+        return _equipmentKeyName;
+    }
+
     // A weapon from a crate is not switched to; this says it is there and how to reach it.
     private void ShowWeaponNotice(Player player, WeaponConfig weapon)
     {
         var who = _players.Count > 1 ? $"PLAYER {player.Index + 1}: " : string.Empty;
-        var how = weapon.Category == WeaponCategory.Gun ? $"PRESS {weapon.Slot}" : "T TO SWITCH EQUIPMENT";
+        var cycleKey = _settings?.Controls is { } keys ? KeyBindings.NameOf(keys.EquipmentCycle) : "T";
+        var how = weapon.Category == WeaponCategory.Gun ? $"PRESS {weapon.Slot}" : $"{cycleKey} TO SWITCH EQUIPMENT";
         _weaponNotice = $"{who}{weapon.DisplayName.ToUpperInvariant()} UNLOCKED - {how}";
         _weaponNoticeLeft = WeaponNoticeSeconds;
     }
@@ -1108,6 +1124,11 @@ public sealed class GameplayScene : IScene
                 _indicators.DrawLethalWarning(renderer, _cameras[i], _bosses);
             }
 
+            if (i == 0)
+            {
+                _playerHuds[i].EquipmentKey = EquipmentKeyName();
+            }
+
             _playerHuds[i].Draw(renderer, _players[i], _cameras[i].ViewRect);
         }
 
@@ -1121,7 +1142,9 @@ public sealed class GameplayScene : IScene
             _bossHud.Draw(renderer, bossConfig.DisplayName, boss, _data.Game.VirtualWidth);
         }
 
-        _scoreHud.Draw(renderer, _score.Total, _modeLabel, _data.Game.VirtualWidth);
+        _scoreHud.Draw(
+            renderer, _score.Total, _modeLabel, _data.Game.VirtualWidth, _score.Combo, _score.ComboMultiplier,
+            _score.ComboTimeFraction);
         _bossIntro.Draw(renderer, _data.Game.VirtualWidth, _data.Game.VirtualHeight);
 
         if (_weaponNoticeLeft > 0f)

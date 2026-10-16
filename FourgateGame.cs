@@ -52,6 +52,7 @@ public sealed class FourgateGame : Game
     private HighScoreTable _highScores = new();
     private readonly SettingsStore _settingsStore = new(SettingsStore.DefaultPath);
     private GameSettings _settings = new();
+    private KeyboardMouseInput? _keyboardMouse;
 
     // A paused run waiting while its settings are open.
     private GameplayScene? _suspendedRun;
@@ -112,6 +113,8 @@ public sealed class FourgateGame : Game
         _highScoreStore = new HighScoreStore(HighScoreStore.DefaultPath);
         _highScores = _highScoreStore.Load();
         _settings = _settingsStore.Load();
+        _keyboardMouse = keyboardMouse;
+        keyboardMouse.Bindings = _settings.Controls!;
         ApplyDisplay(_settings);
         ApplyVolumes();
         _scene = new MainMenuScene(_playerOneInput, _data.Game, MainMenuChoice.Play, _audio);
@@ -187,7 +190,8 @@ public sealed class FourgateGame : Game
 
                 case MainMenuChoice.Settings:
                     _scene = new SettingsScene(
-                        _playerOneInput, _data.Game, _settings, _display.AvailableResolutions, ApplyDisplay, _audio);
+                        _playerOneInput, _data.Game, _settings, _display.AvailableResolutions, ApplyDisplay, _audio,
+                        _keyboardMouse);
                     break;
 
                 case MainMenuChoice.Quit:
@@ -219,7 +223,8 @@ public sealed class FourgateGame : Game
         if (_scene is GameplayScene { SettingsRequested: true } paused)
         {
             _suspendedRun = paused;
-            _scene = new SettingsScene(_playerOneInput, _data.Game, _settings, _display.AvailableResolutions, ApplyDisplay, _audio);
+            _scene = new SettingsScene(
+                _playerOneInput, _data.Game, _settings, _display.AvailableResolutions, ApplyDisplay, _audio, _keyboardMouse);
             return;
         }
 

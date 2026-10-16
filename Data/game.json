@@ -23,7 +23,10 @@
   },
   "knockback": { "explosion": 70, "damping": 14 },
   "catchUp": { "nearDistance": 800, "farDistance": 1100, "speedMult": 2.2 },
-  "score": { "waveClearBonus": 250, "pointsPerSecond": 1 },
+  "score": {
+    "waveClearBonus": 250, "pointsPerSecond": 1,
+    "combo": { "windowSeconds": 2.5, "multiplierPerKill": 1, "maxMultiplier": 0 }
+  },
   "bossAggro": {
     "minTargetSeconds": 5, "maxTargetSeconds": 9, "threatPerDamage": 1, "proximityThreatPerSecond": 120,
     "proximityRange": 500, "threatDecayPerSecond": 0.15, "switchMargin": 1.3
