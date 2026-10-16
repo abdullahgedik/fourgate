@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Fourgate.Core.Audio;
 using Fourgate.Core.Data;
@@ -24,6 +25,9 @@ public sealed class DropSystem
     private readonly IAudioManager _audio;
     private readonly WeaponUnlocks _unlocks;
     private readonly Pool<Crate> _crates = new(InitialCrates);
+
+    /// <summary>Called when a crate gives a player a weapon they did not carry (for a notice).</summary>
+    public Action<Player, WeaponConfig>? WeaponGained { get; set; }
 
     public DropSystem(CratesConfig config, GameRandom random, IAudioManager audio, WeaponUnlocks unlocks)
     {
@@ -170,6 +174,7 @@ public sealed class DropSystem
                     return false;
                 }
 
+                WeaponGained?.Invoke(player, crate.Weapon);
                 _audio.PlaySfx(SfxIds.PickupWeapon);
                 return true;
 
@@ -179,6 +184,7 @@ public sealed class DropSystem
                 if (missing is not null)
                 {
                     _unlocks.Grant(player, missing);
+                    WeaponGained?.Invoke(player, missing);
                     _audio.PlaySfx(SfxIds.PickupWeapon);
                     return true;
                 }

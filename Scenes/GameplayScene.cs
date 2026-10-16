@@ -70,6 +70,10 @@ public sealed class GameplayScene : IScene
     private static readonly Color DeathTextColor = new(220, 40, 40);
     private const float WeaponCrateSpacing = 70f;
     private const float DebugNoticeSeconds = 2f;
+    private const float WeaponNoticeSeconds = 3f;
+    private const float WeaponNoticeY = 150f;
+    private const float WeaponNoticeSize = 32f;
+    private static readonly Color WeaponNoticeColor = new(140, 230, 255);
     private const float PlayerSpawnSpacing = 90f;
 
     // Screen shake: how far away a blast still shakes a view, the blast radius that gives the
@@ -157,6 +161,8 @@ public sealed class GameplayScene : IScene
     private bool _victoryShown;
     private int _newEntryPlace = -1;
     private string _debugNotice = string.Empty;
+    private string _weaponNotice = string.Empty;
+    private float _weaponNoticeLeft;
     private float _debugNoticeLeft;
     private string _disconnectedNotice = string.Empty;
     private readonly GameOverOverlay _gameOverOverlay = new();
@@ -262,6 +268,7 @@ public sealed class GameplayScene : IScene
         _enemies.SpeedMultiplier = _rules.EnemySpeedMultiplier;
         _enemies.WanderWhenAlone = true;
         _drops.HealthChanceMultiplier = _rules.HealthCrateChanceMultiplier;
+        _drops.WeaponGained = ShowWeaponNotice;
         _waves = config.Debug.DisableWaves ? null : new WaveSystem(data, _enemies, _arena, _random, audio) { Rules = _rules };
 
         _muzzleSpots = models is null ? null : FindMuzzleSpots(data, models);
@@ -318,6 +325,7 @@ public sealed class GameplayScene : IScene
     public void Update(float deltaSeconds)
     {
         _debugNoticeLeft = Math.Max(0f, _debugNoticeLeft - deltaSeconds);
+        _weaponNoticeLeft = Math.Max(0f, _weaponNoticeLeft - deltaSeconds);
         for (var i = 0; i < _hurtFlashLeft.Count; i++)
         {
             _hurtFlashLeft[i] = Math.Max(0f, _hurtFlashLeft[i] - deltaSeconds);
@@ -960,6 +968,15 @@ public sealed class GameplayScene : IScene
     }
 
     /// <summary>Debug helper: shows a short message under the wave title for a moment.</summary>
+    // A weapon from a crate is not switched to; this says it is there and how to reach it.
+    private void ShowWeaponNotice(Player player, WeaponConfig weapon)
+    {
+        var who = _players.Count > 1 ? $"PLAYER {player.Index + 1}: " : string.Empty;
+        var how = weapon.Category == WeaponCategory.Gun ? $"PRESS {weapon.Slot}" : "T TO SWITCH EQUIPMENT";
+        _weaponNotice = $"{who}{weapon.DisplayName.ToUpperInvariant()} UNLOCKED - {how}";
+        _weaponNoticeLeft = WeaponNoticeSeconds;
+    }
+
     public void ShowDebugNotice(string text)
     {
         _debugNotice = text;
@@ -1106,6 +1123,13 @@ public sealed class GameplayScene : IScene
 
         _scoreHud.Draw(renderer, _score.Total, _modeLabel, _data.Game.VirtualWidth);
         _bossIntro.Draw(renderer, _data.Game.VirtualWidth, _data.Game.VirtualHeight);
+
+        if (_weaponNoticeLeft > 0f)
+        {
+            renderer.DrawText(
+                _weaponNotice, new Vector2(_data.Game.VirtualWidth / 2f, WeaponNoticeY), WeaponNoticeSize,
+                WeaponNoticeColor * Math.Min(1f, _weaponNoticeLeft), TextAlign.Center);
+        }
 
         if (_debugNoticeLeft > 0f)
         {

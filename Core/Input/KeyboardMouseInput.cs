@@ -114,7 +114,7 @@ public sealed class KeyboardMouseInput : IPlayerInput
 
         FireHeld = mouse.LeftButton == ButtonState.Pressed;
         FirePressed = FireHeld && _previousMouse.LeftButton == ButtonState.Released;
-        DashPressed = keyboard.IsKeyDown(Keys.Space) && _previousKeyboard.IsKeyUp(Keys.Space);
+        DashPressed = keyboard.IsKeyDown(Keys.LeftShift) && _previousKeyboard.IsKeyUp(Keys.LeftShift);
         ReloadPressed = keyboard.IsKeyDown(Keys.R) && _previousKeyboard.IsKeyUp(Keys.R);
         ConfirmPressed = keyboard.IsKeyDown(Keys.Enter) && _previousKeyboard.IsKeyUp(Keys.Enter);
 

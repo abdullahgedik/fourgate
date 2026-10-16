@@ -789,7 +789,7 @@ public sealed partial class BossSystem
                     if (t >= 1f)
                     {
                         boss.Elevation = 0f;
-                        HitPlayersAround(_leapTo, pattern.Radius, pattern.Damage, players);
+                        HitPlayersAround(_leapTo, pattern.Radius, pattern.Damage, players, arena);
                         Particles?.Explosion(_leapTo, pattern.Radius * 0.7f);
                         Impact?.Invoke(_leapTo, pattern.Radius);
                         _audio.PlaySfx(SfxIds.Explosion);
@@ -805,7 +805,7 @@ public sealed partial class BossSystem
                 {
                     for (var i = 0; i < _missileTargets.Count; i++)
                     {
-                        HitPlayersAround(_missileTargets[i], pattern.Radius, pattern.Damage, players);
+                        HitPlayersAround(_missileTargets[i], pattern.Radius, pattern.Damage, players, arena);
                         Particles?.Explosion(_missileTargets[i], pattern.Radius);
                         Impact?.Invoke(_missileTargets[i], pattern.Radius);
                     }
@@ -983,14 +983,17 @@ public sealed partial class BossSystem
         _audio.PlaySfx(SfxIds.EnemyFireball);
     }
 
-    // Everyone within reach of a landing or a blast, once each; dashing dodges it.
-    private static void HitPlayersAround(Vector2 center, float radius, float damage, IReadOnlyList<Player> players)
+    // Everyone within reach of a landing or a blast, once each; dashing dodges it and a pillar
+    // between the blast and a player shelters them.
+    private static void HitPlayersAround(
+        Vector2 center, float radius, float damage, IReadOnlyList<Player> players, Arena arena)
     {
         for (var i = 0; i < players.Count; i++)
         {
             var player = players[i];
             var reach = radius + player.Radius;
-            if (player.IsAlive && Vector2.DistanceSquared(player.Position, center) <= reach * reach)
+            if (player.IsAlive && Vector2.DistanceSquared(player.Position, center) <= reach * reach
+                && arena.PillarsClear(center, player.Position))
             {
                 player.TakeDamage(damage);
             }
