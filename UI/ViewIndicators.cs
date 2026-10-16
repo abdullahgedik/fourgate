@@ -15,6 +15,9 @@ namespace Fourgate.UI;
 /// </summary>
 public sealed class ViewIndicators
 {
+    private const float VignetteReach = 0.42f;
+    private static readonly Color VignetteColor = new Color(14, 0, 0) * 0.55f;
+
     private const float EdgeInset = 40f;
     private const float EdgeRadius = 18f;
     private const float BossRadius = 24f;
@@ -85,6 +88,16 @@ public sealed class ViewIndicators
     }
 
     /// <summary>Red bands along the edges of the view, fading out (0–1), when its player was just hurt.</summary>
+    /// <summary>Shadowed corners with a hint of red, closing the arena in like a pit.</summary>
+    public void DrawVignette(IRenderer renderer, Rectangle view)
+    {
+        var reach = Math.Max(view.Width, view.Height) * VignetteReach;
+        renderer.FillGlow(new Vector2(view.Left, view.Top), reach, VignetteColor);
+        renderer.FillGlow(new Vector2(view.Right, view.Top), reach, VignetteColor);
+        renderer.FillGlow(new Vector2(view.Left, view.Bottom), reach, VignetteColor);
+        renderer.FillGlow(new Vector2(view.Right, view.Bottom), reach, VignetteColor);
+    }
+
     public void DrawHurtFlash(IRenderer renderer, Rectangle view, float strength)
     {
         if (strength <= 0f)

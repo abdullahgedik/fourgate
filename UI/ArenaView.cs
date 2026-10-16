@@ -117,6 +117,7 @@ public sealed class ArenaView
         }
 
         renderer.DrawFloorStains(floorTopLeft, floorSize);
+        _decor.DrawFloorLight(renderer);
 
         var pillars = _arena.Pillars;
         for (var i = 0; i < pillars.Count; i++)

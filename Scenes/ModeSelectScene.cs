@@ -3,6 +3,7 @@ using Fourgate.Core.Data;
 using Fourgate.Core.Input;
 using Fourgate.Core.Rendering;
 using Fourgate.Systems;
+using Fourgate.UI;
 using Microsoft.Xna.Framework;
 
 namespace Fourgate.Scenes;
@@ -33,8 +34,7 @@ public sealed class ModeSelectScene : IScene
     private const float BackTop = 0.79f;
     private const float ButtonWidth = 360f;
 
-    private static readonly Color BackgroundColor = new(20, 21, 28);
-    private static readonly Color TitleColor = new(240, 240, 245);
+    private static readonly Color TitleColor = new(240, 234, 226);
     private static readonly Color SubtitleColor = new(170, 175, 190);
     private static readonly Color CardColor = new(30, 33, 44);
     private static readonly Color CardSelectedColor = new(46, 52, 72);
@@ -42,7 +42,7 @@ public sealed class ModeSelectScene : IScene
     private static readonly Color BorderSelectedColor = new(255, 225, 120);
     private static readonly Color TextColor = new(200, 205, 220);
     private static readonly Color NoteColor = new(130, 134, 150);
-    private static readonly Color HintColor = new(150, 155, 170);
+    private static readonly Color HintColor = new(170, 140, 130);
     private static readonly Color ToggleOnColor = new(120, 40, 40);
     private static readonly Color ToggleOnTextColor = new(255, 170, 140);
 
@@ -54,6 +54,7 @@ public sealed class ModeSelectScene : IScene
 
     private readonly Option[] _options;
     private readonly IAudioManager _audio;
+    private HellBackdrop? _backdropField;
     private readonly IPlayerInput _input;
     private readonly Camera2D _camera;
     private readonly int _screenWidth;
@@ -103,8 +104,11 @@ public sealed class ModeSelectScene : IScene
     /// <summary>The toggles as they are set now.</summary>
     public RunMode Mode => new(_fast, _nightmare);
 
+    private HellBackdrop Backdrop => _backdropField ??= new HellBackdrop(_screenWidth, _screenHeight);
+
     public void Update(float deltaSeconds)
     {
+        Backdrop.Update(deltaSeconds);
         var before = (_row, _selectedCard, _selectedToggle);
         var modeBefore = Mode;
         UpdateMenu(deltaSeconds);
@@ -205,7 +209,7 @@ public sealed class ModeSelectScene : IScene
     public void Draw(IRenderer renderer)
     {
         renderer.BeginScreen();
-        renderer.FillRect(Vector2.Zero, new Vector2(_screenWidth, _screenHeight), BackgroundColor);
+        Backdrop.Draw(renderer);
 
         var center = _screenWidth / 2f;
         renderer.DrawText("FOURGATE", new Vector2(center, _screenHeight * 0.12f), TitleSize, TitleColor, TextAlign.Center);

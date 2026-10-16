@@ -108,6 +108,19 @@ public sealed class RecordingRenderer : IRenderer
     {
     }
 
+    public float MeasureText(string text, float size)
+    {
+        return text.Length * size * 0.5f;
+    }
+
+    public void FillGlow(Vector2 center, float radius, Color color)
+    {
+    }
+
+    public void FillGlowRaised(Vector2 position, float height, float radius, Color color)
+    {
+    }
+
     public void DrawTextCentered(string text, Vector2 center, float size, Color color)
     {
     }

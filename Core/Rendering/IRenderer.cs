@@ -117,4 +117,16 @@ public interface IRenderer
 
     /// <summary>Text whose visible letters are centered on a point, both ways (button labels).</summary>
     void DrawTextCentered(string text, Vector2 center, float size, Color color);
+
+    /// <summary>Width of a line of text at a size.</summary>
+    float MeasureText(string text, float size);
+
+    /// <summary>
+    /// A soft round glow fading to nothing at its edge: on the floor in the world, flat on the
+    /// screen otherwise. A colour with zero alpha adds light instead of covering what is below.
+    /// </summary>
+    void FillGlow(Vector2 center, float radius, Color color);
+
+    /// <summary>A soft round glow facing the camera at a height (fire, embers); see <see cref="FillGlow"/>.</summary>
+    void FillGlowRaised(Vector2 position, float height, float radius, Color color);
 }

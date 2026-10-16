@@ -15,9 +15,8 @@ public sealed class HighScoresScene : IScene
     private const float TitleSize = 80f;
     private const float HintSize = 26f;
 
-    private static readonly Color BackgroundColor = new(20, 21, 28);
-    private static readonly Color TitleColor = new(240, 240, 245);
-    private static readonly Color HintColor = new(150, 155, 170);
+    private static readonly Color TitleColor = new(240, 234, 226);
+    private static readonly Color HintColor = new(170, 140, 130);
 
     private static readonly RunMode[] Modes =
     {
@@ -25,6 +24,7 @@ public sealed class HighScoresScene : IScene
     };
 
     private readonly IAudioManager _audio;
+    private HellBackdrop? _backdropField;
     private readonly IPlayerInput _input;
     private readonly HighScoreTable _table;
     private readonly Camera2D _camera;
@@ -49,8 +49,11 @@ public sealed class HighScoresScene : IScene
     /// <summary>True once the player asked to go back.</summary>
     public bool IsDone { get; private set; }
 
+    private HellBackdrop Backdrop => _backdropField ??= new HellBackdrop(_screenWidth, _screenHeight);
+
     public void Update(float deltaSeconds)
     {
+        Backdrop.Update(deltaSeconds);
         _input.Update(_camera.ViewCenter, _camera);
         if (_input.ConfirmPressed || _input.BackPressed || (_input.HasPointer && _input.FirePressed))
         {
@@ -62,7 +65,7 @@ public sealed class HighScoresScene : IScene
     public void Draw(IRenderer renderer)
     {
         renderer.BeginScreen();
-        renderer.FillRect(Vector2.Zero, new Vector2(_screenWidth, _screenHeight), BackgroundColor);
+        Backdrop.Draw(renderer);
         renderer.DrawText("HIGH SCORES", new Vector2(_screenWidth / 2f, 40f), TitleSize, TitleColor, TextAlign.Center);
 
         // A 2 × 2 grid: Normal and Fast on top, Nightmare and Nightmare + Fast below.

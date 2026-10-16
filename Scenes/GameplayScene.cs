@@ -1141,6 +1141,7 @@ public sealed class GameplayScene : IScene
             _indicators.DrawDoors(renderer, _cameras[i], _waves);
             _indicators.DrawBoss(renderer, _cameras[i], _bosses.Boss);
             _indicators.DrawWeaponCrates(renderer, _cameras[i], _drops);
+            _indicators.DrawVignette(renderer, _cameras[i].ViewRect);
             _indicators.DrawHurtFlash(
                 renderer, _cameras[i].ViewRect, i < _hurtFlashLeft.Count ? _hurtFlashLeft[i] / HurtFlashSeconds : 0f);
             if (_players[i].IsAlive)

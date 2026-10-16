@@ -31,11 +31,11 @@ public sealed class SettingsScene : IScene
     private const int BackRow = 7;
     private const int RowCount = 8;
 
-    private static readonly Color BackgroundColor = new(20, 21, 28);
-    private static readonly Color TitleColor = new(240, 240, 245);
-    private static readonly Color HintColor = new(150, 155, 170);
+    private static readonly Color TitleColor = new(240, 234, 226);
+    private static readonly Color HintColor = new(170, 140, 130);
 
     private readonly IAudioManager _audio;
+    private HellBackdrop? _backdropField;
     private readonly IPlayerInput _input;
     private readonly GameSettings _settings;
     private readonly IReadOnlyList<Point> _resolutions;
@@ -82,8 +82,11 @@ public sealed class SettingsScene : IScene
     /// <summary>True once the player left the screen; the settings should then be saved.</summary>
     public bool IsDone { get; private set; }
 
+    private HellBackdrop Backdrop => _backdropField ??= new HellBackdrop(_screenWidth, _screenHeight);
+
     public void Update(float deltaSeconds)
     {
+        Backdrop.Update(deltaSeconds);
         var before = _selected;
         var labelsBefore = _labelVersion;
         UpdateMenu(deltaSeconds);
@@ -175,7 +178,7 @@ public sealed class SettingsScene : IScene
     public void Draw(IRenderer renderer)
     {
         renderer.BeginScreen();
-        renderer.FillRect(Vector2.Zero, new Vector2(_screenWidth, _screenHeight), BackgroundColor);
+        Backdrop.Draw(renderer);
         if (_controls is { IsOpen: true })
         {
             _controls.Draw(renderer, _input);

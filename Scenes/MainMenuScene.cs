@@ -10,12 +10,11 @@ namespace Fourgate.Scenes;
 /// <summary>The first screen: Play, High Scores, Settings, Quit.</summary>
 public sealed class MainMenuScene : IScene
 {
-    private const float TitleSize = 140f;
+    private const float TitleSize = 170f;
     private const float HintSize = 26f;
 
-    private static readonly Color BackgroundColor = new(20, 21, 28);
-    private static readonly Color TitleColor = new(240, 240, 245);
-    private static readonly Color HintColor = new(150, 155, 170);
+    private static readonly Color CursorColor = new(240, 234, 226);
+    private static readonly Color HintColor = new(170, 140, 130);
 
     private static readonly string[] Labels = { "PLAY", "HIGH SCORES", "SETTINGS", "QUIT" };
     private static readonly MainMenuChoice[] Choices =
@@ -29,6 +28,8 @@ public sealed class MainMenuScene : IScene
     private readonly int _screenWidth;
     private readonly int _screenHeight;
     private readonly MenuList _menu;
+    private readonly HellBackdrop _backdrop;
+    private readonly TitleLogo _title = new(TitleSize);
     private int _selected;
 
     public MainMenuScene(
@@ -41,6 +42,7 @@ public sealed class MainMenuScene : IScene
         _screenHeight = config.VirtualHeight;
         _camera = new Camera2D(new Rectangle(0, 0, _screenWidth, _screenHeight), config.Camera);
         _menu = new MenuList(new Vector2(_screenWidth / 2f, _screenHeight * 0.42f), 460f, 80f, 24f);
+        _backdrop = new HellBackdrop(_screenWidth, _screenHeight);
         _selected = System.Array.IndexOf(Choices, highlighted);
     }
 
@@ -50,6 +52,8 @@ public sealed class MainMenuScene : IScene
     public void Update(float deltaSeconds)
     {
         var before = _selected;
+        _backdrop.Update(deltaSeconds);
+        _title.Update(deltaSeconds);
         UpdateMenu(deltaSeconds);
         if (Choice is not null)
         {
@@ -97,16 +101,16 @@ public sealed class MainMenuScene : IScene
     public void Draw(IRenderer renderer)
     {
         renderer.BeginScreen();
-        renderer.FillRect(Vector2.Zero, new Vector2(_screenWidth, _screenHeight), BackgroundColor);
-        renderer.DrawText("FOURGATE", new Vector2(_screenWidth / 2f, _screenHeight * 0.14f), TitleSize, TitleColor, TextAlign.Center);
+        _backdrop.Draw(renderer);
+        _title.Draw(renderer, new Vector2(_screenWidth / 2f, _screenHeight * 0.22f));
         _menu.Draw(renderer, Labels, _selected);
 
         var hint = _input.HasPointer ? "Arrows / WASD and Enter, or click" : "D-pad and A";
         renderer.DrawText(hint, new Vector2(_screenWidth / 2f, _screenHeight * 0.93f), HintSize, HintColor, TextAlign.Center);
         if (_input.HasPointer)
         {
-            renderer.FillRect(_input.AimScreen - new Vector2(10f, 1f), new Vector2(20f, 2f), TitleColor);
-            renderer.FillRect(_input.AimScreen - new Vector2(1f, 10f), new Vector2(2f, 20f), TitleColor);
+            renderer.FillRect(_input.AimScreen - new Vector2(10f, 1f), new Vector2(20f, 2f), CursorColor);
+            renderer.FillRect(_input.AimScreen - new Vector2(1f, 10f), new Vector2(2f, 20f), CursorColor);
         }
 
         renderer.End();

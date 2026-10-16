@@ -36,6 +36,9 @@ public sealed class Renderer3D : IRenderer, IDisposable
 
     // Flat things float just above the floor so the floor does not hide them.
     private const float FlatHeight = 0.5f;
+
+    // Sides of a soft glow's fan.
+    private const int GlowSegments = 18;
     private const int BillboardSegments = 8;
 
     // The sun stands overhead (as in Boxhead): every shadow lies right under its object, a soft
@@ -246,6 +249,50 @@ public sealed class Renderer3D : IRenderer, IDisposable
         _writingWalls = true;
         Box(topLeft + size / 2f, size / 2f, 0f, height, color);
         _writingWalls = false;
+    }
+
+    public float MeasureText(string text, float size)
+    {
+        return _screen.MeasureText(text, size);
+    }
+
+    public void FillGlow(Vector2 center, float radius, Color color)
+    {
+        if (!_inWorld)
+        {
+            _screen.FillGlow(center, radius, color);
+            return;
+        }
+
+        // A fan on the floor: full colour in the middle, nothing at the rim.
+        var middle = new Vector3(center.X, FlatHeight, center.Y);
+        var previous = new Vector3(center.X + radius, FlatHeight, center.Y);
+        for (var i = 1; i <= GlowSegments; i++)
+        {
+            var angle = MathHelper.TwoPi * i / GlowSegments;
+            var corner = new Vector3(center.X + MathF.Cos(angle) * radius, FlatHeight, center.Y + MathF.Sin(angle) * radius);
+            Triangle(middle, color, previous, Color.Transparent, corner, Color.Transparent);
+            previous = corner;
+        }
+    }
+
+    public void FillGlowRaised(Vector2 position, float height, float radius, Color color)
+    {
+        if (!_inWorld)
+        {
+            _screen.FillGlow(position, radius, color);
+            return;
+        }
+
+        var middle = new Vector3(position.X, height, position.Y);
+        var previous = middle + _billboardRight * radius;
+        for (var i = 1; i <= GlowSegments; i++)
+        {
+            var angle = MathHelper.TwoPi * i / GlowSegments;
+            var corner = middle + (_billboardRight * MathF.Cos(angle) + _billboardUp * MathF.Sin(angle)) * radius;
+            Triangle(middle, color, previous, Color.Transparent, corner, Color.Transparent);
+            previous = corner;
+        }
     }
 
     public void FillCircleRaised(Vector2 position, float height, float radius, Color color)

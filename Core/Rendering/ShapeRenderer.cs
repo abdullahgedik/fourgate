@@ -22,6 +22,7 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
     private readonly Texture2D _circle;
     private readonly Texture2D _triangle;
     private readonly Texture2D _hexagon;
+    private readonly Texture2D _glow;
     private readonly FontSystem _fonts = new();
 
     /// <param name="device">Graphics device to create textures on.</param>
@@ -40,6 +41,7 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
         _circle = CreateCircleTexture(device, CircleTextureSize);
         _triangle = CreateTriangleTexture(device, CircleTextureSize);
         _hexagon = CreateHexagonTexture(device, CircleTextureSize);
+        _glow = CreateGlowTexture(device, CircleTextureSize);
     }
 
     public void BeginScreen()
@@ -208,6 +210,23 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
         _spriteBatch.Draw(_pixel, from, null, color, rotation, new Vector2(0f, 0.5f), scale, SpriteEffects.None, 0f);
     }
 
+    public float MeasureText(string text, float size)
+    {
+        return _fonts.GetFont(size).MeasureString(text).X;
+    }
+
+    public void FillGlow(Vector2 center, float radius, Color color)
+    {
+        var scale = radius * 2f / CircleTextureSize;
+        var origin = new Vector2(CircleTextureSize / 2f);
+        _spriteBatch.Draw(_glow, center, null, color, 0f, origin, scale, SpriteEffects.None, 0f);
+    }
+
+    public void FillGlowRaised(Vector2 position, float height, float radius, Color color)
+    {
+        FillGlow(position, radius, color);
+    }
+
     public void DrawTextCentered(string text, Vector2 center, float size, Color color)
     {
         // Centered on the letters actually drawn, not on the font's line box (which has room for
@@ -321,6 +340,27 @@ public sealed class ShapeRenderer : IRenderer, IDisposable
     private static float Cross(Vector2 a, Vector2 b)
     {
         return a.X * b.Y - a.Y * b.X;
+    }
+
+    // Bright in the middle, falling off smoothly to nothing at the edge (premultiplied).
+    private static Texture2D CreateGlowTexture(GraphicsDevice device, int size)
+    {
+        var data = new Color[size * size];
+        var radius = size / 2f;
+        for (var y = 0; y < size; y++)
+        {
+            for (var x = 0; x < size; x++)
+            {
+                var dx = x + 0.5f - radius;
+                var dy = y + 0.5f - radius;
+                var t = Math.Clamp(1f - MathF.Sqrt(dx * dx + dy * dy) / radius, 0f, 1f);
+                data[y * size + x] = Color.White * (t * t);
+            }
+        }
+
+        var texture = new Texture2D(device, size, size);
+        texture.SetData(data);
+        return texture;
     }
 
     private static Texture2D CreateCircleTexture(GraphicsDevice device, int size)
