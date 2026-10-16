@@ -37,11 +37,11 @@ public sealed class GameOverOverlay
     public string Title { get; set; } = "GAME OVER";
 
     /// <summary>Sets the numbers to show; call once when the run ends.</summary>
-    public void SetStats(int wave, int kills, float elapsedSeconds, int score, string modeName)
+    public void SetStats(int wave, int kills, float elapsedSeconds, int score, string modeName, int bestCombo = 0)
     {
         var totalSeconds = (int)elapsedSeconds;
         _scoreText = $"SCORE   {score.ToString("N0", CultureInfo.InvariantCulture)}   ({modeName})";
-        _detailText = $"WAVE {wave}   ·   KILLS {kills}   ·   TIME {totalSeconds / 60}:{totalSeconds % 60:00}";
+        _detailText = $"WAVE {wave}   ·   KILLS {kills}   ·   BEST COMBO {bestCombo}   ·   TIME {totalSeconds / 60}:{totalSeconds % 60:00}";
         _listTitle = $"HIGH SCORES  ·  {modeName}";
     }
 

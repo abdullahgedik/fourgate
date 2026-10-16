@@ -74,13 +74,34 @@ public class ScoreTests
     }
 
     [Fact]
-    public void ShippedGame_HasAKillCombo()
+    public void ShippedGame_HasAKillCombo_CappedAtTwentyLikeBoxhead()
     {
         var combo = DataLoader.LoadAll(DataLoader.DefaultDirectory).Game.Score.Combo;
 
         Assert.NotNull(combo);
         Assert.True(combo.WindowSeconds > 0f);
-        Assert.True(combo.MultiplierPerKill > 0f);
+        Assert.Equal(20f, combo.MultiplierFor(100));
+    }
+
+    [Fact]
+    public void Combo_AtItsCap_KeepsRefillingTheWindow()
+    {
+        var capped = new ScoreConfig
+        {
+            WaveClearBonus = 0, PointsPerSecond = 0f,
+            Combo = new ComboConfig { WindowSeconds = 2f, MultiplierPerKill = 1f, MaxMultiplier = 3f },
+        };
+        var score = new ScoreSystem(capped, 1f);
+
+        for (var i = 0; i < 6; i++)
+        {
+            score.AddKill(10);
+            score.AddTime(1.5f);
+        }
+
+        Assert.Equal(6, score.Combo);
+        Assert.Equal(3f, score.ComboMultiplier);
+        Assert.Equal(10 + 20 + 30 + 30 + 30 + 30, score.Total);
     }
 
     [Fact]

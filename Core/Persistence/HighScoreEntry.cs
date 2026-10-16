@@ -12,6 +12,9 @@ public sealed class HighScoreEntry
     /// <summary>Seconds survived.</summary>
     public required int Seconds { get; init; }
 
+    /// <summary>Longest kill combo of the run; 0 in files from before combos.</summary>
+    public int BestCombo { get; init; }
+
     /// <summary>1 or 2.</summary>
     public required int Players { get; init; }
 

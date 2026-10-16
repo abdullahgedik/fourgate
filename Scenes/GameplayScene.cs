@@ -646,7 +646,8 @@ public sealed class GameplayScene : IScene
         IsGameOver = true;
         _gameOverSeconds = 0f;
         _gameOverOverlay.Title = title;
-        _gameOverOverlay.SetStats(_waves?.Wave ?? 0, _enemies.KillCount, _elapsedSeconds, _score.Total, _rules.Mode.Name);
+        _gameOverOverlay.SetStats(
+            _waves?.Wave ?? 0, _enemies.KillCount, _elapsedSeconds, _score.Total, _rules.Mode.Name, _score.BestCombo);
         _audio.PlayMusic(MusicIds.GameOver);
         if (_highScores is not null && _highScores.Qualifies(_rules.Mode.Key, _score.Total))
         {
@@ -812,6 +813,7 @@ public sealed class GameplayScene : IScene
             Score = _score.Total,
             Wave = _waves?.Wave ?? 0,
             Kills = _enemies.KillCount,
+            BestCombo = _score.BestCombo,
             Seconds = seconds,
             Players = _players.Count,
             Date = DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
@@ -1008,7 +1010,9 @@ public sealed class GameplayScene : IScene
     {
         var who = _players.Count > 1 ? $"PLAYER {player.Index + 1}: " : string.Empty;
         var cycleKey = _settings?.Controls is { } keys ? KeyBindings.NameOf(keys.EquipmentCycle) : "T";
-        var how = weapon.Category == WeaponCategory.Gun ? $"PRESS {weapon.Slot}" : $"{cycleKey} TO SWITCH EQUIPMENT";
+        var how = weapon.Category == WeaponCategory.Gun
+            ? (player.Input.HasPointer ? $"PRESS {weapon.Slot}" : "LB / RB TO SWITCH GUNS")
+            : (player.Input.HasPointer ? $"{cycleKey} TO SWITCH EQUIPMENT" : "D-PAD TO SWITCH EQUIPMENT");
         _weaponNotice = $"{who}{weapon.DisplayName.ToUpperInvariant()} UNLOCKED - {how}";
         _weaponNoticeLeft = WeaponNoticeSeconds;
     }

@@ -65,7 +65,7 @@ public sealed class HighScoreListView
             var players = entry.Players > 1 ? "2P" : "1P";
             _rows.Add(string.Create(
                 CultureInfo.InvariantCulture,
-                $"{i + 1,2}.  {entry.Initials}   {entry.Score,9:N0}   W{entry.Wave,-3} {players}"));
+                $"{i + 1,2}.  {entry.Initials}   {entry.Score,9:N0}   W{entry.Wave,-3} {players}   x{entry.BestCombo,-4}"));
         }
     }
 }

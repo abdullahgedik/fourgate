@@ -25,7 +25,7 @@
   "catchUp": { "nearDistance": 800, "farDistance": 1100, "speedMult": 2.2 },
   "score": {
     "waveClearBonus": 250, "pointsPerSecond": 1,
-    "combo": { "windowSeconds": 2.5, "multiplierPerKill": 1, "maxMultiplier": 0 }
+    "combo": { "windowSeconds": 2.5, "multiplierPerKill": 1, "maxMultiplier": 20 }
   },
   "bossAggro": {
     "minTargetSeconds": 5, "maxTargetSeconds": 9, "threatPerDamage": 1, "proximityThreatPerSecond": 120,
