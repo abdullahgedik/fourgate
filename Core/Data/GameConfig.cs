@@ -31,6 +31,9 @@ public sealed class GameConfig
     /// <summary>How bosses pick their target in co-op; null makes them chase the nearest player.</summary>
     public BossAggroConfig? BossAggro { get; init; }
 
+    /// <summary>Faster walking far from the players; null keeps every enemy at its own speed.</summary>
+    public CatchUpConfig? CatchUp { get; init; }
+
     /// <summary>Most enemies allowed in the arena at once; further spawns wait at the doors.</summary>
     public required int MaxAliveEnemies { get; init; }
 
@@ -64,6 +67,7 @@ public sealed class GameConfig
 
         DataLoadException.Require(Knockback is not null, file, "knockback", "must not be null");
         BossAggro?.Validate(file, "bossAggro");
+        CatchUp?.Validate(file, "catchUp");
         Knockback!.Validate(file);
 
         DataLoadException.Require(Score is not null, file, "score", "is required");

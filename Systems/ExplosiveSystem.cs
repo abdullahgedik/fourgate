@@ -314,6 +314,12 @@ public sealed class ExplosiveSystem
 
         for (var i = 0; i < _inBlast.Count; i++)
         {
+            // A pillar between the blast and a target shelters it.
+            if (!_arena.PillarsClear(center, _inBlast[i].Position))
+            {
+                continue;
+            }
+
             _inBlast[i].Hit(damage, shot.OwnerIndex);
             var away = _inBlast[i].Position - center;
             if (away.LengthSquared() > 0.0001f)
@@ -342,7 +348,8 @@ public sealed class ExplosiveSystem
         for (var i = 0; i < players.Count; i++)
         {
             var player = players[i];
-            if (Vector2.Distance(player.Position, shot.Target) <= shot.BlastRadius + player.Radius)
+            if (Vector2.Distance(player.Position, shot.Target) <= shot.BlastRadius + player.Radius
+                && _arena.PillarsClear(shot.Target, player.Position))
             {
                 _friendlyFire.ApplyExplosion(player, shot.OwnerIndex, shot.Damage);
             }

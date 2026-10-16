@@ -82,6 +82,9 @@ public sealed class EnemySystem : IHittableSource
     /// <summary>Share of an enemy's remaining knockback applied per second; 0 applies it at once.</summary>
     public float KnockbackDamping { get; set; }
 
+    /// <summary>Lets enemies far from every player walk faster; null for none.</summary>
+    public CatchUpConfig? CatchUp { get; set; }
+
     public void Update(float deltaSeconds, IReadOnlyList<Player> players, Arena arena)
     {
         RemoveDead();
@@ -406,6 +409,12 @@ public sealed class EnemySystem : IHittableSource
             return;
         }
 
+        var speed = enemy.Config.Speed * SpeedMultiplier;
+        if (CatchUp is not null)
+        {
+            speed *= CatchUp.MultiplierAt(MathF.Sqrt(bestDistanceSquared));
+        }
+
         // With a pillar in the way, head for its corner first.
         var waypoint = arena.NextWaypoint(enemy.Position, target.Position, enemy.Radius);
         if (waypoint != target.Position)
@@ -415,7 +424,7 @@ public sealed class EnemySystem : IHittableSource
             if (cornerDistance > 0.0001f)
             {
                 enemy.Facing = MathF.Atan2(toCorner.Y, toCorner.X);
-                enemy.Position += toCorner / cornerDistance * Math.Min(enemy.Config.Speed * SpeedMultiplier * deltaSeconds, cornerDistance);
+                enemy.Position += toCorner / cornerDistance * Math.Min(speed * deltaSeconds, cornerDistance);
             }
 
             return;
@@ -429,7 +438,7 @@ public sealed class EnemySystem : IHittableSource
             return;
         }
 
-        var step = Math.Min(enemy.Config.Speed * SpeedMultiplier * deltaSeconds, gap);
+        var step = Math.Min(speed * deltaSeconds, gap);
         enemy.Facing = MathF.Atan2(target.Position.Y - enemy.Position.Y, target.Position.X - enemy.Position.X);
         enemy.Position += (target.Position - enemy.Position) / distance * step;
     }

@@ -119,6 +119,29 @@ public sealed class Arena
         return distance;
     }
 
+    /// <summary>True when no pillar stands on the straight line between two points.</summary>
+    public bool PillarsClear(Vector2 from, Vector2 to)
+    {
+        var line = to - from;
+        var length = line.Length();
+        if (length < 0.0001f)
+        {
+            return true;
+        }
+
+        var direction = line / length;
+        for (var i = 0; i < _pillars.Length; i++)
+        {
+            if (Collision2D.RayBox(from, direction, _pillars[i].Center, _pillars[i].HalfSize, out var hit, out _)
+                && hit < length)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /// <summary>True when a point is outside the floor or inside a pillar.</summary>
     public bool IsSolid(Vector2 point)
     {

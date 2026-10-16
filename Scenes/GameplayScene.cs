@@ -196,7 +196,10 @@ public sealed class GameplayScene : IScene
         _arena = new Arena(config.Arena);
         FloorStains = new FloorStains(new Vector2(_arena.Left, _arena.Top), _arena.Size);
         Scorches = new ScorchSystem(_arena, FloorStains, ArenaView.WallHeight, ArenaView.PillarHeight);
-        _enemies = new EnemySystem(audio) { KnockbackDamping = config.Knockback.Damping, Fireballs = _fireballs };
+        _enemies = new EnemySystem(audio)
+        {
+            KnockbackDamping = config.Knockback.Damping, Fireballs = _fireballs, CatchUp = config.CatchUp,
+        };
         _bosses = new BossSystem(_enemies, data, _random, audio)
         {
             MaxAliveEnemies = config.MaxAliveEnemies,
