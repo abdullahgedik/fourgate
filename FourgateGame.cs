@@ -32,6 +32,7 @@ public sealed class FourgateGame : Game
     private int _debugEnemyIndex;
     private readonly IAudioManager _audio;
     private readonly AudioEventLog? _audioLog;
+    private readonly MonoGameAudioManager _sound;
     private readonly AudioEventOverlay _audioOverlay = new();
     private readonly GameData _data;
 
@@ -67,15 +68,17 @@ public sealed class FourgateGame : Game
         _models.CheckReferences(_data);
         _frameTime.Visible = _data.Game.Debug.ShowFrameTime;
 
-        // No real sounds yet; with debug.showAudioEvents on, the latest sound events are listed on screen.
+        // Sounds come from Assets/Audio (WAV effects, OGG music, named by event id); events without
+        // a file are silent. With debug.showAudioEvents on, the latest events are listed on screen.
+        _sound = new MonoGameAudioManager(Path.Combine(AppContext.BaseDirectory, "Assets", "Audio"), _data.Game.Audio);
         if (_data.Game.Debug.ShowAudioEvents)
         {
-            _audioLog = new AudioEventLog(new NullAudioManager());
+            _audioLog = new AudioEventLog(_sound);
             _audio = _audioLog;
         }
         else
         {
-            _audio = new NullAudioManager();
+            _audio = _sound;
         }
         _display = new DisplayManager(new GraphicsDeviceManager(this));
 
@@ -116,12 +119,19 @@ public sealed class FourgateGame : Game
         _keyboardMouse = keyboardMouse;
         keyboardMouse.Bindings = _settings.Controls!;
         ApplyDisplay(_settings);
+        _sound.Preload();
+        foreach (var problem in _sound.Problems)
+        {
+            System.Diagnostics.Debug.WriteLine("Audio: " + problem);
+        }
+
         ApplyVolumes();
         _scene = new MainMenuScene(_playerOneInput, _data.Game, MainMenuChoice.Play, _audio);
     }
 
     protected override void UnloadContent()
     {
+        _sound.Dispose();
         _renderer3D?.Dispose();
         _stainCanvas?.Dispose();
         _renderer?.Dispose();

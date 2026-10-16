@@ -93,6 +93,31 @@ Player 1's keyboard keys can be changed in Settings → CONTROLS (fire, the mous
 
 Gamepad support is implemented but has not been tested yet.
 
+## Sound
+
+Put sound files in `Assets/Audio/` (create the folder if it is missing). Each file is named after
+the event it plays for; events without a file are simply silent, so sounds can be added one at a
+time.
+
+- **Effects are `.wav`**, **music is `.ogg`** (music loops).
+- **Variants:** add `-2`, `-3`… (`enemy_death.wav`, `enemy_death-2.wav`) and one is picked at
+  random each time.
+- **Guns:** `weapon_fire.wav` is used by every gun without its own `weapon_fire_<gun>.wav`; the
+  same for `weapon_throw.wav` and the equipment.
+- Rapid fire is kept in check (at most 4 copies of one sound at once) and each play is pitched a
+  little up or down; see `audio` in `Data/game.json`.
+
+| Group | File names (without extension) |
+|---|---|
+| Guns | `weapon_fire`, or one per gun: `weapon_fire_pistol`, `weapon_fire_smg`, `weapon_fire_shotgun`, `weapon_fire_marksman`, `weapon_fire_assault`, `weapon_fire_sniper`, `weapon_fire_flamethrower`, `weapon_fire_rocket`, `weapon_fire_railgun` |
+| Equipment | `weapon_throw`, or one each: `weapon_throw_grenade`, `weapon_throw_molotov`, `weapon_throw_mine`, `weapon_throw_barrel` |
+| Weapons | `weapon_empty`, `weapon_reload_start`, `weapon_reload_end`, `weapon_switch`, `equipment_switch`, `weapon_level_up`, `weapon_unlocked`, `bullet_ricochet`, `explosion`, `fire_start`, `mine_placed`, `barrel_struck`, `armor_hit` |
+| Player | `player_dash`, `player_hurt`, `player_death`, `player_revive`, `level_up`, `upgrade_picked` |
+| Enemies and bosses | `enemy_hit`, `enemy_death`, `enemy_telegraph`, `enemy_fireball`, `door_warning`, `boss_appear`, `boss_telegraph`, `boss_lethal_warning`, `boss_attack`, `boss_phase`, `boss_death` |
+| Run | `wave_start`, `wave_end`, `crate_drop`, `pickup_ammo`, `pickup_health`, `pickup_upgrade`, `pickup_weapon`, `pause`, `resume`, `game_over`, `new_high_score`, `waves_survived` |
+| Menus | `ui_move`, `ui_confirm`, `ui_back` |
+| Music (`.ogg`) | `music_menu`, `music_gameplay`, `music_boss`, `music_game_over` |
+
 ## Tuning
 
 All balance values live in JSON files under `Data/` and are read when the game starts, so the
@@ -120,7 +145,7 @@ The `debug` section of `Data/game.json` has switches for testing:
 | `practiceTargets` | Adds a still and a moving dummy target |
 | `oneShotKills` | Every bullet kills what it hits |
 | `disableWaves` | Leaves the arena empty |
-| `showAudioEvents` | Lists the latest sound events on screen (the game has no sounds yet) |
+| `showAudioEvents` | Lists the latest sound events on screen (handy for finding which sounds are still missing) |
 | `keyboardPlayerTwo` | In co-op, player 2 can also use IJKL to move, U fire, O dash, P reload, Y equipment, H next equipment, N / M guns |
 | `startWave` | Starts the run at the given wave |
 | `seed` | Fixes the random seed so a run can be reproduced |
@@ -141,7 +166,7 @@ The `debug` section of `Data/game.json` has switches for testing:
 
 ```
 Program.cs, FourgateGame.cs   Entry point and main loop
-Core/                         Input, rendering, audio stub, data loading, pooling, spatial hash
+Core/                         Input, rendering, audio player, data loading, pooling, spatial hash
 Entities/                     Player, enemies, projectiles, pickups, arena
 Weapons/                      Weapon logic and stats
 Systems/                      Waves, spawning, shots, drops, XP, upgrades

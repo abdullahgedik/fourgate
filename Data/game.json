@@ -22,6 +22,7 @@
     "ammoPrimaryFraction": 0.35, "ammoOthersFraction": 0.08
   },
   "knockback": { "explosion": 70, "damping": 14 },
+  "audio": { "maxVoicesPerSound": 4, "minRepeatSeconds": 0.03, "pitchVariation": 0.06 },
   "catchUp": { "nearDistance": 800, "farDistance": 1100, "speedMult": 2.2 },
   "score": {
     "waveClearBonus": 250, "pointsPerSecond": 1,
