@@ -20,7 +20,10 @@ local co-op and menus are still to come.
   Juggernaut on wave 30 (shield, sweeping fire stream, charge), the Swarm Mother on
   wave 40 (summons every zombie kind, each followed by a matching attack; splits on death)
   and The Warden on wave 50 (three phases, borrowed attacks, a sweeping laser)
-- Knockback on hits
+- Knockback on hits; enemy bodies are solid, and a dash passes through them
+- Enemies find their way round pillars and barrels (flow fields), break through barrels only
+  when a player is walled in, and in co-op each type picks its target its own way
+- A Boxhead-style kill combo (up to x20 score) with the best combo kept in the high scores
 - Particle effects: explosion bursts with smoke, flames over fire pools, burning enemies, ember trails,
   hit puffs and dust; screen shake on explosions and hits (can be switched off in Settings)
 - Nine guns (pistol, SMG, shotgun, marksman rifle, assault rifle, sniper rifle,
@@ -41,13 +44,15 @@ local co-op and menus are still to come.
   wave reached, kills and time
 - Local high scores: a top 10 per mode with initials, saved in `%APPDATA%/Fourgate/scores.json`
 - A main menu and a settings screen (window mode, window size, screen shake, master / music /
-  effects volume), saved in `%APPDATA%/Fourgate/settings.json`
+  effects volume, rebindable keyboard controls), saved in `%APPDATA%/Fourgate/settings.json`
+- Sound: plays WAV / OGG files dropped into `Assets/Audio/` (see Sound below; no files ship yet)
 - A pause menu (Esc / gamepad Start) and a "50 waves survived" screen after the last boss
 
 ## Planned
 
-- Sound and sprite art (the game currently draws geometric shapes and is silent)
-- A 3D look in the style of Boxhead 2Play: blocky animated characters, bosses and guns over 2D gameplay
+- Sound files (the player is ready; the files are still being chosen) and possibly richer models
+- Status effects (slows, poison, stuns and the like) for new enemies, boss attacks and weapons
+- Waves 51–100 and an endless mode, once the 50-wave game is finished
 
 ## Requirements
 
