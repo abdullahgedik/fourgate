@@ -56,12 +56,13 @@ public sealed class DebugHotkeys
         GrantWeaponsPressed = current.IsKeyDown(GrantWeaponsKey) && _previous.IsKeyUp(GrantWeaponsKey);
         OneShotKillsPressed = current.IsKeyDown(OneShotKillsKey) && _previous.IsKeyUp(OneShotKillsKey);
         var levelKey = current.IsKeyDown(LevelUpWeaponKey) && _previous.IsKeyUp(LevelUpWeaponKey);
-        var shift = current.IsKeyDown(Keys.LeftShift) || current.IsKeyDown(Keys.RightShift);
-        LevelUpWeaponPressed = levelKey && !shift;
-        MaxAllWeaponsPressed = levelKey && shift;
+        // Ctrl, not Shift, picks the second action: Shift is the dash key.
+        var ctrl = current.IsKeyDown(Keys.LeftControl) || current.IsKeyDown(Keys.RightControl);
+        LevelUpWeaponPressed = levelKey && !ctrl;
+        MaxAllWeaponsPressed = levelKey && ctrl;
         var nextKey = current.IsKeyDown(NextEnemyKey) && _previous.IsKeyUp(NextEnemyKey);
-        NextEnemyPressed = nextKey && !shift;
-        ToggleFrameTimePressed = nextKey && shift;
+        NextEnemyPressed = nextKey && !ctrl;
+        ToggleFrameTimePressed = nextKey && ctrl;
         _previous = current;
     }
 }

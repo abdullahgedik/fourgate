@@ -10,8 +10,8 @@ namespace Fourgate.Core.Input;
 /// </summary>
 public sealed class KeyboardMouseInput : IPlayerInput, IKeyCapture
 {
-    // Room for every key held at once that matters; more are ignored.
-    private const int MaxKeysHeld = 16;
+    // Room for every key there is, so reading the held keys can never overflow.
+    private const int MaxKeysHeld = 256;
 
     // Index + 1 is the gun slot.
     private static readonly Keys[] SlotKeys =

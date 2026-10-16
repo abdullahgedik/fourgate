@@ -44,8 +44,13 @@ public sealed class EnemySystem : IHittableSource
     private readonly List<FlowField> _fields = new();
     private readonly List<int> _fieldCells = new();
     private readonly List<Vector2> _solids = new();
+    private readonly List<FlowField> _bossFields = new();
+    private readonly List<int> _bossFieldCells = new();
+    private readonly List<int> _bossFieldVersions = new();
     private Arena? _fieldArena;
     private float _fieldRefreshLeft;
+    private int _fieldVersion;
+    private float _bossClearance = -1f;
     private readonly List<EnemyDeath> _deaths = new();
     private int _nextId;
 
@@ -461,6 +466,45 @@ public sealed class EnemySystem : IHittableSource
         enemy.Position += (target.Position - enemy.Position) / distance * step;
     }
 
+    /// <summary>
+    /// The way to a player for a big body (a boss): pillars and barrels keep the body's whole
+    /// width clear. Built only while a boss asks for it; null before the first update.
+    /// </summary>
+    public FlowField? BossFieldFor(Player player, float bodyRadius)
+    {
+        if (_fieldArena is null)
+        {
+            return null;
+        }
+
+        var clearance = Math.Max(0f, bodyRadius - PathCellSize / 2f);
+        if (clearance != _bossClearance)
+        {
+            _bossClearance = clearance;
+            _bossFields.Clear();
+            _bossFieldCells.Clear();
+            _bossFieldVersions.Clear();
+        }
+
+        while (_bossFields.Count <= player.Index)
+        {
+            _bossFields.Add(new FlowField(_fieldArena, PathCellSize, clearance));
+            _bossFieldCells.Add(-1);
+            _bossFieldVersions.Add(-1);
+        }
+
+        var field = _bossFields[player.Index];
+        var cell = field.CellAt(player.Position);
+        if (cell != _bossFieldCells[player.Index] || _bossFieldVersions[player.Index] != _fieldVersion)
+        {
+            field.Build(player.Position, _solids);
+            _bossFieldCells[player.Index] = cell;
+            _bossFieldVersions[player.Index] = _fieldVersion;
+        }
+
+        return field.TargetCell >= 0 ? field : null;
+    }
+
     /// <summary>The way to a player for anything chasing them; null before the first update or off the grid.</summary>
     public FlowField? FieldFor(Player player)
     {
@@ -476,6 +520,8 @@ public sealed class EnemySystem : IHittableSource
             _fieldArena = arena;
             _fields.Clear();
             _fieldCells.Clear();
+            _bossFields.Clear();
+            _bossClearance = -1f;
         }
 
         _fieldRefreshLeft -= deltaSeconds;
@@ -483,6 +529,7 @@ public sealed class EnemySystem : IHittableSource
         if (refreshAll)
         {
             _fieldRefreshLeft = FieldRefreshSeconds;
+            _fieldVersion++;
             _solids.Clear();
             arena.Obstacles?.CollectSolids(_solids);
         }

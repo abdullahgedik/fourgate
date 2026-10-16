@@ -78,7 +78,7 @@ public sealed class GameplayScene : IScene
     private const float DashRefusedSize = 24f;
     private static readonly Color DashRefusedColor = new(255, 170, 120);
     private const float WeaponNoticeY = 150f;
-    private const float WeaponNoticeSize = 32f;
+    private const float WeaponNoticeSize = 30f;
     private static readonly Color WeaponNoticeColor = new(140, 230, 255);
     private const float PlayerSpawnSpacing = 90f;
 
@@ -167,10 +167,11 @@ public sealed class GameplayScene : IScene
     private bool _victoryShown;
     private int _newEntryPlace = -1;
     private string _debugNotice = string.Empty;
-    private string _weaponNotice = string.Empty;
+    // Per player: weapon notices waiting their turn (the first is showing) and how long it has left.
+    private readonly List<Queue<string>> _weaponNotices = new();
+    private readonly List<float> _weaponNoticeLeft = new();
     private Keys _equipmentKeyNamed = Keys.None;
     private string _equipmentKeyName = "G";
-    private float _weaponNoticeLeft;
     private float _debugNoticeLeft;
     private string _disconnectedNotice = string.Empty;
     private readonly GameOverOverlay _gameOverOverlay = new();
@@ -335,7 +336,7 @@ public sealed class GameplayScene : IScene
     public void Update(float deltaSeconds)
     {
         _debugNoticeLeft = Math.Max(0f, _debugNoticeLeft - deltaSeconds);
-        _weaponNoticeLeft = Math.Max(0f, _weaponNoticeLeft - deltaSeconds);
+        UpdateWeaponNotices(deltaSeconds);
         for (var i = 0; i < _hurtFlashLeft.Count; i++)
         {
             _hurtFlashLeft[i] = Math.Max(0f, _hurtFlashLeft[i] - deltaSeconds);
@@ -1008,15 +1009,56 @@ public sealed class GameplayScene : IScene
     }
 
     // A weapon from a crate is not switched to; this says it is there and how to reach it.
+    // Shown in that player's own view only, one after another if several come at once.
     private void ShowWeaponNotice(Player player, WeaponConfig weapon)
     {
-        var who = _players.Count > 1 ? $"PLAYER {player.Index + 1}: " : string.Empty;
+        while (_weaponNotices.Count <= player.Index)
+        {
+            _weaponNotices.Add(new Queue<string>());
+            _weaponNoticeLeft.Add(0f);
+        }
+
         var cycleKey = _settings?.Controls is { } keys ? KeyBindings.NameOf(keys.EquipmentCycle) : "T";
         var how = weapon.Category == WeaponCategory.Gun
             ? (player.Input.HasPointer ? $"PRESS {weapon.Slot}" : "LB / RB TO SWITCH GUNS")
             : (player.Input.HasPointer ? $"{cycleKey} TO SWITCH EQUIPMENT" : "D-PAD TO SWITCH EQUIPMENT");
-        _weaponNotice = $"{who}{weapon.DisplayName.ToUpperInvariant()} UNLOCKED - {how}";
-        _weaponNoticeLeft = WeaponNoticeSeconds;
+        var queue = _weaponNotices[player.Index];
+        queue.Enqueue($"{weapon.DisplayName.ToUpperInvariant()} UNLOCKED - {how}");
+        if (queue.Count == 1)
+        {
+            _weaponNoticeLeft[player.Index] = WeaponNoticeSeconds;
+        }
+    }
+
+    private void UpdateWeaponNotices(float deltaSeconds)
+    {
+        for (var i = 0; i < _weaponNotices.Count; i++)
+        {
+            if (_weaponNotices[i].Count == 0)
+            {
+                continue;
+            }
+
+            _weaponNoticeLeft[i] -= deltaSeconds;
+            if (_weaponNoticeLeft[i] <= 0f)
+            {
+                _weaponNotices[i].Dequeue();
+                _weaponNoticeLeft[i] = _weaponNotices[i].Count > 0 ? WeaponNoticeSeconds : 0f;
+            }
+        }
+    }
+
+    private void DrawWeaponNotice(IRenderer renderer, int player, Rectangle view)
+    {
+        if (player >= _weaponNotices.Count || _weaponNotices[player].Count == 0)
+        {
+            return;
+        }
+
+        var fade = Math.Min(1f, _weaponNoticeLeft[player]);
+        renderer.DrawText(
+            _weaponNotices[player].Peek(), new Vector2(view.Center.X, view.Top + WeaponNoticeY), WeaponNoticeSize,
+            WeaponNoticeColor * fade, TextAlign.Center);
     }
 
     public void ShowDebugNotice(string text)
@@ -1155,6 +1197,7 @@ public sealed class GameplayScene : IScene
             _playerHuds[i].EquipmentKey = _players[i].Input.HasPointer ? EquipmentKeyName() : GamepadEquipmentLabel;
 
             DrawDashRefused(renderer, _players[i], _cameras[i]);
+            DrawWeaponNotice(renderer, i, _cameras[i].ViewRect);
 
             _playerHuds[i].Draw(renderer, _players[i], _cameras[i].ViewRect);
         }
@@ -1173,13 +1216,6 @@ public sealed class GameplayScene : IScene
             renderer, _score.Total, _modeLabel, _data.Game.VirtualWidth, _score.Combo, _score.ComboMultiplier,
             _score.ComboTimeFraction);
         _bossIntro.Draw(renderer, _data.Game.VirtualWidth, _data.Game.VirtualHeight);
-
-        if (_weaponNoticeLeft > 0f)
-        {
-            renderer.DrawText(
-                _weaponNotice, new Vector2(_data.Game.VirtualWidth / 2f, WeaponNoticeY), WeaponNoticeSize,
-                WeaponNoticeColor * Math.Min(1f, _weaponNoticeLeft), TextAlign.Center);
-        }
 
         if (_debugNoticeLeft > 0f)
         {

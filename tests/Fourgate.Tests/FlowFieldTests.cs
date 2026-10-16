@@ -75,6 +75,42 @@ public class FlowFieldTests
     }
 
     [Fact]
+    public void BossField_KeepsABigBodyClearOfThePillar()
+    {
+        var normal = new FlowField(PillarArena, 60f);
+        var wide = new FlowField(PillarArena, 60f, clearance: 40f);
+        var target = new Vector2(1500, 1800);
+        normal.Build(target, NoBarrels);
+        wide.Build(target, NoBarrels);
+
+        // The cell just beside the pillar's face is open to a zombie, not to a boss.
+        var besideFace = new Vector2(1680, 1500);
+        Assert.True(float.IsFinite(normal.StepsFrom(besideFace)));
+        Assert.False(float.IsFinite(wide.StepsFrom(besideFace)));
+    }
+
+    [Fact]
+    public void BigWalker_FollowingTheBossField_GetsRoundAPillar()
+    {
+        var field = new FlowField(PillarArena, 60f, clearance: 40f);
+        var target = new Vector2(1500, 1900);
+        field.Build(target, NoBarrels);
+        var walker = new Vector2(1500, 1100);
+
+        for (var i = 0; i < 600; i++)
+        {
+            if (!field.TryGetDirection(walker, out var way))
+            {
+                break;
+            }
+
+            walker = PillarArena.ResolveMovement(walker + way * 5f, 70f);
+        }
+
+        Assert.Equal(field.TargetCell, field.CellAt(walker));
+    }
+
+    [Fact]
     public void Cost_CountsTheDetour()
     {
         var field = new FlowField(PillarArena, 60f);

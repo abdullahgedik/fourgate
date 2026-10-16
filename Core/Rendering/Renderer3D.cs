@@ -14,7 +14,12 @@ namespace Fourgate.Core.Rendering;
 /// </summary>
 public sealed class Renderer3D : IRenderer, IDisposable
 {
-    private const int MaxSolidVertices = 120_000;
+    // Room for a full wave of models (150 enemies, corpses, gibs) on top of the arena's stonework.
+    private const int MaxSolidVertices = 200_000;
+
+    // How far outside the visible floor a model may stand and still be drawn: tall bodies near the
+    // bottom edge reach up into view, and a leaping boss is drawn above where it stands.
+    private const float ModelViewMargin = 260f;
     private const int MaxFlatVertices = 300_000;
     private const int VerticesPerDraw = 60_000;
     private const int CircleSegments = 14;
@@ -87,6 +92,8 @@ public sealed class Renderer3D : IRenderer, IDisposable
     private readonly BasicEffect _solidEffect;
     private readonly BasicEffect _flatEffect;
     private readonly VertexPositionNormalColor[] _solids = new VertexPositionNormalColor[MaxSolidVertices];
+    private Vector2 _visibleMin;
+    private Vector2 _visibleMax;
     private readonly VertexPositionNormalColor[] _walls = new VertexPositionNormalColor[MaxSolidVertices];
     private readonly BasicEffect _silhouetteEffect;
     private int _wallCount;
@@ -156,11 +163,31 @@ public sealed class Renderer3D : IRenderer, IDisposable
         _billboardRight = new Vector3(view.M11, view.M21, view.M31);
         _billboardUp = new Vector3(view.M12, view.M22, view.M32);
         _inWorld = true;
+        MeasureVisibleFloor(camera);
         _solidCount = 0;
         _wallCount = 0;
         _flatCount = 0;
         _stainsAt = -1;
         _wallStainCount = 0;
+    }
+
+    // The floor area this view shows (the four screen corners cast onto the floor), grown by a margin.
+    private void MeasureVisibleFloor(Camera2D camera)
+    {
+        var view = camera.ViewRect;
+        var a = camera.ScreenToWorld(new Vector2(view.Left, view.Top));
+        var b = camera.ScreenToWorld(new Vector2(view.Right, view.Top));
+        var c = camera.ScreenToWorld(new Vector2(view.Left, view.Bottom));
+        var d = camera.ScreenToWorld(new Vector2(view.Right, view.Bottom));
+        var margin = new Vector2(ModelViewMargin);
+        _visibleMin = Vector2.Min(Vector2.Min(a, b), Vector2.Min(c, d)) - margin;
+        _visibleMax = Vector2.Max(Vector2.Max(a, b), Vector2.Max(c, d)) + margin;
+    }
+
+    private bool OnVisibleFloor(Vector2 position)
+    {
+        return position.X >= _visibleMin.X && position.X <= _visibleMax.X
+            && position.Y >= _visibleMin.Y && position.Y <= _visibleMax.Y;
     }
 
     public void BeginScreen()
@@ -345,6 +372,12 @@ public sealed class Renderer3D : IRenderer, IDisposable
         if (!_inWorld)
         {
             _screen.DrawModel(pose, fallback);
+            return;
+        }
+
+        if (!OnVisibleFloor(pose.Position))
+        {
+            // Out of view: not posed at all, which also keeps a big wave inside the vertex budget.
             return;
         }
 

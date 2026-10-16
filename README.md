@@ -158,9 +158,9 @@ The `debug` section of `Data/game.json` has switches for testing:
 | F5 | Unlock and give every weapon |
 | F6 | Toggle one-shot kills |
 | F7 | Level up the weapon in hand |
-| Shift + F7 | Every weapon to level 10 |
+| Ctrl + F7 | Every weapon to level 10 |
 | F8 | Switch which enemy (or boss) F1/F2 spawn |
-| Shift + F8 | Show / hide the frame-time readout (FPS, update and draw time, worst frame, enemies, particles) |
+| Ctrl + F8 | Show / hide the frame-time readout (FPS, update and draw time, worst frame, enemies, particles) |
 
 ## Project layout
 

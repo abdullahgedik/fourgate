@@ -103,6 +103,19 @@ public class EnemyAggroTests
     }
 
     [Fact]
+    public void OnceTheBossIsGone_ItsMinionsStopAvoidingAnyone()
+    {
+        var data = DataLoader.LoadAll(DataLoader.DefaultDirectory);
+        var enemies = new EnemySystem(new NullAudioManager());
+        var bosses = new BossSystem(enemies, data, new GameRandom(1), new NullAudioManager());
+        enemies.Targeting.BossTargetIndex = 0;
+
+        bosses.Update(Step, Players(new Vector2(1000, 1000)), new Arena(data.Game.Arena));
+
+        Assert.Equal(-1, enemies.Targeting.BossTargetIndex);
+    }
+
+    [Fact]
     public void Alone_EveryEnemyChasesTheOnlyPlayer()
     {
         var targeting = new EnemyTargeting(Rules) { BossTargetIndex = 0 };

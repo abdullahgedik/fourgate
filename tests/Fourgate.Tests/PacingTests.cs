@@ -85,6 +85,23 @@ public class PacingTests
     }
 
     [Fact]
+    public void ABigBody_HalfBehindAPillar_IsStillHit_ButOneWhollyBehindIsNot()
+    {
+        // Blast well left of the pillar (x and y 1370-1630); its shadow behind the pillar reaches
+        // down to about y 1721 at x 1700.
+        var blast = new Vector2(900, 1500);
+
+        // Centre in the shadow, lower side out of it: hit.
+        Assert.True(PillarArena.BodyExposed(blast, new Vector2(1700, 1700), 80f));
+
+        // Small and right behind the middle: sheltered.
+        Assert.False(PillarArena.BodyExposed(blast, new Vector2(1700, 1500), 20f));
+
+        // Nothing in the way: hit.
+        Assert.True(PillarArena.BodyExposed(blast, new Vector2(900, 1300), 20f));
+    }
+
+    [Fact]
     public void ShippedShotgun_CarriesMoreAsItsMagazineGrows()
     {
         var shotgun = DataLoader.LoadAll(DataLoader.DefaultDirectory).GetWeapon("shotgun");

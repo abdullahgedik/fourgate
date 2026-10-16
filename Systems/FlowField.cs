@@ -36,8 +36,13 @@ public sealed class FlowField
 
     /// <param name="arena">The floor and its pillars.</param>
     /// <param name="cellSize">Grid spacing (the barrel grid).</param>
-    public FlowField(Arena arena, float cellSize)
+    /// <param name="clearance">
+    /// Extra room a big walker needs: cells this close to a pillar or barrel count as part of it,
+    /// so the way keeps the walker's whole body clear (0 for ordinary enemies).
+    /// </param>
+    public FlowField(Arena arena, float cellSize, float clearance = 0f)
     {
+        Clearance = clearance;
         _left = arena.Left;
         _top = arena.Top;
         CellSize = cellSize;
@@ -46,8 +51,8 @@ public sealed class FlowField
         _cost = new int[Columns * Columns];
         _heap = new long[Columns * Columns * 8];
 
-        // Any cell a pillar covers, even partly, is a wall.
-        var half = new Vector2(cellSize / 2f - 0.5f);
+        // Any cell a pillar covers, even partly (or comes within the clearance of), is a wall.
+        var half = new Vector2(cellSize / 2f - 0.5f + clearance);
         for (var row = 0; row < Columns; row++)
         {
             for (var column = 0; column < Columns; column++)
@@ -61,6 +66,9 @@ public sealed class FlowField
     }
 
     public int Columns { get; }
+
+    /// <summary>The extra room kept round pillars and barrels.</summary>
+    public float Clearance { get; }
 
     public float CellSize { get; }
 
@@ -90,12 +98,27 @@ public sealed class FlowField
             _cost[i] = int.MaxValue;
         }
 
+        // A barrel claims its own cell and, for a big walker, the cells round it within reach.
+        var reach = (int)MathF.Ceiling(Clearance / CellSize);
         for (var i = 0; i < barrels.Count; i++)
         {
             var cell = CellAt(barrels[i]);
-            if (cell >= 0 && _cells[cell] == Open)
+            if (cell < 0)
             {
-                _cells[cell] = Barrel;
+                continue;
+            }
+
+            var column = cell % Columns;
+            var row = cell / Columns;
+            for (var y = Math.Max(0, row - reach); y <= Math.Min(Columns - 1, row + reach); y++)
+            {
+                for (var x = Math.Max(0, column - reach); x <= Math.Min(Columns - 1, column + reach); x++)
+                {
+                    if (_cells[y * Columns + x] == Open)
+                    {
+                        _cells[y * Columns + x] = Barrel;
+                    }
+                }
             }
         }
 

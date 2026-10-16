@@ -157,6 +157,8 @@ public sealed partial class BossSystem
     {
         if (!TrackBoss())
         {
+            // No boss: its minions (and its brood) no longer have anyone to avoid.
+            _enemies.Targeting.BossTargetIndex = -1;
             return;
         }
 
@@ -425,8 +427,19 @@ public sealed partial class BossSystem
         boss.Facing = MathHelper.WrapAngle(boss.Facing + Math.Clamp(difference, -most, most));
     }
 
-    private static void Walk(Enemy boss, Player target, Arena arena, float deltaSeconds, float speedMultiplier)
+    private void Walk(Enemy boss, Player target, Arena arena, float deltaSeconds, float speedMultiplier)
     {
+        // Something in the way: follow the boss-sized flow field round pillars and barrels.
+        var field = _enemies.BossFieldFor(target, boss.Radius);
+        if (field is not null && !field.LineClear(boss.Position, target.Position)
+            && field.TryGetDirection(boss.Position, out var way))
+        {
+            boss.Position += way * (boss.Config.Speed * speedMultiplier * deltaSeconds);
+            return;
+        }
+
+        // A clear line, or no help from the field (right beside a target hugging a pillar):
+        // straight at it, or round the corner of the pillar in the way.
         var waypoint = arena.NextWaypoint(boss.Position, target.Position, boss.Radius);
         var toWaypoint = waypoint - boss.Position;
         var distance = toWaypoint.Length();
@@ -995,7 +1008,7 @@ public sealed partial class BossSystem
             var player = players[i];
             var reach = radius + player.Radius;
             if (player.IsAlive && Vector2.DistanceSquared(player.Position, center) <= reach * reach
-                && arena.PillarsClear(center, player.Position))
+                && arena.BodyExposed(center, player.Position, player.Radius))
             {
                 player.TakeDamage(damage);
             }

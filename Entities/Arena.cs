@@ -21,6 +21,9 @@ public sealed class Arena
     // Rays stop this short of a pillar so the next ray starts outside it.
     private const float PillarSkin = 0.01f;
 
+    // How far out to a body's sides a blast looks (share of its radius), so grazing its very edge does not count.
+    private const float BodySideShare = 0.8f;
+
     private readonly Door[] _doors;
     private readonly Pillar[] _pillars;
 
@@ -140,6 +143,28 @@ public sealed class Arena
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// True when a blast at <paramref name="from"/> can reach a round body: its centre or either
+    /// side (across the line to the blast) is in view, so a big body half behind a pillar is
+    /// still hit and only one wholly behind it is sheltered.
+    /// </summary>
+    public bool BodyExposed(Vector2 from, Vector2 center, float radius)
+    {
+        if (PillarsClear(from, center))
+        {
+            return true;
+        }
+
+        var line = center - from;
+        if (line.LengthSquared() < 0.0001f)
+        {
+            return true;
+        }
+
+        var side = Vector2.Normalize(new Vector2(-line.Y, line.X)) * (radius * BodySideShare);
+        return PillarsClear(from, center + side) || PillarsClear(from, center - side);
     }
 
     /// <summary>True when a point is outside the floor or inside a pillar.</summary>
