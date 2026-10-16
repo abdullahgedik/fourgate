@@ -51,6 +51,7 @@ public sealed class ModelLibrary
         for (var i = 0; i < data.Weapons.Count; i++)
         {
             Require(data.Weapons[i].Model, DataLoader.WeaponsFileName, $"weapons[{i}].model");
+            Require(data.Weapons[i].Projectile?.Model, DataLoader.WeaponsFileName, $"weapons[{i}].projectile.model");
         }
 
         for (var i = 0; i < data.Enemies.Count; i++)
@@ -127,6 +128,9 @@ public sealed class ModelLibrary
             Stride = config.Stride,
             FullStrideSpeed = config.FullStrideSpeed,
             Bob = config.Bob,
+            Scale = config.Scale is null ? Vector3.One : Vector(config.Scale),
+            Muzzle = config.Muzzle is null ? null : Vector(config.Muzzle),
+            Exhaust = config.Exhaust is null ? null : Vector(config.Exhaust),
             Parts = parts,
         };
     }

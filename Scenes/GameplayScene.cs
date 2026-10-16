@@ -32,19 +32,21 @@ public sealed class GameplayScene : IScene
     private const float CorpseDarkening = 0.75f;
     private static readonly Color GibClothesColor = new(95, 82, 66);
 
-    // Firing feedback: how far ahead of the body the muzzle is for each way of holding a gun,
-    // how high, and how big the flash is.
-    private const float MuzzleReachOneHand = 16f;
-    private const float MuzzleReachTwoHands = 26f;
-    private const float MuzzleReachShoulder = 30f;
-    private const float MuzzleHeight = 30f;
-    private const float MuzzleHeightShoulder = 42f;
-    private const float DualMuzzleSpread = 7f;
+    // Firing feedback: how long a muzzle flash lasts, and where spent shells fly out from.
+    private const float MuzzleFlashSeconds = 0.06f;
+    private const float ShellHeight = 32f;
     private const float MuzzleFlashSmall = 7f;
     private const float MuzzleFlashMedium = 9f;
     private const float MuzzleFlashLarge = 12f;
     private const float MuzzleFlashRocket = 16f;
     private static readonly Color BrassColor = new(210, 170, 70);
+
+    // The co-op ring round each player's feet.
+    private const int FootRingSegments = 28;
+    private const float FootRingGap = 6f;
+    private const float FootRingThickness = 3f;
+    private const float FootRingOpacity = 0.85f;
+    private const float FootRingFillOpacity = 0.15f;
 
     // The landing marker of thrown equipment.
     private const int ThrowMarkerSegments = 32;
@@ -53,6 +55,7 @@ public sealed class GameplayScene : IScene
     private const float ThrowMarkerRingOpacity = 0.35f;
     private const float ThrowMarkerDotOpacity = 0.7f;
     private static readonly Color ThrowMarkerColor = new(255, 240, 200);
+    private static readonly Color ThrowMarkerWaitColor = new(235, 55, 45);
     private static readonly Color ShotgunShellColor = new(190, 45, 35);
 
     // After the last player dies: "YOU DIED" grows in over a red tint, the world carries on, and
@@ -119,6 +122,9 @@ public sealed class GameplayScene : IScene
     private readonly BossSystem _bosses;
     private readonly ParticleSystem _particles;
     private readonly CorpseSystem _corpses = new();
+    private readonly Dictionary<(string WeaponId, bool Dual), MuzzleSpot>? _muzzleSpots;
+    private readonly BossIntro _bossIntro = new();
+    private Enemy? _announcedBoss;
     private readonly List<bool> _wasAlive = new();
     private readonly GameRandom _visualRandom = new(Environment.TickCount);
     private readonly GameSettings? _settings;
@@ -180,7 +186,8 @@ public sealed class GameplayScene : IScene
     /// <param name="highScoreStore">Where to save them after a new entry, or null.</param>
     public GameplayScene(
         GameData data, IReadOnlyList<IPlayerInput> inputs, IAudioManager audio, RunMode mode = default,
-        HighScoreTable? highScores = null, HighScoreStore? highScoreStore = null, GameSettings? settings = null)
+        HighScoreTable? highScores = null, HighScoreStore? highScoreStore = null, GameSettings? settings = null,
+        ModelLibrary? models = null)
     {
         _data = data;
         _audio = audio;
@@ -221,7 +228,7 @@ public sealed class GameplayScene : IScene
         // Visual only, with its own random source so effects never change a seeded run.
         _particles = new ParticleSystem(_visualRandom);
         _particles.Stains = FloorStains;
-        _arenaView = new ArenaView(_arena, data, _particles);
+        _arenaView = new ArenaView(_arena, data, _particles, FloorStains, _visualRandom);
         _indicators = new ViewIndicators(_arena);
         _shots.Particles = _particles;
         _bosses.Particles = _particles;
@@ -254,6 +261,7 @@ public sealed class GameplayScene : IScene
         _drops.HealthChanceMultiplier = _rules.HealthCrateChanceMultiplier;
         _waves = config.Debug.DisableWaves ? null : new WaveSystem(data, _enemies, _arena, _random, audio) { Rules = _rules };
 
+        _muzzleSpots = models is null ? null : FindMuzzleSpots(data, models);
         var startingWeapon = data.GetWeapon(config.Player.StartingWeapon);
         _startingWeapon = startingWeapon;
         _unlocks.Unlock(startingWeapon);
@@ -268,6 +276,7 @@ public sealed class GameplayScene : IScene
             var player = new Player(i, inputs[i], config.Player, audio, _arena.Center + new Vector2(offset, 0f));
             _unlocks.Grant(player, startingWeapon);
             AddPlayer(player, new Rectangle(i * viewWidth, 0, viewWidth, config.VirtualHeight), config.Camera);
+            player.MuzzleSpots = _muzzleSpots;
         }
 
         if (_rules.AllWeaponsAtStart)
@@ -402,6 +411,7 @@ public sealed class GameplayScene : IScene
         UnlockWeaponsForStartedWaves();
         _enemies.Update(deltaSeconds, _players, _arena);
         _bosses.Update(deltaSeconds, _players, _arena);
+        AnnounceBoss(deltaSeconds);
         _fireballs.Update(deltaSeconds, _players, _arena);
         RewardKills();
 
@@ -1092,6 +1102,7 @@ public sealed class GameplayScene : IScene
         }
 
         _scoreHud.Draw(renderer, _score.Total, _modeLabel, _data.Game.VirtualWidth);
+        _bossIntro.Draw(renderer, _data.Game.VirtualWidth, _data.Game.VirtualHeight);
 
         if (_debugNoticeLeft > 0f)
         {
@@ -1192,6 +1203,10 @@ public sealed class GameplayScene : IScene
             }
 
             DrawThrowMarker(renderer, player);
+            if (_players.Count > 1)
+            {
+                DrawFootRing(renderer, player);
+            }
 
             if (_data.Game.Player.Model is { } model)
             {
@@ -1204,7 +1219,8 @@ public sealed class GameplayScene : IScene
                         Recoil: player.RecoilAmount, Flinch: player.FlinchAmount,
                         GunId: weapon?.Config.Model ?? _data.Game.Player.DefaultGunModel,
                         ShadowRadius: player.Radius,
-                        Hold: HoldFor(weapon), MoveHeading: player.MoveHeading),
+                        Hold: HoldFor(weapon), MoveHeading: player.MoveHeading,
+                        MuzzleFlash: MuzzleFlashAmount(weapon), MuzzleFlashSize: MuzzleFlashSizeFor(weapon)),
                     player.Visual);
                 continue;
             }
@@ -1234,6 +1250,21 @@ public sealed class GameplayScene : IScene
         };
     }
 
+    // In co-op, a ring in the player's own colour round their feet tells the two survivors apart.
+    private static void DrawFootRing(IRenderer renderer, Player player)
+    {
+        var radius = player.Radius + FootRingGap;
+        renderer.FillCircle(player.Position, radius, player.TeamColor * FootRingFillOpacity);
+        var previous = player.Position + new Vector2(radius, 0f);
+        for (var i = 1; i <= FootRingSegments; i++)
+        {
+            var angle = MathHelper.TwoPi * i / FootRingSegments;
+            var point = player.Position + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius;
+            renderer.DrawLine(previous, point, FootRingThickness, player.TeamColor * FootRingOpacity);
+            previous = point;
+        }
+    }
+
     // Where the active grenade, molotov or mine would land: a faint ring of its reach and a dot.
     private static void DrawThrowMarker(IRenderer renderer, Player player)
     {
@@ -1242,6 +1273,8 @@ public sealed class GameplayScene : IScene
             return;
         }
 
+        // Red while it is still on cooldown: letting go now would not throw it yet.
+        var color = player.CanThrowNow ? ThrowMarkerColor : ThrowMarkerWaitColor;
         if (reach > 0f)
         {
             var previous = landing + new Vector2(reach, 0f);
@@ -1249,58 +1282,116 @@ public sealed class GameplayScene : IScene
             {
                 var angle = MathHelper.TwoPi * i / ThrowMarkerSegments;
                 var point = landing + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * reach;
-                renderer.DrawLine(previous, point, ThrowMarkerThickness, ThrowMarkerColor * ThrowMarkerRingOpacity);
+                renderer.DrawLine(previous, point, ThrowMarkerThickness, color * ThrowMarkerRingOpacity);
                 previous = point;
             }
         }
 
-        renderer.FillCircle(landing, ThrowMarkerDot, ThrowMarkerColor * ThrowMarkerDotOpacity);
+        renderer.FillCircle(landing, ThrowMarkerDot, color * ThrowMarkerDotOpacity);
     }
 
-    // A gun that fired this frame flashes at its muzzle and throws out a spent shell.
+    // A boss that has just come in gets its name shown across the screen.
+    private void AnnounceBoss(float deltaSeconds)
+    {
+        _bossIntro.Update(deltaSeconds);
+        if (_bosses is { Boss: { } boss, Config: { } config } && !ReferenceEquals(boss, _announcedBoss))
+        {
+            _announcedBoss = boss;
+            _bossIntro.Start(config.DisplayName);
+        }
+    }
+
+    /// <summary>Enemies alive now (for the frame-time readout).</summary>
+    public int EnemyCount => _enemies.Count;
+
+    /// <summary>Particles alive now (for the frame-time readout).</summary>
+    public int ParticleCount => _particles.Count;
+
+    /// <summary>True while a boss's name is shown on its entrance.</summary>
+    public bool IsShowingBossIntro => _bossIntro.IsShowing;
+
+    // Where every gun's shots leave from, single and dual-wielded, measured on the models.
+    private static Dictionary<(string WeaponId, bool Dual), MuzzleSpot>? FindMuzzleSpots(GameData data, ModelLibrary models)
+    {
+        if (data.Game.Player.Model is not { } body)
+        {
+            return null;
+        }
+
+        var spots = new Dictionary<(string WeaponId, bool Dual), MuzzleSpot>();
+        foreach (var weapon in data.Weapons)
+        {
+            if (weapon.Category != WeaponCategory.Gun || (weapon.Model ?? data.Game.Player.DefaultGunModel) is not { } gun)
+            {
+                continue;
+            }
+
+            var hold = weapon.Hold switch
+            {
+                WeaponHold.OneHand => ModelHold.OneHand,
+                WeaponHold.Shoulder => ModelHold.Shoulder,
+                _ => ModelHold.TwoHands,
+            };
+            if (MuzzleFinder.TryFind(models, body, gun, hold, out var forward, out var right, out _))
+            {
+                spots[(weapon.Id, false)] = new MuzzleSpot(forward, right, 0f);
+            }
+
+            if (MuzzleFinder.TryFind(models, body, gun, ModelHold.Dual, out forward, out right, out var spread))
+            {
+                spots[(weapon.Id, true)] = new MuzzleSpot(forward, right, spread);
+            }
+        }
+
+        return spots;
+    }
+
+    // A gun that fired this frame throws out a spent shell (its flash is drawn on the gun model).
     private void ShowShot(Player player)
     {
         var weapon = player.CurrentWeapon;
-        if (weapon is null || weapon.SecondsSinceShot > 0f || weapon.Config.Type != WeaponType.Projectile)
+        if (weapon is null || weapon.SecondsSinceShot > 0f || weapon.Config.Type != WeaponType.Projectile
+            || weapon.Config.Explosion is not null)
         {
             return;
         }
 
         var aim = player.AimDirection;
         var right = new Vector2(-aim.Y, aim.X);
-        var rocket = weapon.Config.Explosion is not null;
-        var hold = HoldFor(weapon);
-        var reach = hold switch
+        var shotgun = weapon.Config.Projectile!.HitEffect == HitEffect.Pellet;
+        _particles.Shell(player.Position + aim * player.Radius, ShellHeight, right, shotgun ? ShotgunShellColor : BrassColor);
+    }
+
+    // 1 on the frame a bullet gun fires, fading out within a blink.
+    private static float MuzzleFlashAmount(Weapon? weapon)
+    {
+        if (weapon is null || weapon.Config.Type != WeaponType.Projectile)
         {
-            ModelHold.OneHand or ModelHold.Dual => MuzzleReachOneHand,
-            ModelHold.Shoulder => MuzzleReachShoulder,
-            _ => MuzzleReachTwoHands,
-        };
-        var height = hold == ModelHold.Shoulder ? MuzzleHeightShoulder : MuzzleHeight;
-        var size = rocket ? MuzzleFlashRocket : weapon.Config.Projectile!.HitEffect switch
+            return 0f;
+        }
+
+        return Math.Clamp(1f - weapon.SecondsSinceShot / MuzzleFlashSeconds, 0f, 1f);
+    }
+
+    // Bigger guns flash bigger.
+    private static float MuzzleFlashSizeFor(Weapon? weapon)
+    {
+        if (weapon?.Config.Projectile is not { } projectile)
         {
-            HitEffect.Pellet => MuzzleFlashLarge,
-            HitEffect.Sniper => MuzzleFlashLarge,
+            return 0f;
+        }
+
+        if (weapon.Config.Explosion is not null)
+        {
+            return MuzzleFlashRocket;
+        }
+
+        return projectile.HitEffect switch
+        {
+            HitEffect.Pellet or HitEffect.Sniper => MuzzleFlashLarge,
             HitEffect.Heavy => MuzzleFlashMedium,
             _ => MuzzleFlashSmall,
         };
-
-        var muzzle = player.Position + aim * (player.Radius + reach);
-        if (hold == ModelHold.Dual)
-        {
-            _particles.MuzzleFlash(muzzle + right * DualMuzzleSpread, height, size);
-            _particles.MuzzleFlash(muzzle - right * DualMuzzleSpread, height, size);
-        }
-        else
-        {
-            _particles.MuzzleFlash(muzzle, height, size);
-        }
-
-        if (!rocket)
-        {
-            var shotgun = weapon.Config.Projectile!.HitEffect == HitEffect.Pellet;
-            _particles.Shell(player.Position + aim * player.Radius, height, right, shotgun ? ShotgunShellColor : BrassColor);
-        }
     }
 
     // A zombie with a model leaves a body that topples over and later shrinks away; one torn

@@ -4,6 +4,7 @@ using Fourgate.Core.Audio;
 using Fourgate.Core.Data;
 using Fourgate.Core.Pooling;
 using Fourgate.Core.Rendering;
+using Fourgate.Core.Rendering.Models;
 using Fourgate.Entities;
 using Fourgate.Entities.Projectiles;
 using Fourgate.Weapons;
@@ -17,6 +18,11 @@ public sealed class ShotSystem
     private const int InitialBullets = 128;
     private const float StreakLength = 90f;
 
+    // A muzzle pulled back stops this short of what is in the way; enemies this much bigger than
+    // a zombie are still found.
+    private const float MuzzleSkin = 2f;
+    private const float MuzzleSearchMargin = 80f;
+
     // Shotgun pellets: hidden for the first stretch out of the muzzle, then thin short streaks.
     private const float PelletHiddenDistance = 28f;
     private const float PelletStreakLength = 40f;
@@ -28,6 +34,11 @@ public sealed class ShotSystem
     private static readonly Color BulletColor = new(255, 225, 120);
     private static readonly Color RocketColor = new(200, 205, 215);
     private static readonly Color RocketFlameColor = new(255, 150, 50);
+    private static readonly Color RocketCoreColor = new(255, 240, 190);
+
+    // A rocket's exhaust flame: its length and how fast it flickers along the flight.
+    private const float RocketFlameLength = 22f;
+    private const float RocketFlickerPerUnit = 0.15f;
     private static readonly Color BeamGlowColor = new(90, 180, 255);
     private static readonly Color BeamCoreColor = new(225, 245, 255);
     private static readonly Color SparkColor = new(255, 230, 150);
@@ -126,7 +137,8 @@ public sealed class ShotSystem
             rocket,
             projectile.Knockback,
             projectile.HitEffect,
-            wallBounces);
+            wallBounces,
+            projectile.Model);
     }
 
     /// <summary>
@@ -205,6 +217,43 @@ public sealed class ShotSystem
         return MathF.Max(ShotHeight, Depth3D.BodyHeight(target.Radius) * HitHeightOnBody);
     }
 
+    /// <summary>
+    /// A gun's muzzle, pulled back toward the body when a wall, a pillar or an enemy is between
+    /// them, so a shot never starts on the far side of something it should have hit.
+    /// </summary>
+    public Vector2 ClearMuzzle(Vector2 body, Vector2 muzzle)
+    {
+        var along = muzzle - body;
+        var length = along.Length();
+        if (length < 0.01f)
+        {
+            return muzzle;
+        }
+
+        var direction = along / length;
+        var reach = Math.Min(length, _arena.Raycast(body, direction, out _) - MuzzleSkin);
+
+        _candidates.Clear();
+        _candidates.AddRange(_targets);
+        var middle = body + direction * (length / 2f);
+        for (var i = 0; i < _sources.Count; i++)
+        {
+            _sources[i].Collect(middle, length / 2f + MuzzleSearchMargin, _candidates);
+        }
+
+        for (var i = 0; i < _candidates.Count; i++)
+        {
+            var entry = BeamEntry(body, direction, _candidates[i]);
+            var offset = Vector2.Dot(_candidates[i].Position - body, new Vector2(-direction.Y, direction.X));
+            if (MathF.Abs(offset) <= _candidates[i].Radius && entry < reach)
+            {
+                reach = entry - MuzzleSkin;
+            }
+        }
+
+        return body + direction * Math.Max(0f, reach);
+    }
+
     // Distance along the beam to where it first meets a target's body.
     private static float BeamEntry(Vector2 origin, Vector2 direction, IHittable target)
     {
@@ -262,6 +311,10 @@ public sealed class ShotSystem
             else
             {
                 Step(bullet, deltaSeconds);
+                if (bullet.Rocket is not null && !bullet.IsSpent)
+                {
+                    Particles?.RocketTrail(bullet.GetTail(RocketLength), ShotHeight, bullet.Direction, deltaSeconds);
+                }
             }
         }
     }
@@ -324,11 +377,29 @@ public sealed class ShotSystem
                 continue;
             }
 
-            // A rocket: a short, thick body with a flame behind it, and its shadow below in 3D.
-            renderer.DrawShadow(bullet.GetTail(RocketLength * 0.5f), ShotHeight, RocketThickness);
+            // A rocket: its model (or a thick streak) with a flickering exhaust flame behind it,
+            // and its shadow below.
+            var middle = bullet.GetTail(RocketLength * 0.5f);
             var tail = bullet.GetTail(RocketLength);
-            renderer.DrawLineRaised(bullet.GetTail(RocketLength * 1.8f), tail, ShotHeight, RocketThickness * 0.7f, RocketFlameColor);
-            renderer.DrawLineRaised(tail, bullet.Position, ShotHeight, RocketThickness, RocketColor);
+            renderer.DrawShadow(middle, ShotHeight, RocketThickness);
+            if (bullet.Model is { } model)
+            {
+                var heading = MathF.Atan2(bullet.Direction.Y, bullet.Direction.X);
+                renderer.DrawModel(
+                    new ModelPose(model, middle, heading, heading, 0f, 0f, RocketColor, Elevation: ShotHeight),
+                    new VisualDescriptor(ShapeKind.Circle, RocketThickness, RocketColor));
+            }
+            else
+            {
+                renderer.DrawLineRaised(tail, bullet.Position, ShotHeight, RocketThickness, RocketColor);
+            }
+
+            var flicker = 0.8f + 0.2f * MathF.Sin(bullet.Travelled * RocketFlickerPerUnit);
+            var exhaust = bullet.GetTail(RocketLength + RocketFlameLength * 0.5f);
+            renderer.DrawLineRaised(
+                bullet.GetTail(RocketLength + RocketFlameLength * flicker), tail, ShotHeight, RocketThickness * 0.7f, RocketFlameColor);
+            renderer.FillCircleRaised(exhaust, ShotHeight, RocketThickness * 1.6f * flicker, RocketFlameColor * 0.45f);
+            renderer.FillCircleRaised(tail, ShotHeight, RocketThickness * 0.6f, RocketCoreColor);
         }
     }
 

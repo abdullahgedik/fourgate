@@ -73,6 +73,11 @@ public sealed class FakeShotHandler : IShotHandler
         LastRocket = rocket;
     }
 
+    public Vector2 ClearMuzzle(Vector2 body, Vector2 muzzle)
+    {
+        return muzzle;
+    }
+
     public void ThrowExplosive(in ExplosiveShot shot)
     {
         Throws.Add(shot);

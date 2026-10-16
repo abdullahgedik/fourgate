@@ -274,4 +274,22 @@ public class RocketTests
             }
         }
     }
+
+    [Fact]
+    public void FlyingRocket_LeavesASmokeTrail()
+    {
+        var particles = new ParticleSystem(new GameRandom(1));
+        var shots = new ShotSystem(new Arena(TestData.Arena())) { Particles = particles };
+        var rocket = new ProjectileConfig { Speed = 1400, Radius = 8, Model = "rocket" };
+
+        shots.FireProjectile(new Vector2(500, 1500), Vector2.UnitX, rocket, 100, 0, rocket: new RocketPayload(170));
+        for (var i = 0; i < 20; i++)
+        {
+            shots.Update(1f / 60f);
+        }
+
+        Assert.Equal(1, shots.BulletCount);
+        Assert.True(particles.Count > 10);
+    }
+
 }

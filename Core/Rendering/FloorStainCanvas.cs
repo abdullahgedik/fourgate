@@ -18,6 +18,7 @@ public sealed class FloorStainCanvas : IDisposable
     private readonly SpriteBatch _spriteBatch;
     private readonly RenderTarget2D _target;
     private readonly Texture2D _blot;
+    private readonly Texture2D _pixel;
     private FloorStains? _painting;
 
     public FloorStainCanvas(GraphicsDevice device, float floorSize)
@@ -28,6 +29,8 @@ public sealed class FloorStainCanvas : IDisposable
         _target = new RenderTarget2D(
             device, pixels, pixels, false, SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
         _blot = CreateBlotTexture(device);
+        _pixel = new Texture2D(device, 1, 1);
+        _pixel.SetData(new[] { Color.White });
         Clear();
     }
 
@@ -60,6 +63,13 @@ public sealed class FloorStainCanvas : IDisposable
         {
             var stain = stains.GetPending(i);
             var at = (stain.Position - stains.TopLeft) * scale;
+            if (stain.Shape == FloorStains.StainShape.Rect)
+            {
+                _spriteBatch.Draw(
+                    _pixel, at, null, stain.Color, stain.Rotation, new Vector2(0.5f), stain.Size * scale, SpriteEffects.None, 0f);
+                continue;
+            }
+
             var size = stain.Radius * 2f * scale / BlotTextureSize;
             _spriteBatch.Draw(_blot, at, null, stain.Color, 0f, origin, size, SpriteEffects.None, 0f);
         }
@@ -73,6 +83,7 @@ public sealed class FloorStainCanvas : IDisposable
     {
         _target.Dispose();
         _blot.Dispose();
+        _pixel.Dispose();
         _spriteBatch.Dispose();
     }
 

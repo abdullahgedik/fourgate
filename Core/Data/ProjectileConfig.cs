@@ -18,6 +18,9 @@ public sealed class ProjectileConfig
     /// <summary>World units a hit pushes an enemy along the bullet's path; 0 for none.</summary>
     public float Knockback { get; init; }
 
+    /// <summary>The 3D model it flies as (a rocket); null for a plain streak.</summary>
+    public string? Model { get; init; }
+
     /// <summary>What a hit throws off (purely visual).</summary>
     public HitEffect HitEffect { get; init; } = HitEffect.Light;
 }

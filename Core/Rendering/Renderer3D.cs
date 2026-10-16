@@ -21,6 +21,8 @@ public sealed class Renderer3D : IRenderer, IDisposable
     private const int FlatCircleSegments = 10;
     private const int BarrelSegments = 16;
     private const int MaxModelParts = 48;
+    private static readonly Color MuzzleCoreColor = new(255, 235, 170);
+    private static readonly Color MuzzleGlowColor = new(255, 140, 40);
     private const int MaxWallStainVertices = 6 * 1024;
     private const int SootTextureSize = 64;
 
@@ -326,7 +328,7 @@ public sealed class Renderer3D : IRenderer, IDisposable
 
             if (pose.GunId is not null && HoldsGunHere(part.Mount, pose.Hold))
             {
-                DrawHeldModel(pose.GunId, _partWorlds[i]);
+                DrawHeldModel(pose.GunId, _partWorlds[i], pose.MuzzleFlash, pose.MuzzleFlashSize);
             }
         }
     }
@@ -343,8 +345,9 @@ public sealed class Renderer3D : IRenderer, IDisposable
         };
     }
 
-    // A held model (a gun): drawn in the hand's space, unanimated.
-    private void DrawHeldModel(string id, Matrix hand)
+    // A held model (a gun): drawn in the hand's space, unanimated, with its muzzle flash (and a
+    // launcher's back flare) right where its barrel ends.
+    private void DrawHeldModel(string id, Matrix hand, float flash, float flashSize)
     {
         if (Models is null || !Models.TryGet(id, out var held) || held.Parts.Count > MaxModelParts)
         {
@@ -360,6 +363,28 @@ public sealed class Renderer3D : IRenderer, IDisposable
                 OrientedBox(_heldWorlds[i], part.Center, part.HalfSize, PartColor(part, part.Color));
             }
         }
+
+        if (flash <= 0f || flashSize <= 0f)
+        {
+            return;
+        }
+
+        if (held.Muzzle is { } muzzle)
+        {
+            DrawFlash(Vector3.Transform(muzzle, hand), flashSize * (0.6f + 0.4f * flash), flash);
+        }
+
+        if (held.Exhaust is { } exhaust)
+        {
+            DrawFlash(Vector3.Transform(exhaust, hand), flashSize * 1.3f * (0.6f + 0.4f * flash), flash);
+        }
+    }
+
+    // A soft orange glow round a bright core, facing the camera.
+    private void DrawFlash(Vector3 point, float size, float strength)
+    {
+        Billboard(point, size * 1.8f, MuzzleGlowColor * (0.55f * strength));
+        Billboard(point, size, MuzzleCoreColor * strength);
     }
 
     private static Color PartColor(ModelPart part, Color tint)

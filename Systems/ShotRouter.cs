@@ -42,6 +42,11 @@ public sealed class ShotRouter : IShotHandler
             wallBounces);
     }
 
+    public Vector2 ClearMuzzle(Vector2 body, Vector2 muzzle)
+    {
+        return _bullets.ClearMuzzle(body, muzzle);
+    }
+
     public void ThrowExplosive(in ExplosiveShot shot)
     {
         _explosives.Throw(shot);

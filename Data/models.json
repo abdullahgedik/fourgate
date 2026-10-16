@@ -1,7 +1,7 @@
 {
   "models": [
     {
-      "id": "survivor", "height": 46, "stride": 90, "fullStrideSpeed": 260, "bob": 1.8,
+      "id": "survivor", "height": 46, "stride": 90, "fullStrideSpeed": 260, "bob": 1.8, "scale": [1.4, 1.1, 1.2],
       "parts": [
         {"id": "hips", "pivot": [0, 17, 0], "size": [14, 6, 8], "color": [55, 60, 75]},
         {"id": "legLeft", "parent": "hips", "pivot": [-3.8, -2, 0], "size": [6, 15, 7], "center": [0, -7.5, 0], "color": [55, 60, 75], "swing": 30, "step": true},
@@ -26,7 +26,7 @@
       ]
     },
     {
-      "id": "zombie", "height": 42, "stride": 46, "fullStrideSpeed": 100, "bob": 1.2,
+      "id": "zombie", "height": 42, "stride": 46, "fullStrideSpeed": 100, "bob": 1.2, "scale": [1.45, 1.1, 1.2],
       "parts": [
         {"id": "hips", "pivot": [0, 15, 0], "size": [13, 6, 8], "color": [62, 56, 50]},
         {"id": "legLeft", "parent": "hips", "pivot": [-3.5, -2, 0], "size": [5.5, 13, 6.5], "center": [0, -6.5, 0], "color": [62, 56, 50], "rest": [0, 0, 4], "swing": 24, "step": true},
@@ -46,7 +46,7 @@
       ]
     },
     {
-      "id": "runner", "height": 40, "stride": 72, "fullStrideSpeed": 200, "bob": 2,
+      "id": "runner", "height": 40, "stride": 72, "fullStrideSpeed": 200, "bob": 2, "scale": [1.2, 1.05, 1.15],
       "parts": [
         {"id": "hips", "pivot": [0, 18, 0], "size": [10, 5, 6], "color": [55, 60, 50]},
         {"id": "legLeft", "parent": "hips", "pivot": [-2.8, -2, 0], "size": [4, 16, 4.5], "center": [0, -8, 0], "color": [55, 60, 50], "swing": 40, "step": true},
@@ -67,7 +67,7 @@
       ]
     },
     {
-      "id": "spitter", "height": 40, "stride": 40, "fullStrideSpeed": 70, "bob": 1.5,
+      "id": "spitter", "height": 40, "stride": 40, "fullStrideSpeed": 70, "bob": 1.5, "scale": [1.5, 1.1, 1.25],
       "parts": [
         {"id": "hips", "pivot": [0, 14, 0], "size": [14, 6, 9], "color": [70, 60, 55]},
         {"id": "legLeft", "parent": "hips", "pivot": [-4, -2, 0], "size": [6, 12, 6.5], "center": [0, -6, 0], "color": [70, 60, 55], "swing": 20, "step": true},
@@ -90,7 +90,7 @@
       ]
     },
     {
-      "id": "brute", "height": 70, "stride": 80, "fullStrideSpeed": 60, "bob": 3,
+      "id": "brute", "height": 70, "stride": 80, "fullStrideSpeed": 60, "bob": 3, "scale": [1.5, 1.1, 1.3],
       "parts": [
         {"id": "hips", "pivot": [0, 24, 0], "size": [26, 9, 15], "color": [60, 55, 70]},
         {"id": "legLeft", "parent": "hips", "pivot": [-8, -3, 0], "size": [11, 22, 12], "center": [0, -11, 0], "color": [60, 55, 70], "swing": 18, "step": true},
@@ -112,7 +112,7 @@
       ]
     },
     {
-      "id": "elite", "height": 52, "stride": 80, "fullStrideSpeed": 160, "bob": 2,
+      "id": "elite", "height": 52, "stride": 80, "fullStrideSpeed": 160, "bob": 2, "scale": [1.6, 1.0, 1.3],
       "parts": [
         {"id": "hips", "pivot": [0, 22, 0], "size": [16, 7, 10], "color": [45, 30, 50]},
         {"id": "legLeft", "parent": "hips", "pivot": [-4.8, -2, 0], "size": [7, 20, 8], "center": [0, -10, 0], "color": [45, 30, 50], "swing": 30, "step": true},
@@ -153,7 +153,7 @@
       ]
     },
     {
-      "id": "butcher", "height": 110, "stride": 110, "fullStrideSpeed": 90, "bob": 4,
+      "id": "butcher", "height": 110, "stride": 110, "fullStrideSpeed": 90, "bob": 4, "scale": [1.6, 1.05, 1.4],
       "parts": [
         {"id": "hips", "pivot": [0, 34, 0], "size": [36, 12, 22], "color": [60, 50, 45]},
         {"id": "legLeft", "parent": "hips", "pivot": [-10, -4, 0], "size": [14, 30, 15], "center": [0, -15, 0], "color": [60, 50, 45], "swing": 18, "step": true},
@@ -176,7 +176,7 @@
       ]
     },
     {
-      "id": "witch", "height": 95, "stride": 90, "fullStrideSpeed": 70, "bob": 2.5,
+      "id": "witch", "height": 95, "stride": 90, "fullStrideSpeed": 70, "bob": 2.5, "scale": [1.8, 1.0, 1.6],
       "parts": [
         {"id": "robe", "pivot": [0, 0, 0], "size": [30, 34, 26], "center": [0, 17, 0], "tint": true, "flinch": -8},
         {"id": "hem", "parent": "robe", "pivot": [0, 0, 0], "size": [34, 6, 30], "center": [0, 3, 0], "tint": true, "shade": 0.7},
@@ -197,7 +197,7 @@
       ]
     },
     {
-      "id": "juggernaut", "height": 120, "stride": 110, "fullStrideSpeed": 70, "bob": 3,
+      "id": "juggernaut", "height": 120, "stride": 110, "fullStrideSpeed": 70, "bob": 3, "scale": [1.5, 1.0, 1.3],
       "parts": [
         {"id": "hips", "pivot": [0, 34, 0], "size": [40, 12, 26], "color": [85, 90, 100]},
         {"id": "legLeft", "parent": "hips", "pivot": [-12, -4, 0], "size": [16, 30, 18], "center": [0, -15, 0], "color": [95, 100, 112], "swing": 16, "step": true},
@@ -219,7 +219,7 @@
       ]
     },
     {
-      "id": "swarmMother", "height": 110, "stride": 80, "fullStrideSpeed": 60, "bob": 4,
+      "id": "swarmMother", "height": 110, "stride": 80, "fullStrideSpeed": 60, "bob": 4, "scale": [1.3, 1.0, 1.2],
       "parts": [
         {"id": "hips", "pivot": [0, 26, 0], "size": [50, 18, 44], "color": [90, 45, 85]},
         {"id": "legFrontLeft", "parent": "hips", "pivot": [-22, -6, 14], "size": [12, 22, 12], "center": [0, -11, 0], "color": [80, 40, 75], "rest": [0, 0, 18], "swing": 26, "step": true},
@@ -240,7 +240,7 @@
       ]
     },
     {
-      "id": "warden", "height": 125, "stride": 110, "fullStrideSpeed": 90, "bob": 3,
+      "id": "warden", "height": 125, "stride": 110, "fullStrideSpeed": 90, "bob": 3, "scale": [1.7, 1.0, 1.4],
       "parts": [
         {"id": "hips", "pivot": [0, 40, 0], "size": [34, 12, 22], "color": [150, 135, 90]},
         {"id": "legLeft", "parent": "hips", "pivot": [-10, -4, 0], "size": [13, 36, 15], "center": [0, -18, 0], "color": [170, 155, 105], "swing": 22, "step": true},
@@ -263,14 +263,14 @@
       ]
     },
     {
-      "id": "pistol",
+      "id": "pistol", "muzzle": [0, 2.5, 9],
       "parts": [
         {"id": "grip", "pivot": [0, 0, 0], "size": [2.4, 5, 3], "center": [0, -1.5, 0], "color": [40, 40, 45]},
         {"id": "slide", "parent": "grip", "pivot": [0, 1.5, 0], "size": [2.8, 3, 10], "center": [0, 1, 3.5], "color": [75, 78, 88]}
       ]
     },
     {
-      "id": "smg",
+      "id": "smg", "muzzle": [0, 3.1, 15.5],
       "parts": [
         {"id": "grip", "pivot": [0, 0, 0], "size": [2.4, 5, 3], "center": [0, -1.5, 0], "color": [40, 40, 45]},
         {"id": "body", "parent": "grip", "pivot": [0, 1.5, 0], "size": [3.2, 4, 13], "center": [0, 1.2, 3.5], "color": [60, 62, 70]},
@@ -279,7 +279,7 @@
       ]
     },
     {
-      "id": "shotgun",
+      "id": "shotgun", "muzzle": [0, 3.7, 25.5],
       "parts": [
         {"id": "grip", "pivot": [0, 0, 0], "size": [2.6, 5, 3], "center": [0, -1.5, 0], "color": [90, 60, 35]},
         {"id": "stock", "parent": "grip", "pivot": [0, 1, 0], "size": [3, 4.5, 9], "center": [0, -0.5, -5], "color": [110, 72, 40]},
@@ -289,7 +289,7 @@
       ]
     },
     {
-      "id": "rifle",
+      "id": "rifle", "muzzle": [0, 3.3, 22.5],
       "parts": [
         {"id": "grip", "pivot": [0, 0, 0], "size": [2.6, 5, 3], "center": [0, -1.5, 0], "color": [40, 40, 45]},
         {"id": "stock", "parent": "grip", "pivot": [0, 1, 0], "size": [3, 4.5, 8], "center": [0, -0.5, -4.5], "color": [50, 52, 58]},
@@ -299,7 +299,7 @@
       ]
     },
     {
-      "id": "assault",
+      "id": "assault", "muzzle": [0, 3.1, 19.5],
       "parts": [
         {"id": "grip", "pivot": [0, 0, 0], "size": [2.6, 5, 3], "center": [0, -1.5, 0], "color": [40, 40, 45]},
         {"id": "stock", "parent": "grip", "pivot": [0, 1, 0], "size": [3, 4.6, 9], "center": [0, -0.4, -5.5], "color": [40, 40, 45]},
@@ -311,7 +311,7 @@
       ]
     },
     {
-      "id": "marksman",
+      "id": "marksman", "muzzle": [0, 3.3, 23.5],
       "parts": [
         {"id": "grip", "pivot": [0, 0, 0], "size": [2.6, 5, 3], "center": [0, -1.5, 0], "color": [40, 40, 45]},
         {"id": "stock", "parent": "grip", "pivot": [0, 1, 0], "size": [3, 4.8, 10], "center": [0, -0.4, -6], "color": [80, 70, 55]},
@@ -323,7 +323,7 @@
       ]
     },
     {
-      "id": "sniper",
+      "id": "sniper", "muzzle": [0, 3.3, 35.5],
       "parts": [
         {"id": "grip", "pivot": [0, 0, 0], "size": [2.6, 5, 3], "center": [0, -1.5, 0], "color": [40, 40, 45]},
         {"id": "stock", "parent": "grip", "pivot": [0, 1, 0], "size": [3.2, 5.5, 11], "center": [0, -0.8, -7], "color": [60, 66, 52]},
@@ -337,7 +337,7 @@
       ]
     },
     {
-      "id": "launcher",
+      "id": "launcher", "muzzle": [0, 0, 21.5], "exhaust": [0, 0, -13.5],
       "parts": [
         {"id": "tube", "pivot": [0, 0, 0], "size": [5.5, 5.5, 32], "center": [0, 0, 4], "color": [85, 95, 60]},
         {"id": "frontRim", "parent": "tube", "pivot": [0, 0, 20], "size": [6.6, 6.6, 2], "color": [60, 65, 45]},
@@ -350,7 +350,7 @@
       ]
     },
     {
-      "id": "flamer",
+      "id": "flamer", "muzzle": [0, -2, 25.5],
       "parts": [
         {"id": "grip", "pivot": [0, 0, 0], "size": [2.6, 5, 3], "center": [0, -1.5, 0], "color": [40, 40, 45]},
         {"id": "body", "parent": "grip", "pivot": [0, -2, 0], "size": [3.4, 4, 12], "center": [0, 0, 3], "color": [120, 40, 30]},
@@ -362,7 +362,7 @@
       ]
     },
     {
-      "id": "railgun",
+      "id": "railgun", "muzzle": [0, 2.5, 22],
       "parts": [
         {"id": "grip", "pivot": [0, 0, 0], "size": [2.6, 5, 3], "center": [0, -1.5, 0], "color": [40, 40, 45]},
         {"id": "stock", "parent": "grip", "pivot": [0, 1, 0], "size": [3, 4.5, 8], "center": [0, -0.4, -5], "color": [50, 54, 66]},
@@ -384,6 +384,20 @@
         {"id": "striker", "parent": "fuse", "pivot": [0, 1.6, 0], "size": [1.6, 0.9, 1.6], "center": [0, 0.45, 0], "color": [200, 40, 30]},
         {"id": "lever", "parent": "fuse", "pivot": [1.2, 1.4, 0], "size": [0.6, 4.4, 1.4], "center": [0, -2.2, 0], "color": [150, 150, 155], "rest": [0, 0, -8]},
         {"id": "ring", "parent": "fuse", "pivot": [-1.4, 1.2, 0], "size": [1.6, 0.5, 1.6], "color": [175, 175, 180]}
+      ]
+    },
+    {
+      "id": "rocket", "height": 4,
+      "parts": [
+        {"id": "body", "pivot": [0, 0, 0], "size": [3.2, 3.2, 13], "color": [110, 115, 95]},
+        {"id": "band", "parent": "body", "pivot": [0, 0, 3], "size": [3.6, 3.6, 1.2], "color": [215, 180, 50]},
+        {"id": "warhead", "parent": "body", "pivot": [0, 0, 6.5], "size": [2.6, 2.6, 3.6], "center": [0, 0, 1.8], "color": [190, 50, 40]},
+        {"id": "tip", "parent": "warhead", "pivot": [0, 0, 3.6], "size": [1.4, 1.4, 1.6], "center": [0, 0, 0.8], "color": [215, 205, 185]},
+        {"id": "finTop", "parent": "body", "pivot": [0, 2.4, -5], "size": [0.5, 2.6, 3], "color": [70, 72, 64]},
+        {"id": "finBottom", "parent": "body", "pivot": [0, -2.4, -5], "size": [0.5, 2.6, 3], "color": [70, 72, 64]},
+        {"id": "finLeft", "parent": "body", "pivot": [-2.4, 0, -5], "size": [2.6, 0.5, 3], "color": [70, 72, 64]},
+        {"id": "finRight", "parent": "body", "pivot": [2.4, 0, -5], "size": [2.6, 0.5, 3], "color": [70, 72, 64]},
+        {"id": "nozzle", "parent": "body", "pivot": [0, 0, -7.3], "size": [2.2, 2.2, 1.6], "color": [40, 40, 44]}
       ]
     }
   ]

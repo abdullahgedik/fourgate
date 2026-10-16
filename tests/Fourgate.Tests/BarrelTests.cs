@@ -329,6 +329,11 @@ public class BarrelTests
         {
         }
 
+        public Vector2 ClearMuzzle(Vector2 body, Vector2 muzzle)
+        {
+            return muzzle;
+        }
+
         public bool PlaceMine(in MineShot shot)
         {
             return _mines.Place(shot);

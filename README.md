@@ -80,7 +80,7 @@ dotnet test tests/Fourgate.Tests
 | Reload | R | X |
 | Next / previous gun | Mouse wheel, E / Q | RB / LB |
 | Select gun directly | 1–9 | |
-| Use equipment (grenade) | G | Left trigger |
+| Use equipment: hold to aim a grenade, molotov or mine (its landing spot shows), release to throw | G | Left trigger |
 | Next equipment | T | D-pad left / right |
 | Choose an upgrade card | Click, or A / D then Enter | Left / right, then A |
 | Pause / resume a run | Esc | Start |
@@ -133,6 +133,7 @@ The `debug` section of `Data/game.json` has switches for testing:
 | F7 | Level up the weapon in hand |
 | Shift + F7 | Every weapon to level 10 |
 | F8 | Switch which enemy (or boss) F1/F2 spawn |
+| Shift + F8 | Show / hide the frame-time readout (FPS, update and draw time, worst frame, enemies, particles) |
 
 ## Project layout
 

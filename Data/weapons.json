@@ -309,7 +309,7 @@
       "fireRate": 0.8,
       "automatic": false,
       "ammo": { "magSize": 1, "reserveMax": 12, "reloadTime": 1.8, "infiniteReserve": false },
-      "projectile": { "speed": 1400, "radius": 8 },
+      "projectile": { "speed": 1400, "radius": 8, "model": "rocket" },
       "explosion": { "radius": 170 },
       "levels": [
         { "level": 2, "damageMult": 1.08, "fireRateMult": 1.08 },

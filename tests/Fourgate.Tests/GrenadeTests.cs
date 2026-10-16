@@ -296,6 +296,32 @@ public class GrenadeTests
         Assert.Equal("weapons[0].explosion", error.Field);
     }
 
+    [Fact]
+    public void LandingMarker_SitsAtTheAimPoint_NoFurtherThanTheReach_AndOnlyForThrownEquipment()
+    {
+        var data = DataLoader.LoadAll(DataLoader.DefaultDirectory);
+        var input = new FakeInput { AimDistance = 200f, EquipmentHeld = true };
+        var player = new Player(0, input, TestData.Game().Player, new NullAudioManager(), new Vector2(1000, 1000));
+        var grenade = data.GetWeapon("grenade");
+        player.GiveWeapon(new Weapon(grenade, TestData.Game(), new NullAudioManager()));
+
+        Assert.True(player.TryGetThrowLanding(out var landing, out var reach));
+        Assert.Equal(1000f + player.Radius + 200f, landing.X, 1);
+        Assert.Equal(grenade.Explosion!.Radius, reach, 1);
+
+        input.AimDistance = 5000f;
+        player.TryGetThrowLanding(out landing, out _);
+        Assert.Equal(1000f + player.Radius + grenade.Thrown!.MaxRange, landing.X, 1);
+
+        var barrels = new Player(1, new FakeInput { EquipmentHeld = true }, TestData.Game().Player, new NullAudioManager(), new Vector2(1000, 1000));
+        barrels.GiveWeapon(new Weapon(data.GetWeapon("barrel"), TestData.Game(), new NullAudioManager()));
+        Assert.False(barrels.TryGetThrowLanding(out _, out _));
+
+        // Not aiming: no marker.
+        input.EquipmentHeld = false;
+        Assert.False(player.TryGetThrowLanding(out _, out _));
+    }
+
     private static WeaponConfig GrenadeConfig()
     {
         return new WeaponConfig

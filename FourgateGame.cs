@@ -41,6 +41,7 @@ public sealed class FourgateGame : Game
     private Renderer3D? _renderer3D;
     private FloorStainCanvas? _stainCanvas;
     private readonly ModelLibrary _models;
+    private readonly FrameTimeOverlay _frameTime = new();
     private IScene? _scene;
     private IPlayerInput? _playerOneInput;
     private IPlayerInput[] _singleInputs = Array.Empty<IPlayerInput>();
@@ -63,6 +64,7 @@ public sealed class FourgateGame : Game
         _data = DataLoader.LoadAll(DataLoader.DefaultDirectory);
         _models = new ModelLibrary(DataLoader.LoadModels(DataLoader.DefaultDirectory));
         _models.CheckReferences(_data);
+        _frameTime.Visible = _data.Game.Debug.ShowFrameTime;
 
         // No real sounds yet; with debug.showAudioEvents on, the latest sound events are listed on screen.
         if (_data.Game.Debug.ShowAudioEvents)
@@ -126,6 +128,7 @@ public sealed class FourgateGame : Game
 
     protected override void Update(GameTime gameTime)
     {
+        _frameTime.BeginUpdate();
         // Freeze while the window is in the background so stray input does not play the game.
         if (IsActive)
         {
@@ -151,6 +154,13 @@ public sealed class FourgateGame : Game
             SwitchScene();
         }
 
+        if (_scene is GameplayScene counted)
+        {
+            _frameTime.Enemies = counted.EnemyCount;
+            _frameTime.Particles = counted.ParticleCount;
+        }
+
+        _frameTime.EndUpdate();
         base.Update(gameTime);
     }
 
@@ -232,7 +242,8 @@ public sealed class FourgateGame : Game
             _lastMode = select.Mode;
             _scene = new GameplayScene(
                 _data, players == 2 ? _coopInputs : _singleInputs, _audio, _lastMode, _highScores, _highScoreStore,
-                _settings);
+                _settings,
+                _models);
         }
         else if (_scene is HighScoresScene { IsDone: true })
         {
@@ -267,6 +278,10 @@ public sealed class FourgateGame : Game
     private void UpdateDebugHotkeys()
     {
         _debugHotkeys.Update();
+        if (_debugHotkeys.ToggleFrameTimePressed)
+        {
+            _frameTime.Visible = !_frameTime.Visible;
+        }
 
         if (_debugHotkeys.NextEnemyPressed)
         {
@@ -334,6 +349,8 @@ public sealed class FourgateGame : Game
             return;
         }
 
+        _frameTime.BeginDraw();
+
         // New blood is painted into the floor image first: that switches the render target.
         if (_scene is GameplayScene run)
         {
@@ -346,6 +363,15 @@ public sealed class FourgateGame : Game
         {
             _audioOverlay.Draw(_renderer, _audioLog, _data.Game.VirtualHeight);
         }
+
+        _frameTime.EndDraw(gameTime.ElapsedGameTime.TotalSeconds);
+        if (_frameTime.Visible)
+        {
+            _renderer.BeginScreen();
+            _frameTime.Draw(_renderer);
+            _renderer.End();
+        }
+
         _screen.Present(_spriteBatch);
 
         base.Draw(gameTime);

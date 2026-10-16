@@ -43,6 +43,9 @@ public sealed class DebugHotkeys
     /// <summary>Switch which enemy type F1/F2 spawn.</summary>
     public bool NextEnemyPressed { get; private set; }
 
+    /// <summary>Shift + F8: show or hide the frame-time readout.</summary>
+    public bool ToggleFrameTimePressed { get; private set; }
+
     public void Update()
     {
         var current = Keyboard.GetState();
@@ -56,7 +59,9 @@ public sealed class DebugHotkeys
         var shift = current.IsKeyDown(Keys.LeftShift) || current.IsKeyDown(Keys.RightShift);
         LevelUpWeaponPressed = levelKey && !shift;
         MaxAllWeaponsPressed = levelKey && shift;
-        NextEnemyPressed = current.IsKeyDown(NextEnemyKey) && _previous.IsKeyUp(NextEnemyKey);
+        var nextKey = current.IsKeyDown(NextEnemyKey) && _previous.IsKeyUp(NextEnemyKey);
+        NextEnemyPressed = nextKey && !shift;
+        ToggleFrameTimePressed = nextKey && shift;
         _previous = current;
     }
 }

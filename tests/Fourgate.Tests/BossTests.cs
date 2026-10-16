@@ -1,5 +1,7 @@
 using Fourgate.Core.Audio;
 using Fourgate.Core.Data;
+using Fourgate.Scenes;
+using Fourgate.Core.Input;
 using Fourgate.Core.Rng;
 using Fourgate.Entities;
 using Fourgate.Entities.Enemies;
@@ -900,6 +902,33 @@ public class BossTests
         // Charging.
         world.Run(0.35f);
         Assert.True(boss.BossAction > 0.5f);
+    }
+
+    [Fact]
+    public void BossArriving_IsAnnouncedByName_ForAMoment()
+    {
+        var shipped = DataLoader.LoadAll(DataLoader.DefaultDirectory);
+        var data = new GameData(
+            TestData.Game(startWave: 10), shipped.Weapons, shipped.Enemies, shipped.Waves, shipped.Upgrades, shipped.Bosses);
+        var input = new FakeInput();
+        var scene = new GameplayScene(data, new IPlayerInput[] { input }, new NullAudioManager());
+
+        var frames = 0;
+        while (!scene.IsShowingBossIntro && frames < 60 * 60)
+        {
+            scene.Update(Step);
+            scene.Players[0].HealToFull();
+            frames++;
+        }
+
+        Assert.True(scene.IsShowingBossIntro);
+        for (var i = 0; i < 60 * 4; i++)
+        {
+            scene.Update(Step);
+            scene.Players[0].HealToFull();
+        }
+
+        Assert.False(scene.IsShowingBossIntro);
     }
 
     private static int StartWave(GameData shipped, int wave)

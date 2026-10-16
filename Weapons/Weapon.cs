@@ -21,7 +21,7 @@ public sealed class Weapon
     private const float OverdriveSettleSpeed = 3f;
 
     // Half the gap between the two muzzles of a dual-wielded weapon.
-    private const float DualWieldOffset = 7f;
+
 
     private readonly GameConfig _rules;
     // One sound id per weapon, built once.
@@ -31,6 +31,12 @@ public sealed class Weapon
     // A beam's width, thicker at level 10 when the level-10 bonus says so.
     private float BeamWidth => Config.Beam!.Width
         * (Level >= WeaponConfig.MaxLevel ? Config.LevelTen?.BeamWidthMult ?? 1f : 1f);
+
+    /// <summary>With a gun in each hand, how far each muzzle is to the side of the aim line.</summary>
+    public float DualSpread { get; set; } = 7f;
+
+    /// <summary>True when its cooldown is over, so it could fire (or be thrown) right now.</summary>
+    public bool IsReady => _cooldown <= TimeEpsilon;
 
     /// <summary>Seconds since it last fired (for the gun's kick on a model).</summary>
     public float SecondsSinceShot { get; private set; } = float.MaxValue;
@@ -299,7 +305,7 @@ public sealed class Weapon
         }
 
         // Two muzzles side by side, one volley from each.
-        var side = new Vector2(-direction.Y, direction.X) * DualWieldOffset;
+        var side = new Vector2(-direction.Y, direction.X) * DualSpread;
         FireVolley(muzzle + side, direction, damage, ownerIndex, shots);
         FireVolley(muzzle - side, direction, damage, ownerIndex, shots);
         return true;

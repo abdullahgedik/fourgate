@@ -47,6 +47,10 @@ public static class ModelAnimator
         var flinch = Math.Clamp(pose.Flinch, 0f, 1f);
         var windup = Math.Clamp(pose.Windup, 0f, 1f);
         var hold = (int)pose.Hold;
+        if (model.Scale != Vector3.One)
+        {
+            root = Matrix.CreateScale(model.Scale) * root;
+        }
 
         // Legs step along the way the body moves, seen from the body: forward and back swing
         // them front to back (backward reverses the stride), sideways swings them out to the side.

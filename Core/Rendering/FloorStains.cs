@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 
 namespace Fourgate.Core.Rendering;
@@ -32,12 +33,31 @@ public sealed class FloorStains
     /// <summary>Every stain ever added (for tests and debugging).</summary>
     public int TotalAdded { get; private set; }
 
+    /// <summary>A soft round blot (blood, soot, oil).</summary>
     public void Add(Vector2 position, float radius, Color color)
+    {
+        Push(new Stain(position, radius, color));
+    }
+
+    /// <summary>A hard-edged rectangle turned by <paramref name="rotation"/> (floor slabs, painted marks).</summary>
+    public void AddRect(Vector2 center, Vector2 size, float rotation, Color color)
+    {
+        Push(new Stain(center, 0f, color, StainShape.Rect, size, rotation));
+    }
+
+    /// <summary>A straight line (seams, cracks).</summary>
+    public void AddLine(Vector2 from, Vector2 to, float thickness, Color color)
+    {
+        var along = to - from;
+        AddRect((from + to) / 2f, new Vector2(along.Length(), thickness), MathF.Atan2(along.Y, along.X), color);
+    }
+
+    private void Push(in Stain stain)
     {
         TotalAdded++;
         if (PendingCount < MaxPending)
         {
-            _pending[PendingCount++] = new Stain(position, radius, color);
+            _pending[PendingCount++] = stain;
         }
     }
 
@@ -52,6 +72,15 @@ public sealed class FloorStains
         PendingCount = 0;
     }
 
-    /// <summary>One mark: a soft round blot.</summary>
-    public readonly record struct Stain(Vector2 Position, float Radius, Color Color);
+    /// <summary>One mark: a soft round blot, or a hard-edged turned rectangle.</summary>
+    public readonly record struct Stain(
+        Vector2 Position, float Radius, Color Color, StainShape Shape = StainShape.Blot, Vector2 Size = default,
+        float Rotation = 0f);
+
+    /// <summary>The shape of a floor mark.</summary>
+    public enum StainShape
+    {
+        Blot,
+        Rect,
+    }
 }

@@ -41,6 +41,9 @@ public sealed class Bullet
     /// <summary>Bounces the bullet has left.</summary>
     public int RicochetsLeft { get; private set; }
 
+    /// <summary>The 3D model it flies as (a rocket); null for a streak.</summary>
+    public string? Model { get; private set; }
+
     /// <summary>Bounces off walls and pillars left.</summary>
     public int WallBouncesLeft { get; private set; }
 
@@ -80,9 +83,11 @@ public sealed class Bullet
         RocketPayload? rocket,
         float knockback = 0f,
         HitEffect hitEffect = HitEffect.Light,
-        int wallBounces = 0)
+        int wallBounces = 0,
+        string? model = null)
     {
         WallBouncesLeft = wallBounces;
+        Model = model;
         Knockback = knockback;
         HitEffect = hitEffect;
         Rocket = rocket;

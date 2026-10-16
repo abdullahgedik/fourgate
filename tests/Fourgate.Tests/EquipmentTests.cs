@@ -28,16 +28,40 @@ public class EquipmentTests
     }
 
     [Fact]
-    public void EquipmentButton_ThrowsTheActiveEquipment_AndTheGunStaysInHand()
+    public void EquipmentButton_AimsWhileHeld_AndThrowsOnRelease_TheGunStaysInHand()
     {
         var player = PlayerWithPistolAndGrenade();
 
         _input.EquipmentPressed = true;
         _input.EquipmentHeld = true;
         Tick(player);
+        _input.EquipmentPressed = false;
+        Tick(player);
+        Assert.Empty(_shots.Throws);
+        Assert.True(player.IsAimingThrow);
+
+        Assert.True(player.CanThrowNow);
+        ReleaseEquipment(player);
 
         Assert.Single(_shots.Throws);
         Assert.Equal(0, _shots.Count);
+
+        // Aiming the next one straight away: still on cooldown (the marker turns red).
+        _input.EquipmentPressed = true;
+        _input.EquipmentHeld = true;
+        Tick(player);
+        Assert.True(player.IsAimingThrow);
+        Assert.False(player.CanThrowNow);
+
+        // Letting go while it is red throws nothing, not even once the cooldown is over.
+        ReleaseEquipment(player);
+        for (var i = 0; i < 120; i++)
+        {
+            Tick(player);
+        }
+
+        Assert.Single(_shots.Throws);
+        Assert.True(player.CanThrowNow);
         Assert.Equal("pistol", player.CurrentWeapon!.Config.Id);
         Assert.Equal(9, player.ActiveEquipment!.Reserve);
     }
@@ -60,11 +84,12 @@ public class EquipmentTests
     {
         var player = PlayerWithPistolAndGrenade();
 
-        _input.FirePressed = true;
-        _input.FireHeld = true;
         _input.EquipmentPressed = true;
         _input.EquipmentHeld = true;
         Tick(player);
+        _input.FirePressed = true;
+        _input.FireHeld = true;
+        ReleaseEquipment(player);
 
         Assert.Equal(1, _shots.Count);
         Assert.Single(_shots.Throws);
@@ -88,6 +113,7 @@ public class EquipmentTests
         _input.EquipmentPressed = true;
         _input.EquipmentHeld = true;
         Tick(player);
+        ReleaseEquipment(player);
 
         Assert.Single(_shots.Throws);
         Assert.True(pistol.IsReloading);
@@ -263,4 +289,12 @@ public class EquipmentTests
         _input.EquipmentCycle = 0;
         return player.ActiveEquipment!.Config.Id;
     }
+
+    private void ReleaseEquipment(Player player)
+    {
+        _input.EquipmentPressed = false;
+        _input.EquipmentHeld = false;
+        Tick(player);
+    }
+
 }

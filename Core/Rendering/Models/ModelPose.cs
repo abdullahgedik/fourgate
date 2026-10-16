@@ -27,6 +27,8 @@ namespace Fourgate.Core.Rendering.Models;
 /// <param name="Tumble">Spin end over end (radians), for something thrown.</param>
 /// <param name="Glow">0–1: how strongly every part is washed with <paramref name="GlowColor"/> (a hit flash, burning).</param>
 /// <param name="GlowColor">The colour of that wash.</param>
+/// <param name="MuzzleFlash">0–1: the held gun's flash, drawn at its muzzle (and its exhaust).</param>
+/// <param name="MuzzleFlashSize">How big that flash is at its brightest.</param>
 public readonly record struct ModelPose(
     string ModelId,
     Vector2 Position,
@@ -48,4 +50,6 @@ public readonly record struct ModelPose(
     float Elevation = 0f,
     float Tumble = 0f,
     float Glow = 0f,
-    Color GlowColor = default);
+    Color GlowColor = default,
+    float MuzzleFlash = 0f,
+    float MuzzleFlashSize = 0f);

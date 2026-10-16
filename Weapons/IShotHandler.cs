@@ -45,4 +45,10 @@ public interface IShotHandler
     void EmitFlame(in FlameShot shot);
 
     void FireBeam(in BeamShot shot);
+
+    /// <summary>
+    /// A gun's muzzle, pulled back toward the body when a wall, a pillar or an enemy is between
+    /// them, so a shot never starts on the far side of something it should have hit.
+    /// </summary>
+    Vector2 ClearMuzzle(Vector2 body, Vector2 muzzle);
 }

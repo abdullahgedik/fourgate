@@ -253,6 +253,153 @@ public class ModelTests
         Assert.Equal(0, particles.Count);
     }
 
+    [Fact]
+    public void EveryCharacterModel_FillsAFairShareOfItsHitbox()
+    {
+        var data = DataLoader.LoadAll(DataLoader.DefaultDirectory);
+
+        // Shots hitting air next to a thin body (or fireballs hitting a player beside them) feel
+        // wrong, so each body must be at least this wide for its hitbox.
+        void Check(string? id, float radius)
+        {
+            Assert.True(Shipped.TryGet(id, out var model), id);
+            Assert.True(BodyHalfWidth(model) >= radius * 0.45f, $"{id}: body {BodyHalfWidth(model):0.0} for radius {radius}");
+        }
+
+        Check(data.Game.Player.Model, data.Game.Player.Radius);
+        foreach (var enemy in data.Enemies)
+        {
+            Check(enemy.Model, enemy.Radius);
+        }
+
+        foreach (var boss in data.Bosses)
+        {
+            Check(boss.Model, boss.Radius);
+        }
+    }
+
+    [Fact]
+    public void YardDressing_PaintsTheFloorOnce_WithoutTouchingTheGameplay()
+    {
+        var arena = new Arena(TestData.Arena());
+        var floor = new Fourgate.Core.Rendering.FloorStains(new Vector2(arena.Left, arena.Top), arena.Size);
+        var decor = new Fourgate.UI.ArenaDecor(arena, 90f, 120f);
+
+        decor.Paint(floor, new Fourgate.Core.Rng.GameRandom(3));
+
+        Assert.True(floor.TotalAdded > 100);
+        Assert.Equal(floor.TotalAdded, floor.PendingCount);
+    }
+
+    [Fact]
+    public void EveryGunsMuzzle_SitsAtTheFrontEndOfItsBarrel()
+    {
+        foreach (var gun in new[] { "pistol", "smg", "shotgun", "rifle", "assault", "marksman", "sniper", "flamer", "railgun" })
+        {
+            Assert.True(Shipped.TryGet(gun, out var model), gun);
+            Assert.True(model.Muzzle.HasValue, gun);
+            var front = FrontOf(model, out var frontHeight);
+            Assert.True(MathF.Abs(model.Muzzle!.Value.Z - front) <= 1.5f, $"{gun}: muzzle {model.Muzzle.Value.Z} vs barrel end {front}");
+            Assert.True(MathF.Abs(model.Muzzle.Value.Y - frontHeight) <= 2f, $"{gun}: muzzle height {model.Muzzle.Value.Y} vs {frontHeight}");
+        }
+
+        // The launcher flares at both ends of its tube.
+        Assert.True(Shipped.TryGet("launcher", out var launcher));
+        Assert.True(launcher.Muzzle!.Value.Z > 15f);
+        Assert.True(launcher.Exhaust!.Value.Z < -10f);
+    }
+
+    // The furthest forward point of a gun's parts, and the height of the part that reaches it.
+    private static float FrontOf(ModelDefinition model, out float height)
+    {
+        var pose = new ModelPose(model.Id, Vector2.Zero, 0f, 0f, 0f, 0f, Color.White);
+        var worlds = new Matrix[model.Parts.Count];
+        ModelAnimator.Pose(model, pose, Matrix.Identity, worlds);
+        var front = float.MinValue;
+        height = 0f;
+        for (var i = 0; i < model.Parts.Count; i++)
+        {
+            var part = model.Parts[i];
+            if (!part.IsVisible)
+            {
+                continue;
+            }
+
+            var tip = Vector3.Transform(part.Center + new Vector3(0f, 0f, part.HalfSize.Z), worlds[i]);
+            if (tip.Z > front)
+            {
+                front = tip.Z;
+                height = tip.Y;
+            }
+        }
+
+        return front;
+    }
+
+    [Fact]
+    public void ShotsLeaveFromTheBarrel_ThePistolsOffToTheRight_TheLaunchersOnTheShoulder()
+    {
+        Assert.True(MuzzleFinder.TryFind(Shipped, "survivor", "pistol", ModelHold.OneHand, out var forward, out var right, out _));
+        Assert.True(forward > 20f);
+        Assert.True(right > 5f);
+
+        Assert.True(MuzzleFinder.TryFind(Shipped, "survivor", "launcher", ModelHold.Shoulder, out _, out var shoulder, out _));
+        Assert.True(shoulder > 4f);
+
+        Assert.True(MuzzleFinder.TryFind(Shipped, "survivor", "pistol", ModelHold.Dual, out _, out _, out var spread));
+        Assert.True(spread > 8f);
+    }
+
+    [Fact]
+    public void Muzzle_IsPulledBack_BeforeAWallOrAZombieInTheWay()
+    {
+        var arena = new Arena(TestData.Arena());
+        var shots = new ShotSystem(arena);
+        var enemies = new EnemySystem(new NullAudioManager());
+        shots.AddSource(enemies);
+        enemies.Spawn(TestData.Zombie(), new Vector2(1550, 1500));
+        enemies.Update(Step, new List<Player>(), arena);
+
+        // Clear way: the muzzle stays where it is.
+        Assert.Equal(new Vector2(1500, 1400), shots.ClearMuzzle(new Vector2(1500, 1500), new Vector2(1500, 1400)));
+
+        // A zombie hugging the player: the shot starts before its body.
+        var blocked = shots.ClearMuzzle(new Vector2(1500, 1500), new Vector2(1600, 1500));
+        Assert.True(blocked.X < 1550f - TestData.Zombie().Radius);
+
+        // Against the wall: the shot starts inside it.
+        var walled = shots.ClearMuzzle(new Vector2(arena.Left + 25f, 1500), new Vector2(arena.Left - 20f, 1500));
+        Assert.True(walled.X > arena.Left);
+    }
+
+    private static float BodyHalfWidth(ModelDefinition model)
+    {
+        var pose = new ModelPose(model.Id, Vector2.Zero, 0f, 0f, 0f, 0f, Color.White);
+        var worlds = new Matrix[model.Parts.Count];
+        ModelAnimator.Pose(model, pose, ModelAnimator.Root(pose), worlds);
+        var half = 0f;
+        for (var i = 0; i < model.Parts.Count; i++)
+        {
+            var part = model.Parts[i];
+            if (part.Id is not ("torso" or "hips" or "body" or "robe"))
+            {
+                continue;
+            }
+
+            for (var c = 0; c < 8; c++)
+            {
+                var corner = part.Center + new Vector3(
+                    (c & 1) != 0 ? part.HalfSize.X : -part.HalfSize.X,
+                    (c & 2) != 0 ? part.HalfSize.Y : -part.HalfSize.Y,
+                    (c & 4) != 0 ? part.HalfSize.Z : -part.HalfSize.Z);
+                var world = Vector3.Transform(corner, worlds[i]);
+                half = MathF.Max(half, MathF.Max(MathF.Abs(world.X), MathF.Abs(world.Z)));
+            }
+        }
+
+        return half;
+    }
+
     private static (Vector3 Left, Vector3 Right) Feet(ModelDefinition model, float speed, float walked, float? heading = null)
     {
         var pose = new ModelPose("survivor", Vector2.Zero, 0f, 0f, walked, speed, Color.White, MoveHeading: heading);

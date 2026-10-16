@@ -33,6 +33,7 @@ public sealed class Player
     private float _hurtFlashLeft;
     private Vector2 _lastPosition;
     private Vector2 _previousPosition;
+    private bool _equipmentWasHeld;
 
     // Movement this small (a nudge) does not change which way the legs step.
     private const float MinHeadingStep = 0.05f;
@@ -123,6 +124,9 @@ public sealed class Player
     /// <summary>1 when the dash is ready, rising from 0 while it recharges.</summary>
     public float DashReadiness =>
         DashCooldown > 0f ? 1f - _dashCooldownLeft / DashCooldown : 1f;
+
+    /// <summary>The player's own colour (P1 blue, P2 orange), without dash or hurt tints.</summary>
+    public Color TeamColor => BodyColors[Index % BodyColors.Length];
 
     public VisualDescriptor Visual
     {
@@ -364,22 +368,25 @@ public sealed class Player
         HandleEquipmentCycle();
 
         var muzzle = Position + AimDirection * Radius;
-        CurrentWeapon?.Update(deltaSeconds, WeaponTrigger.ForGun(Input), muzzle, AimDirection, Index, shots);
+        CurrentWeapon?.Update(deltaSeconds, WeaponTrigger.ForGun(Input), GunMuzzle(muzzle, shots), AimDirection, Index, shots);
 
-        // Equipment works alongside the gun, on its own button and its own cooldown.
-        ActiveEquipment?.Update(deltaSeconds, WeaponTrigger.ForEquipment(Input), muzzle, AimDirection, Index, shots);
+        // Equipment works alongside the gun, on its own button and its own cooldown. Thrown
+        // equipment is aimed while the button is held (the landing marker shows) and thrown
+        // when it is let go.
+        ActiveEquipment?.Update(deltaSeconds, EquipmentTrigger(), muzzle, AimDirection, Index, shots);
+        _equipmentWasHeld = Input.EquipmentHeld;
     }
 
     /// <summary>
-    /// Where the active equipment would land if thrown now, and how far its blast or fire reaches;
-    /// false when it is not thrown (a barrel) or none is left.
+    /// While thrown equipment is being aimed: where it would land if let go now, and how far its
+    /// blast or fire reaches; false when not aiming one or none is left.
     /// </summary>
     public bool TryGetThrowLanding(out Vector2 landing, out float reach)
     {
         landing = Position;
         reach = 0f;
         var equipment = ActiveEquipment;
-        if (!IsAlive || equipment?.Config.Thrown is null || (!equipment.HasInfiniteReserve && equipment.Reserve <= 0))
+        if (!IsAimingThrow || equipment is null || (!equipment.HasInfiniteReserve && equipment.Reserve <= 0))
         {
             return false;
         }
@@ -389,6 +396,47 @@ public sealed class Player
         landing = muzzle + AimDirection * Math.Min(Input.AimDistance, equipment.Stats.Range);
         reach = Math.Max(equipment.Stats.BlastRadius, equipment.Stats.FireRadius);
         return true;
+    }
+
+    /// <summary>
+    /// Where each gun's shots leave from, by weapon id and whether it is dual-wielded; set by the
+    /// game from the models. Without it shots leave from the edge of the body.
+    /// </summary>
+    public IReadOnlyDictionary<(string WeaponId, bool Dual), MuzzleSpot>? MuzzleSpots { get; set; }
+
+    /// <summary>True when the active equipment's cooldown is over, so letting go would throw it.</summary>
+    public bool CanThrowNow => ActiveEquipment?.IsReady ?? false;
+
+    /// <summary>True while thrown equipment is being aimed (its button held).</summary>
+    public bool IsAimingThrow => IsAlive && Input.EquipmentHeld && ActiveEquipment?.Config.Thrown is not null;
+
+    // The gun's real muzzle (pulled back when something is in the way), and the spread of two guns.
+    private Vector2 GunMuzzle(Vector2 fallback, IShotHandler shots)
+    {
+        var gun = CurrentWeapon;
+        if (gun is null || MuzzleSpots is null || !MuzzleSpots.TryGetValue((gun.Config.Id, gun.Stats.DualWield), out var spot))
+        {
+            return fallback;
+        }
+
+        gun.DualSpread = spot.DualHalfSpread;
+        var right = new Vector2(-AimDirection.Y, AimDirection.X);
+        return shots.ClearMuzzle(Position, Position + AimDirection * spot.Forward + right * spot.Right);
+    }
+
+    // Thrown equipment goes on release; anything else (a barrel) as soon as the button is pressed.
+    // A release only counts while it is ready (the marker is not red): unlike a gun's click, it
+    // is not remembered until the cooldown ends, so what the marker shows is what happens.
+    private WeaponTrigger EquipmentTrigger()
+    {
+        var equipment = ActiveEquipment;
+        if (equipment?.Config.Thrown is null)
+        {
+            return WeaponTrigger.ForEquipment(Input);
+        }
+
+        var released = _equipmentWasHeld && !Input.EquipmentHeld && equipment.IsReady;
+        return new WeaponTrigger(released, false, false, Input.AimDistance);
     }
 
     private void HandleWeaponSwitch()

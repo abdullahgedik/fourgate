@@ -19,8 +19,13 @@ public sealed class ParticleSystem
     private const float ShotHeight = 30f;
     private const float SplatAlpha = 0.6f;
 
-    // Firing feedback: how long a muzzle flash lasts, and how long shells and gibs lie on the floor.
-    private const float MuzzleFlashSeconds = 0.06f;
+    // A rocket's trail: puffs and sparks per second, and the smoke's colours.
+    private const float RocketSmokePerSecond = 70f;
+    private const float RocketSparksPerSecond = 45f;
+    private static readonly Color RocketSmokeLight = new(150, 150, 155);
+    private static readonly Color RocketSmokeDark = new(70, 70, 75);
+
+    // How long shells and gibs lie on the floor.
     private const float ShellRestSeconds = 1.2f;
     private const float GibRestSeconds = 3f;
 
@@ -219,31 +224,50 @@ public sealed class ParticleSystem
         }
     }
 
-    /// <summary>A gun's flash at its muzzle: a bright core in a wider glow, gone in a blink.</summary>
-    public void MuzzleFlash(Vector2 position, float height, float size)
+    /// <summary>
+    /// A rocket's trail, called every frame it flies: grey smoke puffs that swell, drift and rise
+    /// behind it, and sparks spat out of its exhaust.
+    /// </summary>
+    public void RocketTrail(Vector2 exhaust, float height, Vector2 direction, float deltaSeconds)
     {
-        Add(new Particle
+        var smoke = Spawns(RocketSmokePerSecond * deltaSeconds);
+        for (var i = 0; i < smoke; i++)
         {
-            Position = position,
-            BaseHeight = height,
-            Life = MuzzleFlashSeconds,
-            SizeStart = size * 1.8f,
-            SizeEnd = size,
-            ColorStart = FlameCool,
-            ColorEnd = FlameCool,
-            AlphaStart = 0.55f,
-        });
-        Add(new Particle
+            var size = _random.Range(4f, 6f);
+            Add(new Particle
+            {
+                Position = exhaust + RandomInDisc(3f),
+                BaseHeight = height,
+                Velocity = -direction * _random.Range(10f, 40f) + RandomDirection() * _random.Range(5f, 20f),
+                Climb = _random.Range(5f, 20f),
+                Drag = 2f,
+                Rise = 12f,
+                Life = _random.Range(0.7f, 1.2f),
+                SizeStart = size,
+                SizeEnd = size * 3f,
+                ColorStart = RocketSmokeLight,
+                ColorEnd = RocketSmokeDark,
+                AlphaStart = 0.45f,
+            });
+        }
+
+        var sparks = Spawns(RocketSparksPerSecond * deltaSeconds);
+        for (var i = 0; i < sparks; i++)
         {
-            Position = position,
-            BaseHeight = height,
-            Life = MuzzleFlashSeconds,
-            SizeStart = size,
-            SizeEnd = size * 0.5f,
-            ColorStart = FlameHot,
-            ColorEnd = FlameHot,
-            AlphaStart = 1f,
-        });
+            Add(new Particle
+            {
+                Position = exhaust,
+                BaseHeight = height,
+                Velocity = Turn(-direction, _random.Range(-0.6f, 0.6f)) * _random.Range(80f, 200f),
+                Drag = 4f,
+                Life = _random.Range(0.12f, 0.28f),
+                SizeStart = _random.Range(2f, 3.5f),
+                SizeEnd = 0.6f,
+                ColorStart = FlameHot,
+                ColorEnd = FlameCool,
+                AlphaStart = 1f,
+            });
+        }
     }
 
     /// <summary>A spent shell flipped out to the side of the gun; it bounces down and lies a moment.</summary>

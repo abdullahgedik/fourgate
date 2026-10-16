@@ -1,6 +1,7 @@
 using System;
 using Fourgate.Core.Data;
 using Fourgate.Core.Rendering;
+using Fourgate.Core.Rng;
 using Fourgate.Entities;
 using Fourgate.Systems;
 using Microsoft.Xna.Framework;
@@ -43,19 +44,24 @@ public sealed class ArenaView
 
     private static readonly Color WallColor = new(70, 74, 92);
     private static readonly Color FloorColor = new(34, 36, 46);
-    private static readonly Color GridColor = new(42, 45, 57);
+    private static readonly Color GridColor = new(39, 41, 52);
     private static readonly Color GateColor = new(150, 60, 50);
 
     private readonly Arena _arena;
     private readonly ParticleSystem _particles;
+    private readonly ArenaDecor _decor;
     private readonly float _floorCellSize;
     private readonly float[] _doorGlow;
     private float _pulseTime;
 
-    public ArenaView(Arena arena, GameData data, ParticleSystem particles)
+    /// <param name="floor">The floor image; the yard's look is painted into it once, here.</param>
+    /// <param name="random">Varies the yard's look from run to run (visual only).</param>
+    public ArenaView(Arena arena, GameData data, ParticleSystem particles, FloorStains floor, GameRandom random)
     {
         _arena = arena;
         _particles = particles;
+        _decor = new ArenaDecor(arena, WallHeight, PillarHeight);
+        _decor.Paint(floor, random);
         _floorCellSize = FloorCellSize(data);
         _doorGlow = new float[arena.Doors.Count];
     }
@@ -117,6 +123,8 @@ public sealed class ArenaView
             renderer.FillBox(pillars[i].Center - pillars[i].HalfSize, pillars[i].HalfSize * 2f, PillarHeight, WallColor);
         }
 
+        _decor.Draw(renderer);
+
         var doors = _arena.Doors;
         for (var i = 0; i < doors.Count; i++)
         {
@@ -170,8 +178,8 @@ public sealed class ArenaView
         }
     }
 
-    // The two ends of a door's edge facing the arena.
-    private static void DoorInnerEdge(Door door, out Vector2 from, out Vector2 to)
+    /// <summary>The two ends of a door's edge facing the arena.</summary>
+    public static void DoorInnerEdge(Door door, out Vector2 from, out Vector2 to)
     {
         var half = door.Size / 2f;
         var depth = MathF.Abs(door.Inward.X) * half.X + MathF.Abs(door.Inward.Y) * half.Y;
