@@ -32,7 +32,6 @@ public sealed class SettingsScene : IScene
     private const int RowCount = 8;
 
     private static readonly Color TitleColor = new(240, 234, 226);
-    private static readonly Color HintColor = new(170, 140, 130);
 
     private readonly IAudioManager _audio;
     private HellBackdrop? _backdropField;
@@ -192,7 +191,7 @@ public sealed class SettingsScene : IScene
         var hint = _input.HasPointer
             ? "Up / Down: choose   ·   Left / Right or Enter: change   ·   Esc: back"
             : "D-pad: choose and change   ·   B: back";
-        renderer.DrawText(hint, new Vector2(_screenWidth / 2f, _screenHeight * 0.93f), HintSize, HintColor, TextAlign.Center);
+        HellBackdrop.DrawHint(renderer, hint, new Vector2(_screenWidth / 2f, _screenHeight * 0.955f), HintSize);
         if (_input.HasPointer)
         {
             renderer.FillRect(_input.AimScreen - new Vector2(10f, 1f), new Vector2(20f, 2f), TitleColor);

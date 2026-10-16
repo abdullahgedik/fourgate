@@ -18,7 +18,7 @@ public sealed class ControlsMenu
     private const float RefusedSeconds = 1.5f;
 
     private static readonly Color TitleColor = new(240, 240, 245);
-    private static readonly Color HintColor = new(150, 155, 170);
+    private static readonly Color HintColor = new(240, 226, 210);
     private static readonly Color ListenColor = new(255, 225, 120);
     private static readonly Color RefusedColor = new(255, 120, 100);
 
@@ -140,7 +140,7 @@ public sealed class ControlsMenu
             hint = "Enter or click: change   ·   Esc: back   ·   Fixed: left mouse fire, mouse wheel / 1-9 guns, Esc pause";
         }
 
-        renderer.DrawText(hint, new Vector2(_screenWidth / 2f, _screenHeight * 0.95f), HintSize, color, TextAlign.Center);
+        HellBackdrop.DrawHint(renderer, hint, new Vector2(_screenWidth / 2f, _screenHeight * 0.955f), HintSize, color);
         if (input.HasPointer)
         {
             renderer.FillRect(input.AimScreen - new Vector2(10f, 1f), new Vector2(20f, 2f), TitleColor);

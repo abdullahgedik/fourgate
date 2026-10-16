@@ -16,7 +16,6 @@ public sealed class HighScoresScene : IScene
     private const float HintSize = 26f;
 
     private static readonly Color TitleColor = new(240, 234, 226);
-    private static readonly Color HintColor = new(170, 140, 130);
 
     private static readonly RunMode[] Modes =
     {
@@ -77,9 +76,8 @@ public sealed class HighScoresScene : IScene
             _views[i].Draw(renderer, Modes[i].Name, _table.Get(Modes[i].Key), _table.Version, topCenter, -1);
         }
 
-        renderer.DrawText(
-            "Enter, Esc or click to go back", new Vector2(_screenWidth / 2f, _screenHeight - 50f), HintSize, HintColor,
-            TextAlign.Center);
+        HellBackdrop.DrawHint(
+            renderer, "Enter, Esc or click to go back", new Vector2(_screenWidth / 2f, _screenHeight - 50f), HintSize);
         renderer.End();
     }
 }

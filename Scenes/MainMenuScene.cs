@@ -14,7 +14,6 @@ public sealed class MainMenuScene : IScene
     private const float HintSize = 26f;
 
     private static readonly Color CursorColor = new(240, 234, 226);
-    private static readonly Color HintColor = new(170, 140, 130);
 
     private static readonly string[] Labels = { "PLAY", "HIGH SCORES", "SETTINGS", "QUIT" };
     private static readonly MainMenuChoice[] Choices =
@@ -106,7 +105,7 @@ public sealed class MainMenuScene : IScene
         _menu.Draw(renderer, Labels, _selected);
 
         var hint = _input.HasPointer ? "Arrows / WASD and Enter, or click" : "D-pad and A";
-        renderer.DrawText(hint, new Vector2(_screenWidth / 2f, _screenHeight * 0.93f), HintSize, HintColor, TextAlign.Center);
+        HellBackdrop.DrawHint(renderer, hint, new Vector2(_screenWidth / 2f, _screenHeight * 0.955f), HintSize);
         if (_input.HasPointer)
         {
             renderer.FillRect(_input.AimScreen - new Vector2(10f, 1f), new Vector2(20f, 2f), CursorColor);

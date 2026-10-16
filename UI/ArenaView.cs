@@ -23,7 +23,6 @@ public sealed class ArenaView
 
     // Floor grid spacing when no weapon snaps to a grid.
     private const float GridSpacing = 100f;
-    private const float GridLineThickness = 2f;
     private const float GateInset = 2f;
 
     // The door warning: pulses that quicken as the enemies near, a curtain of light in the
@@ -42,9 +41,9 @@ public sealed class ArenaView
     /// <summary>The gold a warning door glows (also used by the off-screen door pointers).</summary>
     public static readonly Color GateGlowColor = new(255, 130, 50);
 
-    private static readonly Color WallColor = new(66, 54, 56);
+    // The mortar between the stone blocks (the blocks themselves are ArenaDecor's).
+    private static readonly Color WallColor = new(30, 23, 24);
     private static readonly Color FloorColor = new(40, 31, 31);
-    private static readonly Color GridColor = new(45, 35, 35);
     private static readonly Color GateColor = new(95, 32, 26);
 
     private readonly Arena _arena;
@@ -60,9 +59,9 @@ public sealed class ArenaView
     {
         _arena = arena;
         _particles = particles;
-        _decor = new ArenaDecor(arena, WallHeight, PillarHeight);
-        _decor.Paint(floor, random);
         _floorCellSize = FloorCellSize(data);
+        _decor = new ArenaDecor(arena, WallHeight, PillarHeight, _floorCellSize);
+        _decor.Paint(floor, random);
         _doorGlow = new float[arena.Doors.Count];
     }
 
@@ -102,20 +101,9 @@ public sealed class ArenaView
         renderer.FillBox(floorTopLeft + new Vector2(floorSize.X, 0f), new Vector2(wall.X, floorSize.Y), WallHeight, WallColor);
         renderer.FillRect(floorTopLeft, floorSize, FloorColor);
 
-        // Floor grid: gives the eye a reference for camera and player movement.
-        // (Blood stains go on after it, so they darken the grid lines too.)
-        for (var offset = _floorCellSize; offset < _arena.Size; offset += _floorCellSize)
-        {
-            renderer.FillRect(
-                new Vector2(_arena.Left + offset - GridLineThickness / 2f, _arena.Top),
-                new Vector2(GridLineThickness, _arena.Size),
-                GridColor);
-            renderer.FillRect(
-                new Vector2(_arena.Left, _arena.Top + offset - GridLineThickness / 2f),
-                new Vector2(_arena.Size, GridLineThickness),
-                GridColor);
-        }
-
+        // The floor grid (a reference for camera and player movement) is drawn as the
+        // flagstones' joints; blood stains go on after it, so they darken it too.
+        _decor.DrawFloorDetail(renderer);
         renderer.DrawFloorStains(floorTopLeft, floorSize);
         _decor.DrawFloorLight(renderer);
 
@@ -125,6 +113,7 @@ public sealed class ArenaView
             renderer.FillBox(pillars[i].Center - pillars[i].HalfSize, pillars[i].HalfSize * 2f, PillarHeight, WallColor);
         }
 
+        _decor.DrawStonework(renderer);
         _decor.Draw(renderer);
 
         var doors = _arena.Doors;

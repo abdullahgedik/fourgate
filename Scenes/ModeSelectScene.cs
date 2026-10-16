@@ -42,7 +42,6 @@ public sealed class ModeSelectScene : IScene
     private static readonly Color BorderSelectedColor = new(255, 225, 120);
     private static readonly Color TextColor = new(200, 205, 220);
     private static readonly Color NoteColor = new(130, 134, 150);
-    private static readonly Color HintColor = new(170, 140, 130);
     private static readonly Color ToggleOnColor = new(120, 40, 40);
     private static readonly Color ToggleOnTextColor = new(255, 170, 140);
 
@@ -238,7 +237,7 @@ public sealed class ModeSelectScene : IScene
         var hint = _input.HasPointer
             ? "Arrows / WASD to move  ·  Enter: start on a card, switch on a toggle  ·  or click"
             : "D-pad to move  ·  A: start on a card, switch on a toggle";
-        renderer.DrawText(hint, new Vector2(center, _screenHeight * 0.93f), HintSize, HintColor, TextAlign.Center);
+        HellBackdrop.DrawHint(renderer, hint, new Vector2(center, _screenHeight * 0.955f), HintSize);
 
         if (_input.HasPointer)
         {

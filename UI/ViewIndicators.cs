@@ -16,7 +16,7 @@ namespace Fourgate.UI;
 public sealed class ViewIndicators
 {
     private const float VignetteReach = 0.42f;
-    private static readonly Color VignetteColor = new Color(14, 0, 0) * 0.55f;
+    private static readonly Color VignetteColor = new Color(14, 0, 0) * 0.35f;
 
     private const float EdgeInset = 40f;
     private const float EdgeRadius = 18f;

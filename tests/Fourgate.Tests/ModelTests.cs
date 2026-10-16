@@ -279,15 +279,17 @@ public class ModelTests
     }
 
     [Fact]
-    public void YardDressing_PaintsTheFloorOnce_WithoutTouchingTheGameplay()
+    public void YardDressing_PaintsOnlyTheSoftMarks_AndDrawsTheSharpDetailAsGeometry()
     {
         var arena = new Arena(TestData.Arena());
         var floor = new Fourgate.Core.Rendering.FloorStains(new Vector2(arena.Left, arena.Top), arena.Size);
-        var decor = new Fourgate.UI.ArenaDecor(arena, 90f, 120f);
+        var decor = new Fourgate.UI.ArenaDecor(arena, 90f, 120f, 60f);
 
         decor.Paint(floor, new Fourgate.Core.Rng.GameRandom(3));
 
-        Assert.True(floor.TotalAdded > 100);
+        // Old blood and scorched thresholds go into the floor image; flagstones, cracks, runes
+        // and bones are drawn crisp each frame instead.
+        Assert.InRange(floor.TotalAdded, 1, 60);
         Assert.Equal(floor.TotalAdded, floor.PendingCount);
     }
 
