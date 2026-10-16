@@ -64,7 +64,8 @@ public readonly record struct WeaponStats(
     int EnemyHitsToDetonate,
     float EndBlastRadius,
     float EndBlastDamageMult,
-    PointBlank? PointBlank)
+    PointBlank? PointBlank,
+    float ExecuteBelow)
 {
     /// <summary>
     /// Applies every level bonus up to <paramref name="level"/> to the weapon's base stats;
@@ -148,11 +149,13 @@ public readonly record struct WeaponStats(
         var endBlastRadius = 0f;
         var endBlastDamageMult = 0f;
         PointBlank? pointBlank = null;
+        var executeBelow = 0f;
         if (level >= WeaponConfig.MaxLevel && config.LevelTen is not null)
         {
             damage *= config.LevelTen.DamageMult;
             fireRate *= config.LevelTen.FireRateMult;
             magSize += config.LevelTen.MagSizeBonus;
+            reserveMaxBonus += config.LevelTen.ReserveMaxBonus;
             range *= config.LevelTen.RangeMult;
             fireSeconds *= config.LevelTen.DurationMult;
             blastRadius *= config.LevelTen.BlastRadiusMult;
@@ -200,6 +203,10 @@ public readonly record struct WeaponStats(
                         leaveFireSeconds = abilities[i].Seconds;
                         leaveFireDamageMult = abilities[i].DamageMult;
                         leaveFireHurtsPlayers = abilities[i].HurtsPlayers;
+                        break;
+
+                    case WeaponAbility.Execute:
+                        executeBelow = abilities[i].HpShare;
                         break;
 
                     case WeaponAbility.PointBlank:
@@ -275,7 +282,7 @@ public readonly record struct WeaponStats(
             config.Placed?.Shootable ?? false, leaveFireRadius, leaveFireSeconds, leaveFireDamageMult,
             leaveFireHurtsPlayers, config.Placed?.Solid ?? false, config.Placed?.GridSize ?? 0f,
             config.Placed?.PlaceDistance ?? 0f, config.Placed?.EnemyHitsToDetonate ?? 0,
-            endBlastRadius, endBlastDamageMult, pointBlank);
+            endBlastRadius, endBlastDamageMult, pointBlank, executeBelow);
     }
 
     /// <summary>

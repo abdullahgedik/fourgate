@@ -57,6 +57,9 @@ public sealed class Bullet
     /// <summary>After a kill, the leftover damage keeps flying to the next enemy in line.</summary>
     public bool Overkill { get; private set; }
 
+    /// <summary>Share of full HP at or below which a non-boss enemy dies to this bullet; 0 for none.</summary>
+    public float ExecuteBelow { get; private set; }
+
     /// <summary>Set when close hits hit harder and push further.</summary>
     public PointBlank? PointBlank { get; private set; }
 
@@ -89,9 +92,11 @@ public sealed class Bullet
         HitEffect hitEffect = HitEffect.Light,
         int wallBounces = 0,
         string? model = null,
-        PointBlank? pointBlank = null)
+        PointBlank? pointBlank = null,
+        float executeBelow = 0f)
     {
         PointBlank = pointBlank;
+        ExecuteBelow = executeBelow;
         _flown = 0f;
         WallBouncesLeft = wallBounces;
         Model = model;

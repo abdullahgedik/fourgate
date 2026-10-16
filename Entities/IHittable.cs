@@ -48,6 +48,16 @@ public interface IHittable
         return false;
     }
 
+    /// <summary>
+    /// The damage that executes it when it is at or below <paramref name="hpShare"/> of its full
+    /// HP (its full HP, so the kill lands as one big hit); 0 when it cannot be executed now.
+    /// Most things cannot be.
+    /// </summary>
+    float ExecutionDamage(float hpShare)
+    {
+        return 0f;
+    }
+
     /// <summary>Damage over time (fire): no hit flash or hit sound for every small tick.</summary>
     /// <param name="damage">Damage dealt this frame.</param>
     /// <param name="ownerIndex">Index of the player whose fire it is.</param>

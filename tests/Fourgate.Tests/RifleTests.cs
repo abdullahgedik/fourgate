@@ -79,7 +79,7 @@ public class RifleTests
     }
 
     [Fact]
-    public void ShippedMarksmanRifle_PiercesAndEmpowersAtLevelTen()
+    public void ShippedMarksmanRifle_PiercesAndExecutesAtLevelTen()
     {
         var rifle = DataLoader.LoadAll(DataLoader.DefaultDirectory).GetWeapon("marksman");
 
@@ -90,10 +90,9 @@ public class RifleTests
         Assert.Equal(6, rifle.UnlockWave);
         Assert.True(ten.Automatic);
         Assert.Equal(0, nine.Pierce);
-        Assert.Equal(0, nine.EmpoweredEvery);
+        Assert.Equal(0f, nine.ExecuteBelow);
         Assert.Equal(3, ten.Pierce);
-        Assert.Equal(4, ten.EmpoweredEvery);
-        Assert.Equal(2f, ten.EmpoweredDamageMult);
+        Assert.InRange(ten.ExecuteBelow, 0.01f, 0.5f);
     }
 
     private static Weapon CreateRifle()

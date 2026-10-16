@@ -120,7 +120,8 @@ public sealed class ShotSystem
         bool overkill = false,
         RocketPayload? rocket = null,
         int wallBounces = 0,
-        PointBlank? pointBlank = null)
+        PointBlank? pointBlank = null,
+        float executeBelow = 0f)
     {
         _bullets.Rent().Launch(
             origin,
@@ -140,7 +141,8 @@ public sealed class ShotSystem
             projectile.HitEffect,
             wallBounces,
             projectile.Model,
-            pointBlank);
+            pointBlank,
+            executeBelow);
     }
 
     /// <summary>
@@ -505,6 +507,11 @@ public sealed class ShotSystem
             {
                 damage *= close.DamageMult;
                 knockback *= close.KnockbackMult;
+            }
+
+            if (bullet.ExecuteBelow > 0f)
+            {
+                damage = Math.Max(damage, hit.ExecutionDamage(bullet.ExecuteBelow));
             }
 
             hit.HitAt(damage, bullet.OwnerIndex, impact);

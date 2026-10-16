@@ -21,6 +21,7 @@ public interface IShotHandler
     /// <param name="rocket">Makes it a rocket: it explodes where it stops instead of hitting directly.</param>
     /// <param name="wallBounces">Times the bullet bounces off walls and pillars instead of stopping.</param>
     /// <param name="pointBlank">Makes hits close to the muzzle hit harder and push further.</param>
+    /// <param name="executeBelow">Share of full HP at or below which a non-boss enemy dies to the hit; 0 for none.</param>
     void FireProjectile(
         Vector2 origin,
         Vector2 direction,
@@ -35,7 +36,8 @@ public interface IShotHandler
         bool overkill = false,
         RocketPayload? rocket = null,
         int wallBounces = 0,
-        PointBlank? pointBlank = null);
+        PointBlank? pointBlank = null,
+        float executeBelow = 0f);
 
     /// <summary>Throws an explosive that flies to its target and explodes where it lands.</summary>
     void ThrowExplosive(in ExplosiveShot shot);

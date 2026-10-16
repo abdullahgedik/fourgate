@@ -17,6 +17,9 @@ public sealed class WeaponLevelTenConfig
     /// <summary>Extra rounds in the magazine.</summary>
     public int MagSizeBonus { get; init; }
 
+    /// <summary>Extra rounds carried in reserve.</summary>
+    public int ReserveMaxBonus { get; init; }
+
     /// <summary>Lengthens how long a fire pool burns.</summary>
     public float DurationMult { get; init; } = 1f;
 
@@ -40,6 +43,7 @@ public sealed class WeaponLevelTenConfig
         DataLoadException.Require(BeamWidthMult > 0, file, $"{path}.beamWidthMult", "must be greater than 0");
         DataLoadException.Require(FireRateMult > 0, file, $"{path}.fireRateMult", "must be greater than 0");
         DataLoadException.Require(MagSizeBonus >= 0, file, $"{path}.magSizeBonus", "must not be negative");
+        DataLoadException.Require(ReserveMaxBonus >= 0, file, $"{path}.reserveMaxBonus", "must not be negative");
         DataLoadException.Require(DurationMult > 0, file, $"{path}.durationMult", "must be greater than 0");
         DataLoadException.Require(MaxPlacedBonus >= 0, file, $"{path}.maxPlacedBonus", "must not be negative");
         DataLoadException.Require(RangeMult > 0, file, $"{path}.rangeMult", "must be greater than 0");
@@ -62,6 +66,8 @@ public sealed class WeaponLevelTenConfig
                 Abilities[i].FireRateMult > 0, file, $"{path}.abilities[{i}].fireRateMult", "must be greater than 0");
             DataLoadException.Require(
                 Abilities[i].KnockbackMult >= 0, file, $"{path}.abilities[{i}].knockbackMult", "must not be negative");
+            DataLoadException.Require(
+                Abilities[i].HpShare is >= 0 and <= 1, file, $"{path}.abilities[{i}].hpShare", "must be between 0 and 1");
             DataLoadException.Require(
                 Abilities[i].Seconds >= 0, file, $"{path}.abilities[{i}].seconds", "must not be negative");
             DataLoadException.Require(

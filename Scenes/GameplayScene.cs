@@ -1220,7 +1220,8 @@ public sealed class GameplayScene : IScene
                         GunId: weapon?.Config.Model ?? _data.Game.Player.DefaultGunModel,
                         ShadowRadius: player.Radius,
                         Hold: HoldFor(weapon), MoveHeading: player.MoveHeading,
-                        MuzzleFlash: MuzzleFlashAmount(weapon), MuzzleFlashSize: MuzzleFlashSizeFor(weapon)),
+                        MuzzleFlash: MuzzleFlashAmount(weapon), MuzzleFlashSize: MuzzleFlashSizeFor(weapon),
+                        GunHeat: weapon?.Overdrive ?? 0f),
                     player.Visual);
                 continue;
             }

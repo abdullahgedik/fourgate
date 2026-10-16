@@ -23,6 +23,13 @@ public sealed class Renderer3D : IRenderer, IDisposable
     private const int MaxModelParts = 48;
     private static readonly Color MuzzleCoreColor = new(255, 235, 170);
     private static readonly Color MuzzleGlowColor = new(255, 140, 40);
+
+    // A gun running hot (overdrive): the colour it glows, how far its parts are washed with it,
+    // the size of the shimmer at its muzzle and how much bigger its flash gets at full heat.
+    private static readonly Color GunHeatColor = new(255, 90, 30);
+    private const float GunHeatWash = 0.55f;
+    private const float GunHeatGlowSize = 10f;
+    private const float GunHeatFlashGrowth = 0.6f;
     private const int MaxWallStainVertices = 6 * 1024;
     private const int SootTextureSize = 64;
 
@@ -328,7 +335,7 @@ public sealed class Renderer3D : IRenderer, IDisposable
 
             if (pose.GunId is not null && HoldsGunHere(part.Mount, pose.Hold))
             {
-                DrawHeldModel(pose.GunId, _partWorlds[i], pose.MuzzleFlash, pose.MuzzleFlashSize);
+                DrawHeldModel(pose.GunId, _partWorlds[i], pose.MuzzleFlash, pose.MuzzleFlashSize, pose.GunHeat);
             }
         }
     }
@@ -346,8 +353,9 @@ public sealed class Renderer3D : IRenderer, IDisposable
     }
 
     // A held model (a gun): drawn in the hand's space, unanimated, with its muzzle flash (and a
-    // launcher's back flare) right where its barrel ends.
-    private void DrawHeldModel(string id, Matrix hand, float flash, float flashSize)
+    // launcher's back flare) right where its barrel ends. A hot gun glows red-orange, shimmers at
+    // the muzzle and flashes bigger.
+    private void DrawHeldModel(string id, Matrix hand, float flash, float flashSize, float heat)
     {
         if (Models is null || !Models.TryGet(id, out var held) || held.Parts.Count > MaxModelParts)
         {
@@ -360,10 +368,23 @@ public sealed class Renderer3D : IRenderer, IDisposable
             var part = held.Parts[i];
             if (part.IsVisible)
             {
-                OrientedBox(_heldWorlds[i], part.Center, part.HalfSize, PartColor(part, part.Color));
+                var color = PartColor(part, part.Color);
+                if (heat > 0f)
+                {
+                    color = Color.Lerp(color, GunHeatColor, Math.Clamp(heat, 0f, 1f) * GunHeatWash);
+                }
+
+                OrientedBox(_heldWorlds[i], part.Center, part.HalfSize, color);
             }
         }
 
+        heat = Math.Clamp(heat, 0f, 1f);
+        if (heat > 0f && held.Muzzle is { } hotMuzzle)
+        {
+            Billboard(Vector3.Transform(hotMuzzle, hand), GunHeatGlowSize * heat, GunHeatColor * (0.45f * heat));
+        }
+
+        flashSize *= 1f + GunHeatFlashGrowth * heat;
         if (flash <= 0f || flashSize <= 0f)
         {
             return;

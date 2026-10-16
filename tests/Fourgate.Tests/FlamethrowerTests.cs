@@ -28,7 +28,7 @@ public class FlamethrowerTests
 
         // 30 flames per second, one fuel each.
         Assert.Equal(30, shots.Flames.Count);
-        Assert.Equal(370, flamer.Reserve);
+        Assert.Equal(flamer.ReserveMax - 30, flamer.Reserve);
         Assert.False(flamer.UsesMagazine);
     }
 

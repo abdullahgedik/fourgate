@@ -100,8 +100,14 @@ public class AssaultRifleTests
         Assert.Equal(5, rifle.Slot);
         Assert.Equal(7, rifle.UnlockWave);
         Assert.True(rifle.Automatic);
-        Assert.Equal(1f, WeaponStats.Compute(rifle, 9).OverdriveFireRateMult);
-        Assert.True(WeaponStats.Compute(rifle, 10).OverdriveFireRateMult > 1f);
+        var nine = WeaponStats.Compute(rifle, 9);
+        var ten = WeaponStats.Compute(rifle, 10);
+        Assert.Equal(1f, nine.OverdriveFireRateMult);
+        Assert.True(ten.OverdriveFireRateMult > 1f);
+
+        // Level 10 carries more, so overdrive has rounds to burn.
+        Assert.True(ten.MagSize >= nine.MagSize * 1.4f);
+        Assert.True(ten.ReserveMaxBonus > nine.ReserveMaxBonus);
     }
 
     private static Weapon CreateRifle(int level, int magSize = 500)

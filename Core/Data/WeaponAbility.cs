@@ -85,4 +85,10 @@ public enum WeaponAbility
     /// times the damage and pushes <c>knockbackMult</c> times as far.
     /// </summary>
     PointBlank,
+
+    /// <summary>
+    /// A bullet that hits a non-boss enemy at or below the ability's <c>hpShare</c> of its full
+    /// HP kills it outright, as a full-HP hit (so it bursts).
+    /// </summary>
+    Execute,
 }

@@ -83,6 +83,12 @@ public sealed class Enemy : IHittable
 
     public float HitPointsLeft => Math.Max(0f, Hp);
 
+    /// <summary>Bosses are never executed.</summary>
+    public float ExecutionDamage(float hpShare)
+    {
+        return !Config.IsBoss && IsAlive && Hp <= MaxHp * hpShare ? MaxHp : 0f;
+    }
+
     /// <summary>True when the enemy's contact attack is off cooldown.</summary>
     public bool CanAttack => _attackCooldownLeft <= 0f;
 

@@ -26,6 +26,9 @@ public sealed class WeaponAbilityConfig
     /// <summary>Knockback multiplier applied by the ability (point blank: to close hits).</summary>
     public float KnockbackMult { get; init; } = 1f;
 
+    /// <summary>Share of full HP, 0–1 (execute: at or below it an enemy dies to one hit).</summary>
+    public float HpShare { get; init; }
+
     /// <summary>Time the ability takes, in seconds (overdrive: to ramp up fully).</summary>
     public float Seconds { get; init; }
 

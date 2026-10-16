@@ -29,6 +29,7 @@ namespace Fourgate.Core.Rendering.Models;
 /// <param name="GlowColor">The colour of that wash.</param>
 /// <param name="MuzzleFlash">0–1: the held gun's flash, drawn at its muzzle (and its exhaust).</param>
 /// <param name="MuzzleFlashSize">How big that flash is at its brightest.</param>
+/// <param name="GunHeat">0–1: how hot the held gun runs (overdrive): it glows and its flash grows.</param>
 public readonly record struct ModelPose(
     string ModelId,
     Vector2 Position,
@@ -52,4 +53,5 @@ public readonly record struct ModelPose(
     float Glow = 0f,
     Color GlowColor = default,
     float MuzzleFlash = 0f,
-    float MuzzleFlashSize = 0f);
+    float MuzzleFlashSize = 0f,
+    float GunHeat = 0f);
