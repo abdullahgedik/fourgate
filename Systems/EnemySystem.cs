@@ -480,6 +480,39 @@ public sealed class EnemySystem : IHittableSource
         }
     }
 
+    /// <summary>
+    /// Enemy bodies are solid to a walking player: one who walked into a body is put back just
+    /// touching it, and the body does not move. A dashing player passes through.
+    /// </summary>
+    public void BlockPlayer(Player player, Arena arena)
+    {
+        if (!player.IsAlive || player.IsDashing)
+        {
+            return;
+        }
+
+        for (var i = 0; i < _enemies.Count; i++)
+        {
+            var enemy = _enemies[i];
+            if (!enemy.IsAlive || enemy.Elevation > 0f)
+            {
+                continue;
+            }
+
+            var away = player.Position - enemy.Position;
+            var reach = enemy.Radius + player.Radius;
+            var distanceSquared = away.LengthSquared();
+            if (distanceSquared >= reach * reach)
+            {
+                continue;
+            }
+
+            var distance = MathF.Sqrt(distanceSquared);
+            var direction = distance > 0.001f ? away / distance : Vector2.UnitX;
+            player.PushOut(direction * (reach - distance), arena);
+        }
+    }
+
     // Each overlapping pair is seen once from each side and each side moves half the
     // overlap, so together they end up just touching. Against a boss the other side moves
     // the whole overlap.
@@ -589,7 +622,7 @@ public sealed class EnemySystem : IHittableSource
         for (var i = 0; i < players.Count; i++)
         {
             var player = players[i];
-            if (!player.IsAlive)
+            if (!player.IsAlive || player.IsDashing)
             {
                 continue;
             }

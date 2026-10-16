@@ -29,7 +29,11 @@ public sealed class Player
     private float _ammoCapacityMultiplier = 1f;
     private Vector2 _dashDirection;
     private float _dashTimeLeft;
+    // How long the "dash not ready" notice shows after a refused dash.
+    private const float DashRefusedSeconds = 0.8f;
+
     private float _dashCooldownLeft;
+    private float _dashRefusedLeft;
     private float _hurtFlashLeft;
     private Vector2 _lastPosition;
     private Vector2 _previousPosition;
@@ -115,6 +119,18 @@ public sealed class Player
 
     public bool IsDashing => _dashTimeLeft > 0f;
 
+    /// <summary>0–1: fades out after dash was pressed while it was still recharging.</summary>
+    public float DashRefused => _dashRefusedLeft / DashRefusedSeconds;
+
+    /// <summary>
+    /// Moves the player out of something solid it walked into (an enemy body), then back
+    /// inside the arena.
+    /// </summary>
+    public void PushOut(Vector2 offset, Arena arena)
+    {
+        Position = arena.ResolveMovement(Position + offset, Radius);
+    }
+
     /// <summary>True while nothing can damage the player (dash i-frames).</summary>
     public bool IsInvulnerable => IsDashing && _config.Dash.IFrames;
 
@@ -136,11 +152,6 @@ public sealed class Player
             if (IsDashing)
             {
                 body = DashColor;
-            }
-            else if (_dashCooldownLeft > 0f)
-            {
-                // Dimmed while the dash recharges.
-                body = Color.Lerp(body, Color.Black, 0.35f);
             }
 
             body = Color.Lerp(body, HurtColor, _hurtFlashLeft / HurtFlashSeconds);
@@ -515,9 +526,14 @@ public sealed class Player
         }
 
         _dashCooldownLeft = Math.Max(0f, _dashCooldownLeft - deltaSeconds);
+        _dashRefusedLeft = Math.Max(0f, _dashRefusedLeft - deltaSeconds);
         if (Input.DashPressed && !IsDashing && _dashCooldownLeft <= 0f)
         {
             StartDash(move);
+        }
+        else if (Input.DashPressed && !IsDashing)
+        {
+            _dashRefusedLeft = DashRefusedSeconds;
         }
 
         var walkSeconds = deltaSeconds;

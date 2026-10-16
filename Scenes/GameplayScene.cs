@@ -72,6 +72,10 @@ public sealed class GameplayScene : IScene
     private const float WeaponCrateSpacing = 70f;
     private const float DebugNoticeSeconds = 2f;
     private const float WeaponNoticeSeconds = 3f;
+    private const float DashRefusedLift = 90f;
+    private const float DashRefusedRise = 20f;
+    private const float DashRefusedSize = 24f;
+    private static readonly Color DashRefusedColor = new(255, 170, 120);
     private const float WeaponNoticeY = 150f;
     private const float WeaponNoticeSize = 32f;
     private static readonly Color WeaponNoticeColor = new(140, 230, 255);
@@ -436,6 +440,7 @@ public sealed class GameplayScene : IScene
 
             player.Input.Update(player.Position, camera);
             player.Update(deltaSeconds, _arena, _shotRouter);
+            _enemies.BlockPlayer(player, _arena);
             camera.Follow(player.Position, player.Input.AimScreen, deltaSeconds);
             ShakeOnHurt(i);
             LeaveBodyOnDeath(i);
@@ -971,6 +976,20 @@ public sealed class GameplayScene : IScene
     }
 
     /// <summary>Debug helper: shows a short message under the wave title for a moment.</summary>
+    // A small "not ready" over a player who pressed dash while it was recharging.
+    private static void DrawDashRefused(IRenderer renderer, Player player, Camera2D camera)
+    {
+        var fade = player.DashRefused;
+        if (fade <= 0f || !player.IsAlive)
+        {
+            return;
+        }
+
+        var at = camera.WorldToScreen(player.Position) - new Vector2(0f, DashRefusedLift + (1f - fade) * DashRefusedRise);
+        renderer.DrawText("DASH NOT READY", at + new Vector2(2f, 2f), DashRefusedSize, Color.Black * (0.6f * fade), TextAlign.Center);
+        renderer.DrawText("DASH NOT READY", at, DashRefusedSize, DashRefusedColor * fade, TextAlign.Center);
+    }
+
     // Player 1's equipment key as the HUD shows it; the name is only rebuilt after a rebind.
     private string EquipmentKeyName()
     {
@@ -1128,6 +1147,8 @@ public sealed class GameplayScene : IScene
             {
                 _playerHuds[i].EquipmentKey = EquipmentKeyName();
             }
+
+            DrawDashRefused(renderer, _players[i], _cameras[i]);
 
             _playerHuds[i].Draw(renderer, _players[i], _cameras[i].ViewRect);
         }
