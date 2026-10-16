@@ -95,6 +95,18 @@ public sealed class Enemy : IHittable
     /// <summary>Index of the player whose shot landed last.</summary>
     public int LastHitBy { get; private set; }
 
+    /// <summary>Index of the player it is chasing, or -1 (set by <c>EnemyTargeting</c>).</summary>
+    public int TargetIndex { get; set; } = -1;
+
+    /// <summary>How long it has kept its current target, in seconds.</summary>
+    public float TargetHeldFor { get; set; }
+
+    /// <summary>Brought in by a boss (summoned or born of it): goes for the player the boss is not after.</summary>
+    public bool IsMinion { get; set; }
+
+    /// <summary>Seconds since a player last hurt it (infinite when never).</summary>
+    public float SecondsSinceHurt { get; private set; } = float.PositiveInfinity;
+
     /// <summary>Damage of the last bullet, beam or blast that hit it (burning does not count).</summary>
     public float LastHitDamage { get; private set; }
 
@@ -261,6 +273,10 @@ public sealed class Enemy : IHittable
         MaxHp = config.Hp;
         LastHitBy = 0;
         LastHitDamage = 0f;
+        TargetIndex = -1;
+        TargetHeldFor = 0f;
+        IsMinion = false;
+        SecondsSinceHurt = float.PositiveInfinity;
         Array.Clear(_damageByOwner);
         _flashLeft = 0f;
         _wasHit = false;
@@ -452,6 +468,7 @@ public sealed class Enemy : IHittable
 
         Hp -= damage;
         LastHitBy = ownerIndex;
+        SecondsSinceHurt = 0f;
         LastHitDamage = damage;
         CountDamage(damage, ownerIndex);
         _flashLeft = FlashSeconds;
@@ -467,6 +484,7 @@ public sealed class Enemy : IHittable
 
         Hp -= damage;
         LastHitBy = ownerIndex;
+        SecondsSinceHurt = 0f;
         CountDamage(damage, ownerIndex);
         _scorchLeft = ScorchSeconds;
     }
@@ -508,6 +526,7 @@ public sealed class Enemy : IHittable
     /// <summary>Advances timers, and burns while on fire.</summary>
     public void Tick(float deltaSeconds)
     {
+        SecondsSinceHurt += deltaSeconds;
         _flashLeft = Math.Max(0f, _flashLeft - deltaSeconds);
         _lungeAge += deltaSeconds;
         _attackCooldownLeft = Math.Max(0f, _attackCooldownLeft - deltaSeconds);

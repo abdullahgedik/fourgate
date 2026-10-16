@@ -36,6 +36,25 @@ public sealed class BossAggro
         return playerIndex >= 0 && playerIndex < _threat.Count ? _threat[playerIndex] : 0f;
     }
 
+    /// <summary>
+    /// A new phase: everyone's threat shrinks to the configured share and the boss looks again at
+    /// its next chance, so whoever held it all along may suddenly become the other target.
+    /// </summary>
+    public void OnPhaseChange()
+    {
+        if (_config is null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < _threat.Count; i++)
+        {
+            _threat[i] *= _config.PhaseThreatKeep;
+        }
+
+        _targetLeft = 0f;
+    }
+
     /// <summary>Forgets everything (a new boss).</summary>
     public void Reset()
     {

@@ -202,7 +202,8 @@ public sealed class ArenaView
     }
 
     // The floor grid shows the cells barrels snap to, so a player can see where one will go.
-    private static float FloorCellSize(GameData data)
+    /// <summary>The floor grid's spacing: the solid barrels' grid, or a default.</summary>
+    public static float FloorCellSize(GameData data)
     {
         var weapons = data.Weapons;
         for (var i = 0; i < weapons.Count; i++)

@@ -18,6 +18,9 @@ public sealed class EnemySystem : IHittableSource
     // Ambling once the players are gone: slower than a chase, in short legs, sometimes standing still.
     private const float WanderSpeedShare = 0.3f;
 
+    // How often every flow field is rebuilt even when its player stands still.
+    private const float FieldRefreshSeconds = 0.5f;
+
     // A zombie killed by a single hit this big (a share of its full HP) bursts apart.
     private const float GibHitShare = 0.8f;
     private const float WanderMinSeconds = 1.2f;
@@ -38,6 +41,11 @@ public sealed class EnemySystem : IHittableSource
     private readonly Pool<Enemy> _enemies = new(InitialEnemies);
     private readonly SpatialHash<Enemy> _hash = new(CellSize);
     private readonly List<Enemy> _nearby = new();
+    private readonly List<FlowField> _fields = new();
+    private readonly List<int> _fieldCells = new();
+    private readonly List<Vector2> _solids = new();
+    private Arena? _fieldArena;
+    private float _fieldRefreshLeft;
     private readonly List<EnemyDeath> _deaths = new();
     private int _nextId;
 
@@ -82,12 +90,24 @@ public sealed class EnemySystem : IHittableSource
     /// <summary>Share of an enemy's remaining knockback applied per second; 0 applies it at once.</summary>
     public float KnockbackDamping { get; set; }
 
+    /// <summary>Grid spacing of the path finding: the barrel grid, so a barrel fills one cell.</summary>
+    public float PathCellSize { get; set; } = 60f;
+
+    /// <summary>Whom each enemy chases (co-op rules); the defaults until the game's are set.</summary>
+    public EnemyTargeting Targeting { get; set; } = new(new EnemyAggroConfig());
+
     /// <summary>Lets enemies far from every player walk faster; null for none.</summary>
     public CatchUpConfig? CatchUp { get; set; }
 
     public void Update(float deltaSeconds, IReadOnlyList<Player> players, Arena arena)
     {
         RemoveDead();
+        UpdateFlowFields(deltaSeconds, players, arena);
+        Targeting.ClearChasers();
+        for (var i = 0; i < _enemies.Count; i++)
+        {
+            Targeting.CountChaser(_enemies[i]);
+        }
 
         for (var i = 0; i < _enemies.Count; i++)
         {
@@ -104,9 +124,13 @@ public sealed class EnemySystem : IHittableSource
             }
 
             // A boss is moved by the boss system.
-            if (!enemy.Config.IsBoss && !UpdateRangedAttack(enemy, players, arena, deltaSeconds))
+            if (!enemy.Config.IsBoss)
             {
-                MoveTowardNearestPlayer(enemy, players, arena, deltaSeconds);
+                var target = Targeting.Choose(enemy, players, deltaSeconds);
+                if (!UpdateRangedAttack(enemy, target, arena, deltaSeconds))
+                {
+                    MoveTowardTarget(enemy, target, players, arena, deltaSeconds);
+                }
             }
 
             enemy.Position += enemy.TakeKnockStep(
@@ -250,7 +274,7 @@ public sealed class EnemySystem : IHittableSource
     // A ranged enemy stops to attack when its target is in range, in clear sight past the
     // pillars, and able to see it (so nobody is shot from off-screen). Returns true while it
     // holds still: winding up, or waiting out its cooldown in a good spot.
-    private bool UpdateRangedAttack(Enemy enemy, IReadOnlyList<Player> players, Arena arena, float deltaSeconds)
+    private bool UpdateRangedAttack(Enemy enemy, Player? target, Arena arena, float deltaSeconds)
     {
         var attack = enemy.CurrentAttack;
         if (attack is null || !enemy.IsAlive)
@@ -296,7 +320,6 @@ public sealed class EnemySystem : IHittableSource
             return true;
         }
 
-        var target = NearestLivingPlayer(enemy.Position, players);
         if (target is null)
         {
             return false;
@@ -379,26 +402,9 @@ public sealed class EnemySystem : IHittableSource
         return nearest;
     }
 
-    private void MoveTowardNearestPlayer(
-        Enemy enemy, IReadOnlyList<Player> players, Arena arena, float deltaSeconds)
+    private void MoveTowardTarget(
+        Enemy enemy, Player? target, IReadOnlyList<Player> players, Arena arena, float deltaSeconds)
     {
-        Player? target = null;
-        var bestDistanceSquared = float.MaxValue;
-        for (var i = 0; i < players.Count; i++)
-        {
-            if (!players[i].IsAlive)
-            {
-                continue;
-            }
-
-            var distanceSquared = Vector2.DistanceSquared(enemy.Position, players[i].Position);
-            if (distanceSquared < bestDistanceSquared)
-            {
-                bestDistanceSquared = distanceSquared;
-                target = players[i];
-            }
-        }
-
         if (target is null)
         {
             if (WanderWhenAlone)
@@ -412,10 +418,22 @@ public sealed class EnemySystem : IHittableSource
         var speed = enemy.Config.Speed * SpeedMultiplier;
         if (CatchUp is not null)
         {
-            speed *= CatchUp.MultiplierAt(MathF.Sqrt(bestDistanceSquared));
+            // Off screen means far from every player, not just from its own target.
+            var nearest = NearestLivingPlayer(enemy.Position, players);
+            speed *= nearest is null ? 1f : CatchUp.MultiplierAt(Vector2.Distance(enemy.Position, nearest.Position));
         }
 
-        // With a pillar in the way, head for its corner first.
+        // Something in the way: follow the target's flow field round pillars and barrels.
+        var field = FieldFor(target);
+        if (field is not null && !field.LineClear(enemy.Position, target.Position)
+            && field.TryGetDirection(enemy.Position, out var way))
+        {
+            enemy.Facing = MathF.Atan2(way.Y, way.X);
+            enemy.Position += way * (speed * deltaSeconds);
+            return;
+        }
+
+        // Off the grid (or no field): head for the corner of a pillar in the way first.
         var waypoint = arena.NextWaypoint(enemy.Position, target.Position, enemy.Radius);
         if (waypoint != target.Position)
         {
@@ -431,7 +449,7 @@ public sealed class EnemySystem : IHittableSource
         }
 
         // Walk up to the player and stop when touching.
-        var distance = MathF.Sqrt(bestDistanceSquared);
+        var distance = Vector2.Distance(enemy.Position, target.Position);
         var gap = distance - (enemy.Radius + target.Radius);
         if (gap <= 0f)
         {
@@ -441,6 +459,57 @@ public sealed class EnemySystem : IHittableSource
         var step = Math.Min(speed * deltaSeconds, gap);
         enemy.Facing = MathF.Atan2(target.Position.Y - enemy.Position.Y, target.Position.X - enemy.Position.X);
         enemy.Position += (target.Position - enemy.Position) / distance * step;
+    }
+
+    /// <summary>The way to a player for anything chasing them; null before the first update or off the grid.</summary>
+    public FlowField? FieldFor(Player player)
+    {
+        return player.Index < _fields.Count && _fields[player.Index].TargetCell >= 0 ? _fields[player.Index] : null;
+    }
+
+    // One field per player, rebuilt when the player steps into another cell and every so often
+    // anyway (barrels come and go).
+    private void UpdateFlowFields(float deltaSeconds, IReadOnlyList<Player> players, Arena arena)
+    {
+        if (!ReferenceEquals(arena, _fieldArena))
+        {
+            _fieldArena = arena;
+            _fields.Clear();
+            _fieldCells.Clear();
+        }
+
+        _fieldRefreshLeft -= deltaSeconds;
+        var refreshAll = _fieldRefreshLeft <= 0f;
+        if (refreshAll)
+        {
+            _fieldRefreshLeft = FieldRefreshSeconds;
+            _solids.Clear();
+            arena.Obstacles?.CollectSolids(_solids);
+        }
+
+        for (var i = 0; i < players.Count; i++)
+        {
+            var player = players[i];
+            while (_fields.Count <= player.Index)
+            {
+                _fields.Add(new FlowField(arena, PathCellSize));
+                _fieldCells.Add(-1);
+            }
+
+            var field = _fields[player.Index];
+            var cell = field.CellAt(player.Position);
+            if (refreshAll || cell != _fieldCells[player.Index])
+            {
+                if (!refreshAll)
+                {
+                    _solids.Clear();
+                    arena.Obstacles?.CollectSolids(_solids);
+                }
+
+                field.Build(player.Position, _solids);
+                _fieldCells[player.Index] = cell;
+            }
+        }
     }
 
     // Slow ambles in random directions, now and then standing still a while.

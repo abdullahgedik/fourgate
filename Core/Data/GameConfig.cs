@@ -28,6 +28,9 @@ public sealed class GameConfig
     /// <summary>How hits push enemies back; no knockback when left out.</summary>
     public KnockbackConfig Knockback { get; init; } = new();
 
+    /// <summary>How regular enemies keep and change targets in co-op; the defaults when left out.</summary>
+    public EnemyAggroConfig EnemyAggro { get; init; } = new();
+
     /// <summary>How sound effects are mixed; the defaults when left out.</summary>
     public AudioConfig Audio { get; init; } = new();
 
@@ -72,6 +75,8 @@ public sealed class GameConfig
         BossAggro?.Validate(file, "bossAggro");
         CatchUp?.Validate(file, "catchUp");
         DataLoadException.Require(Audio is not null, file, "audio", "must not be null");
+        DataLoadException.Require(EnemyAggro is not null, file, "enemyAggro", "must not be null");
+        EnemyAggro!.Validate(file);
         Audio!.Validate(file);
         Knockback!.Validate(file);
 

@@ -22,6 +22,7 @@
     "ammoPrimaryFraction": 0.35, "ammoOthersFraction": 0.08
   },
   "knockback": { "explosion": 70, "damping": 14 },
+  "enemyAggro": { "switchCloserShare": 0.3, "weakerShare": 0.15, "grudgeSeconds": 4, "minCommitSeconds": 4, "maxCommitSeconds": 7 },
   "audio": { "maxVoicesPerSound": 4, "minRepeatSeconds": 0.03, "pitchVariation": 0.06 },
   "catchUp": { "nearDistance": 800, "farDistance": 1100, "speedMult": 2.2 },
   "score": {
@@ -30,7 +31,7 @@
   },
   "bossAggro": {
     "minTargetSeconds": 5, "maxTargetSeconds": 9, "threatPerDamage": 1, "proximityThreatPerSecond": 120,
-    "proximityRange": 500, "threatDecayPerSecond": 0.15, "switchMargin": 1.3
+    "proximityRange": 500, "threatDecayPerSecond": 0.15, "switchMargin": 1.3, "phaseThreatKeep": 0.3
   },
   "coop": { "reviveHpFraction": 0.5, "enemyBudgetMultiplier": 1.6, "bossHpMultiplier": 1.5 },
   "friendlyFire": {

@@ -55,6 +55,9 @@ public sealed class EnemyConfig
     /// <summary>True for a boss's body: the boss system moves it instead of the zombie AI.</summary>
     public bool IsBoss { get; init; }
 
+    /// <summary>How it picks whom to chase in co-op.</summary>
+    public EnemyAggro Aggro { get; init; } = EnemyAggro.Nearest;
+
     /// <summary>The enemy's 3D model; null draws the plain shape.</summary>
     public string? Model { get; init; }
 

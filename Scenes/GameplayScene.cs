@@ -213,6 +213,8 @@ public sealed class GameplayScene : IScene
         _enemies = new EnemySystem(audio)
         {
             KnockbackDamping = config.Knockback.Damping, Fireballs = _fireballs, CatchUp = config.CatchUp,
+            PathCellSize = ArenaView.FloorCellSize(data),
+            Targeting = new EnemyTargeting(config.EnemyAggro),
         };
         _bosses = new BossSystem(_enemies, data, _random, audio)
         {

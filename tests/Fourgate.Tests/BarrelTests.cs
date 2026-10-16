@@ -203,7 +203,7 @@ public class BarrelTests
     }
 
     [Fact]
-    public void Zombie_CannotWalkThroughABarrel()
+    public void Zombie_GoesRoundALoneBarrel_ToReachThePlayer()
     {
         var world = new World();
         world.Mines.Place(GridBarrel(new Vector2(1000, 1000)));
@@ -212,27 +212,29 @@ public class BarrelTests
 
         world.Run(6f, new List<Player> { player });
 
-        // Held at the barrel's left side (barrel 962-1022, zombie radius 20).
-        Assert.True(zombie.Position.X <= 942.5f);
+        // It walked round the barrel instead of stopping at it, and never went through it.
+        Assert.True(Vector2.Distance(zombie.Position, player.Position) < zombie.Radius + player.Radius + 5f);
+        Assert.Equal(1, world.Mines.Count);
     }
 
     [Fact]
-    public void Zombie_BlockedByABarrel_HitsItUntilItGoesOff()
+    public void Zombie_FacingAPlayerWalledInByBarrels_BreaksThrough()
     {
         var world = new World();
-        world.Mines.Place(GridBarrel(new Vector2(1000, 1000)) with { EnemyHitsToDetonate = 3 });
-        var player = new Player(0, new FakeInput(), TestData.Game().Player, new NullAudioManager(), new Vector2(1300, 992));
-        var players = new List<Player> { player };
-        var zombie = world.Spawn(new Vector2(800, 992));
 
-        // Reaches the barrel after about 1.3 s, then hits it every 0.8 s: two hits by 2.5 s.
-        world.Run(2.5f, players);
-        Assert.Equal(1, world.Mines.Count);
-        Assert.Equal(100f, player.Hp);
+        // The player stands in the corner cell; barrels fill the three cells round it.
+        foreach (var cell in new[] { new Vector2(90, 30), new Vector2(30, 90), new Vector2(90, 90) })
+        {
+            Assert.True(world.Mines.Place(GridBarrel(cell) with { EnemyHitsToDetonate = 3 }));
+        }
 
-        world.Run(3.5f, players);
-        Assert.Equal(0, world.Mines.Count);
-        Assert.True(zombie.Hp < 1000f);
+        var player = new Player(0, new FakeInput(), TestData.Game().Player, new NullAudioManager(), new Vector2(30, 30));
+        var zombie = world.Spawn(new Vector2(500, 500));
+
+        world.Run(12f, new List<Player> { player });
+
+        Assert.True(world.Mines.Count < 3);
+        Assert.True(zombie.Hp < 1000f || !zombie.IsAlive);
     }
 
     [Fact]

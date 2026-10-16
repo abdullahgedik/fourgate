@@ -171,6 +171,7 @@ public sealed partial class BossSystem
         UpdateBodyPose(boss, deltaSeconds);
         _players = players;
         var target = _aggro.Update(boss, players, deltaSeconds, mayTurn: _state == State.Walking);
+        _enemies.Targeting.BossTargetIndex = _aggro.TargetIndex;
         if (target is null)
         {
             return;
@@ -345,7 +346,7 @@ public sealed partial class BossSystem
         {
             var angle = MathHelper.TwoPi * i / spawn.Count;
             var point = death.Position + Direction(angle) * spawn.SpawnRadius;
-            _enemies.Spawn(enemy, arena.ResolveMovement(point, enemy.Radius));
+            _enemies.Spawn(enemy, arena.ResolveMovement(point, enemy.Radius)).IsMinion = true;
         }
     }
 
@@ -552,6 +553,7 @@ public sealed partial class BossSystem
         }
 
         _phase++;
+        _aggro.OnPhaseChange();
         _state = State.ChangingPhase;
         _stateLeft = phases[_phase].TransitionSeconds;
         _transitionAge = 0f;
@@ -741,7 +743,7 @@ public sealed partial class BossSystem
                 var config = _data.GetEnemy(pattern.EnemyId);
                 for (var i = 0; i < _summonPoints.Count && _enemies.Count < MaxAliveEnemies; i++)
                 {
-                    _enemies.Spawn(config, _summonPoints[i]);
+                    _enemies.Spawn(config, _summonPoints[i]).IsMinion = true;
                 }
 
                 done = true;

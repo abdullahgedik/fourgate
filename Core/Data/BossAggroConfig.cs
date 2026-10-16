@@ -29,6 +29,9 @@ public sealed class BossAggroConfig
     /// <summary>Another player needs this many times the current target's threat to take the boss over.</summary>
     public required float SwitchMargin { get; init; }
 
+    /// <summary>Share of every player's threat kept when the boss enters a new phase (1 keeps it all).</summary>
+    public float PhaseThreatKeep { get; init; } = 1f;
+
     public void Validate(string file, string path)
     {
         DataLoadException.Require(MinTargetSeconds > 0, file, $"{path}.minTargetSeconds", "must be greater than 0");
@@ -41,5 +44,7 @@ public sealed class BossAggroConfig
         DataLoadException.Require(
             ThreatDecayPerSecond >= 0 && ThreatDecayPerSecond < 1, file, $"{path}.threatDecayPerSecond", "must be from 0 up to (not including) 1");
         DataLoadException.Require(SwitchMargin >= 1, file, $"{path}.switchMargin", "must be 1 or greater");
+        DataLoadException.Require(
+            PhaseThreatKeep is >= 0 and <= 1, file, $"{path}.phaseThreatKeep", "must be between 0 and 1");
     }
 }

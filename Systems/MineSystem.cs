@@ -159,6 +159,17 @@ public sealed class MineSystem : IHittableSource, IObstacleSource
         return false;
     }
 
+    public void CollectSolids(List<Vector2> centers)
+    {
+        for (var i = 0; i < _mines.Count; i++)
+        {
+            if (_mines[i].Shot.Solid && !_mines[i].IsDetonating)
+            {
+                centers.Add(_mines[i].Position);
+            }
+        }
+    }
+
     public Vector2 PushOut(Vector2 position, float radius)
     {
         for (var i = 0; i < _mines.Count; i++)

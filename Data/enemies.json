@@ -18,7 +18,7 @@
       "color": [ 90, 190, 100 ]
     },
     {
-      "id": "fast",
+      "id": "fast", "aggro": "weakest",
       "model": "runner",
       "displayName": "Fast Zombie",
       "hp": 40,
@@ -35,7 +35,7 @@
       "color": [ 235, 210, 60 ]
     },
     {
-      "id": "ranged",
+      "id": "ranged", "aggro": "committed",
       "model": "spitter",
       "displayName": "Ranged Zombie",
       "hp": 60,
@@ -56,7 +56,7 @@
       "color": [ 240, 140, 50 ]
     },
     {
-      "id": "tank",
+      "id": "tank", "aggro": "grudge",
       "model": "brute",
       "displayName": "Tank Zombie",
       "hp": 400,
@@ -74,7 +74,7 @@
       "color": [ 140, 30, 35 ]
     },
     {
-      "id": "elite",
+      "id": "elite", "aggro": "grudge",
       "model": "elite",
       "displayName": "Elite Zombie",
       "hp": 300,
