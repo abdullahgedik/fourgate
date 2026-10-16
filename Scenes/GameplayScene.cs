@@ -72,6 +72,7 @@ public sealed class GameplayScene : IScene
     private const float WeaponCrateSpacing = 70f;
     private const float DebugNoticeSeconds = 2f;
     private const float WeaponNoticeSeconds = 3f;
+    private const string GamepadEquipmentLabel = "LT";
     private const float DashRefusedLift = 90f;
     private const float DashRefusedRise = 20f;
     private const float DashRefusedSize = 24f;
@@ -1143,10 +1144,8 @@ public sealed class GameplayScene : IScene
                 _indicators.DrawLethalWarning(renderer, _cameras[i], _bosses);
             }
 
-            if (i == 0)
-            {
-                _playerHuds[i].EquipmentKey = EquipmentKeyName();
-            }
+            // The keyboard player sees their bound key, a gamepad player the trigger.
+            _playerHuds[i].EquipmentKey = _players[i].Input.HasPointer ? EquipmentKeyName() : GamepadEquipmentLabel;
 
             DrawDashRefused(renderer, _players[i], _cameras[i]);
 

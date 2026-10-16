@@ -76,7 +76,7 @@ dotnet test tests/Fourgate.Tests
 | Move | W A S D | Left stick |
 | Aim | Mouse | Right stick |
 | Fire | Left mouse button | Right trigger |
-| Dash | Space | A |
+| Dash (passes through enemies) | Left Shift | A |
 | Reload | R | X |
 | Next / previous gun | Mouse wheel, E / Q | RB / LB |
 | Select gun directly | 1–9 | |
@@ -88,6 +88,8 @@ dotnet test tests/Fourgate.Tests
 | Back to the start screen after game over | Enter | A or Start |
 | Borderless fullscreen | F11 | |
 | Cycle window size | F9 | |
+
+Player 1's keyboard keys can be changed in Settings → CONTROLS (fire, the mouse wheel, 1–9, Esc and Enter stay fixed).
 
 Gamepad support is implemented but has not been tested yet.
 
