@@ -404,7 +404,7 @@ public sealed class Player
 
         // The same rule as the throw itself: the aim point, no further than the reach.
         var muzzle = Position + AimDirection * Radius;
-        landing = muzzle + AimDirection * Math.Min(Input.AimDistance, equipment.Stats.Range);
+        landing = muzzle + AimDirection * Math.Min(ThrowAimDistance(equipment), equipment.Stats.Range);
         reach = Math.Max(equipment.Stats.BlastRadius, equipment.Stats.FireRadius);
         return true;
     }
@@ -447,7 +447,14 @@ public sealed class Player
         }
 
         var released = _equipmentWasHeld && !Input.EquipmentHeld && equipment.IsReady;
-        return new WeaponTrigger(released, false, false, Input.AimDistance);
+        return new WeaponTrigger(released, false, false, ThrowAimDistance(equipment));
+    }
+
+    // With a pointer the throw lands at the pointer; with a stick, at the share of the range its
+    // tilt asks for.
+    private float ThrowAimDistance(Weapon equipment)
+    {
+        return Input.HasPointer ? Input.AimDistance : Input.AimReach * equipment.Stats.Range;
     }
 
     private void HandleWeaponSwitch()

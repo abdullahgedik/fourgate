@@ -300,7 +300,7 @@ public class GrenadeTests
     public void LandingMarker_SitsAtTheAimPoint_NoFurtherThanTheReach_AndOnlyForThrownEquipment()
     {
         var data = DataLoader.LoadAll(DataLoader.DefaultDirectory);
-        var input = new FakeInput { AimDistance = 200f, EquipmentHeld = true };
+        var input = new FakeInput { AimDistance = 200f, EquipmentHeld = true, HasPointer = true };
         var player = new Player(0, input, TestData.Game().Player, new NullAudioManager(), new Vector2(1000, 1000));
         var grenade = data.GetWeapon("grenade");
         player.GiveWeapon(new Weapon(grenade, TestData.Game(), new NullAudioManager()));
@@ -320,6 +320,23 @@ public class GrenadeTests
         // Not aiming: no marker.
         input.EquipmentHeld = false;
         Assert.False(player.TryGetThrowLanding(out _, out _));
+    }
+
+    [Fact]
+    public void WithAStick_TheThrowGoesAsFarAsTheTiltAsks()
+    {
+        var data = DataLoader.LoadAll(DataLoader.DefaultDirectory);
+        var input = new FakeInput { HasPointer = false, AimReach = 0.5f, EquipmentHeld = true };
+        var player = new Player(0, input, TestData.Game().Player, new NullAudioManager(), new Vector2(1000, 1000));
+        var grenade = data.GetWeapon("grenade");
+        player.GiveWeapon(new Weapon(grenade, TestData.Game(), new NullAudioManager()));
+
+        Assert.True(player.TryGetThrowLanding(out var landing, out _));
+        Assert.Equal(1000f + player.Radius + grenade.Thrown!.MaxRange * 0.5f, landing.X, 1);
+
+        input.AimReach = 1f;
+        player.TryGetThrowLanding(out landing, out _);
+        Assert.Equal(1000f + player.Radius + grenade.Thrown.MaxRange, landing.X, 1);
     }
 
     private static WeaponConfig GrenadeConfig()

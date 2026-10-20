@@ -15,6 +15,12 @@ public interface IPlayerInput
     /// <summary>World distance from the player to the aim point; infinite when the device has no pointer.</summary>
     float AimDistance { get; }
 
+    /// <summary>
+    /// For a device without a pointer: how far to throw, as a share (0–1) of the thrown weapon's
+    /// range (a stick's tilt). Devices with a pointer throw to <see cref="AimDistance"/> instead.
+    /// </summary>
+    float AimReach => 1f;
+
     /// <summary>Point on the virtual screen the player is aiming toward; drives the camera lead.</summary>
     Vector2 AimScreen { get; }
 

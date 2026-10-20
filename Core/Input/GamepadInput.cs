@@ -9,6 +9,12 @@ namespace Fourgate.Core.Input;
 public sealed class GamepadInput : IPlayerInput
 {
     private const float TriggerThreshold = 0.5f;
+
+    // Throwing: a light tilt of the aim stick throws this share of the range, a full tilt all of
+    // it; tilts below the first number count as light. The reach starts at the last number.
+    private const float ThrowTiltFloor = 0.25f;
+    private const float ThrowReachMin = 0.15f;
+    private const float ThrowReachStart = 0.6f;
     private const float MenuStickThreshold = 0.5f;
 
     private readonly PlayerIndex _index;
@@ -25,8 +31,11 @@ public sealed class GamepadInput : IPlayerInput
 
     public Vector2 AimDirection { get; private set; } = Vector2.UnitX;
 
-    // A stick gives a direction only; throws go as far as the weapon allows.
+    // A stick has no aim point; throws use the stick's tilt (AimReach) instead.
     public float AimDistance => float.PositiveInfinity;
+
+    /// <summary>How far to throw: set by how far the aim stick is tilted, kept while the stick rests.</summary>
+    public float AimReach { get; private set; } = ThrowReachStart;
 
     public Vector2 AimScreen { get; private set; }
 
@@ -85,6 +94,11 @@ public sealed class GamepadInput : IPlayerInput
         if (aim != Vector2.Zero)
         {
             AimDirection = Vector2.Normalize(aim);
+
+            // Letting the stick go keeps the last reach, so a throw can be released without
+            // the marker snapping back.
+            var tilt = Math.Clamp((aim.Length() - ThrowTiltFloor) / (1f - ThrowTiltFloor), 0f, 1f);
+            AimReach = ThrowReachMin + (1f - ThrowReachMin) * tilt;
         }
 
         // A fully tilted stick leads the camera as far as a cursor at the edge of the view.

@@ -85,7 +85,7 @@ dotnet test tests/Fourgate.Tests
 | Reload | R | X |
 | Next / previous gun | Mouse wheel, E / Q | RB / LB |
 | Select gun directly | 1–9 | |
-| Use equipment: hold to aim a grenade, molotov or mine (its landing spot shows), release to throw | G | Left trigger |
+| Use equipment: hold to aim a grenade, molotov or mine (its landing spot shows), release to throw | G (lands at the cursor) | Left trigger (right stick: direction, and tilt for distance) |
 | Next equipment | T | D-pad left / right |
 | Choose an upgrade card | Click, or A / D then Enter | Left / right, then A |
 | Pause / resume a run | Esc | Start |

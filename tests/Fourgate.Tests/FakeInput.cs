@@ -13,6 +13,8 @@ public sealed class FakeInput : IPlayerInput
 
     public float AimDistance { get; set; } = float.PositiveInfinity;
 
+    public float AimReach { get; set; } = 1f;
+
     public Vector2 AimScreen { get; set; }
 
     public bool HasPointer { get; set; }
